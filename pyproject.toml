@@ -1,0 +1,26 @@
+[project]
+name = "horsey-heresy-list-builder"
+version = "0.1.0"
+description = "Tournament-informed army list builder for Horus Heresy 3.0 Solar Auxilia"
+requires-python = ">=3.14"
+dependencies = [
+    "lxml>=5.1.0",
+    "click>=8.1.0",
+    "rich>=13.7.0",
+    "playwright>=1.42.0",
+    "httpx>=0.27.0",
+    "peewee>=3.17.0",
+    "jinja2>=3.1.0",
+    "reportlab>=4.1.0",
+]
+
+[project.scripts]
+auxilia = "src.cli.main:cli"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
