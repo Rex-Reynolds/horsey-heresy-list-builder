@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Roster, RosterEntry
 from src.bsdata.foc_validator import FOCValidator
 from src.bsdata.points_calculator import PointsCalculator
-from src.analytics.unit_popularity import get_unit_popularity, get_trending_units
+from src.analytics.unit_popularity import calculate_unit_popularity
 import json
 
 # Initialize FastAPI
@@ -320,19 +320,16 @@ async def validate_roster(roster_id: int):
 async def get_popular_units(min_appearances: int = Query(3, ge=1)):
     """Get most popular units from tournament data."""
     try:
-        popularity = get_unit_popularity(min_appearances=min_appearances)
+        popularity = calculate_unit_popularity(min_appearances=min_appearances)
         return {"units": popularity[:20]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Meta analysis error: {str(e)}")
 
 @app.get("/api/meta/trending-units")
 async def get_trending(months: int = Query(6, ge=1, le=24)):
-    """Get trending units."""
-    try:
-        trending = get_trending_units(months=months)
-        return {"units": trending[:20]}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Meta analysis error: {str(e)}")
+    """Get trending units (coming soon - requires tournament data)."""
+    # TODO: Implement trending calculation
+    return {"units": [], "message": "Trending analysis requires tournament data. Run 'auxilia tournament update' first."}
 
 @app.get("/api/meta/stats")
 async def get_meta_stats():

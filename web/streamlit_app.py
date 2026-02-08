@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Roster, RosterEntry
 from src.bsdata.foc_validator import FOCValidator
 from src.bsdata.points_calculator import PointsCalculator
-from src.analytics.unit_popularity import get_unit_popularity, get_trending_units
+from src.analytics.unit_popularity import calculate_unit_popularity
 import json
 
 # Page config
@@ -278,7 +278,7 @@ with tab3:
         # Unit popularity
         st.subheader("🔥 Most Popular Units")
 
-        popularity = get_unit_popularity(min_appearances=3)
+        popularity = calculate_unit_popularity(min_appearances=3)
 
         if popularity:
             # Show top 10
@@ -293,13 +293,9 @@ with tab3:
         else:
             st.info("Run `auxilia tournament update` to scrape tournament data for meta analysis!")
 
-        # Trending units
+        # Trending units (coming soon)
         st.subheader("📈 Trending Units")
-        trending = get_trending_units(months=6)
-
-        if trending:
-            for unit in trending[:5]:
-                st.write(f"↗️ **{unit['unit_name']}** ({unit['trend_indicator']})")
+        st.info("Trending analysis coming soon - requires more tournament data!")
 
     except Exception as e:
         st.warning("Tournament data not available. Run `auxilia tournament update` to enable meta analysis.")
