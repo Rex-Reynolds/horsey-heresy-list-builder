@@ -50,20 +50,31 @@ class BattleScribeParser:
         if not self.ns:
             return element.xpath(xpath)
 
-        # Simple mapping for common XPath patterns
-        # For .// just prepend bs: to element names
-        import re
+        # Add namespace prefix to all element names in the path
+        # Split by / and add bs: prefix to element names
+        parts = xpath.split('/')
+        ns_parts = []
 
-        # Replace //element with //bs:element
-        xpath_ns = re.sub(r'//([\w]+)(\[|$|/)', r'//bs:\1\2', xpath)
-        # Replace ./element with ./bs:element
-        xpath_ns = re.sub(r'\.([\w]+)(\[|$|/)', r'.\1\2', xpath_ns)  # Keep ./ as-is
-        # Replace /element with /bs:element (but not at start of string, and not after @)
-        xpath_ns = re.sub(r'([^@])/([a-zA-Z][\w]*)', r'\1/bs:\2', xpath_ns)
+        for part in parts:
+            # Skip empty parts, dots, double dots, and parts that start with @
+            if not part or part in ('.', '..') or part.startswith('@'):
+                ns_parts.append(part)
+            # Skip parts that already have a namespace prefix
+            elif ':' in part:
+                ns_parts.append(part)
+            # Check if part contains [ for predicates
+            elif '[' in part:
+                # Split element name and predicate
+                elem_name, predicate = part.split('[', 1)
+                if elem_name and not elem_name.startswith('@'):
+                    ns_parts.append(f'bs:{elem_name}[{predicate}')
+                else:
+                    ns_parts.append(part)
+            # Regular element name
+            else:
+                ns_parts.append(f'bs:{part}')
 
-        # Clean up any double bs:bs:
-        xpath_ns = xpath_ns.replace('bs:bs:', 'bs:')
-
+        xpath_ns = '/'.join(ns_parts)
         return element.xpath(xpath_ns, namespaces=self.ns)
 
     def get_catalogue_info(self) -> dict:

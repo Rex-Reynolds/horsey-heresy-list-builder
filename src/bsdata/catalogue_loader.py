@@ -245,10 +245,21 @@ class SolarAuxiliaCatalogue:
 
             logger.info(f"✓ Inserted {len(units)} units into database")
 
-            # Step 4: Bulk insert unit-upgrade relationships
+            # Step 4: Deduplicate and bulk insert unit-upgrade relationships
             if unit_upgrade_links:
-                UnitUpgrade.insert_many(unit_upgrade_links).execute()
-                logger.info(f"✓ Created {len(unit_upgrade_links)} unit-upgrade relationships")
+                # Deduplicate by (unit_id, upgrade_id) pair
+                seen = set()
+                unique_links = []
+                for link in unit_upgrade_links:
+                    key = (link['unit'], link['upgrade'])
+                    if key not in seen:
+                        seen.add(key)
+                        unique_links.append(link)
+
+                logger.info(f"Deduplicating: {len(unit_upgrade_links)} -> {len(unique_links)} unique relationships")
+
+                UnitUpgrade.insert_many(unique_links).execute()
+                logger.info(f"✓ Created {len(unique_links)} unit-upgrade relationships")
             else:
                 logger.warning("No unit-upgrade relationships created")
 

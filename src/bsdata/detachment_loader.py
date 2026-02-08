@@ -112,6 +112,16 @@ class DetachmentLoader:
         """
         foc_constraints = {}
 
+        # For Solar Auxilia, FOC constraints are in nested forceEntries
+        # We need to parse those separately
+        force_name = force.get('name', '')
+
+        # If this is a parent force with nested entries, parse them
+        if 'Force Organization Chart' in force_name:
+            # This is a parent force, constraints are in nested forceEntries
+            # Return empty dict for now - will need to load nested forces separately
+            return foc_constraints
+
         # Get category links - these define which categories are available
         category_links = force.get('category_links', [])
 
@@ -120,66 +130,47 @@ class DetachmentLoader:
             if not category_name:
                 continue
 
-            # Skip non-FOC categories
-            foc_categories = ['HQ', 'Troops', 'Elites', 'Fast Attack', 'Heavy Support', 'Lord of War', 'Fortification']
-            if category_name not in foc_categories:
-                continue
-
             # Initialize with defaults
             foc_constraints[category_name] = {
                 'min': 0,
                 'max': 999,  # Effectively unlimited
             }
 
-        # Parse constraints from the force entry
+        # Parse constraints from the force entry's category links
+        # Constraints are attached to each categoryLink
+        for cat_link in category_links:
+            category_name = cat_link.get('name')
+            if not category_name or category_name not in foc_constraints:
+                continue
+
+            # Check if this category link has constraints
+            # Note: The parser doesn't extract constraints from categoryLinks
+            # We need to parse them from the raw XML when needed
+
+        # Apply constraints from the force entry level
         constraints = force.get('constraints', [])
 
-        for constraint in constraints:
-            constraint_type = constraint.get('type')
-            value = int(constraint.get('value', 0))
-            field = constraint.get('field')
-            scope = constraint.get('scope')
+        # Build a map of constraints by checking the field/scope
+        # This is complex because constraints don't directly specify which category
+        # For now, use fallback patterns
 
-            # Try to match constraint to a category
-            # This is tricky - constraints may reference category IDs
-            # For now, apply force-level constraints as defaults
-            if constraint_type == 'min' and scope == 'force':
-                # Apply to all categories as default minimum
-                pass
-            elif constraint_type == 'max' and scope == 'force':
-                # Apply to all categories as default maximum
-                pass
-
-        # Apply common FOC patterns based on detachment name
+        # Apply patterns based on detachment name for common cases
         name_lower = force.get('name', '').lower()
 
-        if 'primary' in name_lower:
-            # Primary detachment typical constraints
-            if 'HQ' in foc_constraints:
-                foc_constraints['HQ'] = {'min': 1, 'max': 2}
-            if 'Troops' in foc_constraints:
-                foc_constraints['Troops'] = {'min': 2, 'max': 6}
-            if 'Elites' in foc_constraints:
-                foc_constraints['Elites'] = {'min': 0, 'max': 3}
-            if 'Fast Attack' in foc_constraints:
-                foc_constraints['Fast Attack'] = {'min': 0, 'max': 3}
-            if 'Heavy Support' in foc_constraints:
-                foc_constraints['Heavy Support'] = {'min': 0, 'max': 3}
-            if 'Lord of War' in foc_constraints:
-                foc_constraints['Lord of War'] = {'min': 0, 'max': 1}
-
-        elif 'auxiliary' in name_lower:
-            # Auxiliary detachment typical constraints
-            if 'HQ' in foc_constraints:
-                foc_constraints['HQ'] = {'min': 0, 'max': 1}
-            if 'Troops' in foc_constraints:
-                foc_constraints['Troops'] = {'min': 1, 'max': 3}
-            if 'Elites' in foc_constraints:
-                foc_constraints['Elites'] = {'min': 0, 'max': 2}
-            if 'Fast Attack' in foc_constraints:
-                foc_constraints['Fast Attack'] = {'min': 0, 'max': 2}
-            if 'Heavy Support' in foc_constraints:
-                foc_constraints['Heavy Support'] = {'min': 0, 'max': 2}
+        # Use actual Solar Auxilia category names if present
+        if 'High Command' in foc_constraints:
+            foc_constraints['High Command']['max'] = 1
+        if 'Command' in foc_constraints:
+            foc_constraints['Command']['max'] = 3
+        if 'Troops' in foc_constraints:
+            if 'tactical support' in name_lower:
+                foc_constraints['Troops']['max'] = 2
+        if 'Support' in foc_constraints:
+            if 'tactical support' in name_lower:
+                foc_constraints['Support']['max'] = 2
+        if 'Fast Attack' in foc_constraints:
+            if 'first strike' in name_lower:
+                foc_constraints['Fast Attack']['max'] = 2
 
         return foc_constraints
 
