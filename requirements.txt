@@ -1,0 +1,24 @@
+# Solar Auxilia List Builder - Consolidated Requirements
+# This file includes all dependencies for CLI, web, and API components
+
+# Core Dependencies
+peewee>=3.17.0
+lxml>=4.9.0
+rich>=13.7.0
+click>=8.1.7
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+playwright>=1.40.0
+
+# Analytics
+pandas>=2.1.0
+mlxtend>=0.23.0
+
+# Web UI (Streamlit)
+streamlit>=1.30.0
+
+# API Backend (FastAPI)
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+python-multipart>=0.0.6
