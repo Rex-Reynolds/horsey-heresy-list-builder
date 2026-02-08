@@ -4,11 +4,13 @@ A tournament-informed army list builder for Horus Heresy 3.0 Solar Auxilia force
 
 ## Project Status
 
-**Current Phase:** Phase 2 Complete ✓ (95%) | **Next:** Phase 3 - UI Development
+**Current Phase:** Phase 3 In Progress 🚀 | **Next:** React Frontend
 
 - ✅ **Phase 1:** Tournament data scraping & analysis
 - ✅ **Phase 2:** BSData integration (weapons, upgrades, FOC validation, points calculation)
-- ⏭️ **Phase 3:** Interactive list builder UI
+- 🚧 **Phase 3A:** Streamlit MVP (✅ READY TO DEPLOY)
+- 🚧 **Phase 3B:** FastAPI Backend (✅ COMPLETE)
+- ⏭️ **Phase 3C:** React Frontend (Coming Soon)
 
 See [PHASE2_COMPLETE.md](PHASE2_COMPLETE.md) for Phase 2 implementation details.
 
@@ -60,6 +62,24 @@ playwright install chromium
 # Initialize database
 python -c "from src.models.database import initialize_database; initialize_database()"
 ```
+
+## 🌐 Web Apps (NEW!)
+
+### Streamlit App (Interactive UI)
+```bash
+cd web
+streamlit run streamlit_app.py
+```
+Visit `http://localhost:8501` for an interactive web interface!
+
+**Deploy to Streamlit Cloud in 5 minutes:** See [DEPLOYMENT.md](DEPLOYMENT.md)
+
+### FastAPI Backend (REST API)
+```bash
+cd api
+uvicorn main:app --reload
+```
+API docs at `http://localhost:8000/docs`
 
 ## Quick Start
 
