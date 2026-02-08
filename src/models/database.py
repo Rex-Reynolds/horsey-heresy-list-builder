@@ -25,7 +25,7 @@ class BaseModel(Model):
 def initialize_database():
     """Initialize the database and create all tables."""
     from src.models.tournament import Tournament, ArmyList, UnitEntry
-    from src.models.catalogue import Unit, Weapon, Upgrade
+    from src.models.catalogue import Unit, Weapon, Upgrade, UnitUpgrade, Detachment
     from src.models.roster import Roster, RosterEntry
     from src.models.collection import Collection, CollectionItem
 
@@ -37,6 +37,8 @@ def initialize_database():
         Unit,
         Weapon,
         Upgrade,
+        UnitUpgrade,
+        Detachment,
         Roster,
         RosterEntry,
         Collection,

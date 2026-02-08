@@ -7,7 +7,10 @@ from typing import Optional
 from src.bsdata.parser import BattleScribeParser
 from src.bsdata.repository import get_catalogue_path
 from src.bsdata.category_mapping import normalize_category
-from src.models import Unit, Weapon, Upgrade, db
+from src.bsdata.catalogue_cache import CatalogueCache
+from src.bsdata.upgrade_extractor import UpgradeExtractor
+from src.models import Unit, Weapon, Upgrade, UnitUpgrade, db
+from src.config import BSDATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +37,17 @@ class SolarAuxiliaCatalogue:
         # Build category mapping from entryLinks
         self.category_map = self._build_category_map()
 
+        # Initialize catalogue cache and load shared catalogues
+        self.cache = CatalogueCache(BSDATA_DIR)
+        logger.info("Loading shared catalogues...")
+        self.cache.load_shared_catalogue("Weapons")
+        self.cache.load_shared_catalogue("Wargear")
+
+        # Initialize upgrade extractor
+        self.upgrade_extractor = UpgradeExtractor(self.parser, self.cache)
+
         logger.info(f"Loaded Solar Auxilia catalogue (revision {self.catalogue_info['revision']})")
+        logger.info(f"Cache stats: {self.cache.get_cache_stats()}")
 
     def _build_category_map(self) -> dict[str, str]:
         """
@@ -144,16 +157,43 @@ class SolarAuxiliaCatalogue:
         """Load catalogue data into database."""
         logger.info("Populating database with catalogue data...")
 
-        units = self.load_all_units()
-
         with db.atomic():
-            # Clear existing catalogue data
+            # Clear existing catalogue data (in correct order for FK constraints)
+            logger.info("Clearing existing catalogue data...")
+            UnitUpgrade.delete().execute()
+            Upgrade.delete().execute()
+            Weapon.delete().execute()
             Unit.delete().execute()
-            logger.info("Cleared existing unit data")
+            logger.info("✓ Cleared existing data")
 
-            # Insert units
+            # Step 1: Populate weapons from Weapons.cat
+            logger.info("Extracting weapons from Weapons.cat...")
+            weapons = self.upgrade_extractor.extract_weapons_from_shared()
+            if weapons:
+                # Use insert_many for efficiency
+                Weapon.insert_many(weapons).execute()
+                logger.info(f"✓ Inserted {len(weapons)} weapons into database")
+            else:
+                logger.warning("No weapons extracted")
+
+            # Step 2: Populate upgrades from Wargear.cat
+            logger.info("Extracting upgrades from Wargear.cat...")
+            upgrades = self.upgrade_extractor.extract_upgrades_from_shared()
+            if upgrades:
+                Upgrade.insert_many(upgrades).execute()
+                logger.info(f"✓ Inserted {len(upgrades)} upgrades into database")
+            else:
+                logger.warning("No upgrades extracted")
+
+            # Step 3: Populate units and link to upgrades
+            logger.info("Loading units from Solar Auxilia.cat...")
+            units = self.load_all_units()
+
+            unit_upgrade_links = []
+
             for unit_data in units:
-                Unit.create(
+                # Create unit
+                unit = Unit.create(
                     bs_id=unit_data['bs_id'],
                     name=unit_data['name'],
                     unit_type=unit_data['unit_type'],
@@ -163,7 +203,56 @@ class SolarAuxiliaCatalogue:
                     constraints=json.dumps(unit_data['constraints']),
                 )
 
+                # Extract available upgrades for this unit
+                try:
+                    unit_upgrades = self.upgrade_extractor.extract_unit_upgrades(unit_data)
+
+                    for uu in unit_upgrades:
+                        # Look up upgrade by bs_id
+                        upgrade_id = uu['upgrade_id']
+
+                        # Try to find in Weapon table first
+                        weapon = Weapon.get_or_none(Weapon.bs_id == upgrade_id)
+                        if weapon:
+                            # Create a synthetic Upgrade entry for this weapon if it doesn't exist
+                            upgrade = Upgrade.get_or_none(Upgrade.bs_id == upgrade_id)
+                            if not upgrade:
+                                upgrade = Upgrade.create(
+                                    bs_id=upgrade_id,
+                                    name=uu['upgrade_name'],
+                                    cost=weapon.cost,
+                                    applicable_units=json.dumps([]),
+                                    upgrade_type='Weapon',
+                                )
+                        else:
+                            # Look up in Upgrade table
+                            upgrade = Upgrade.get_or_none(Upgrade.bs_id == upgrade_id)
+
+                        if upgrade:
+                            unit_upgrade_links.append({
+                                'unit': unit.id,
+                                'upgrade': upgrade.id,
+                                'min_quantity': uu.get('min_quantity', 0),
+                                'max_quantity': uu.get('max_quantity', 1),
+                                'group_name': uu.get('group_name'),
+                                'constraints': json.dumps(uu.get('constraints')) if uu.get('constraints') else None,
+                            })
+                        else:
+                            logger.debug(f"Upgrade not found for ID {upgrade_id}: {uu['upgrade_name']}")
+
+                except Exception as e:
+                    logger.warning(f"Failed to extract upgrades for unit '{unit_data['name']}': {e}")
+
             logger.info(f"✓ Inserted {len(units)} units into database")
+
+            # Step 4: Bulk insert unit-upgrade relationships
+            if unit_upgrade_links:
+                UnitUpgrade.insert_many(unit_upgrade_links).execute()
+                logger.info(f"✓ Created {len(unit_upgrade_links)} unit-upgrade relationships")
+            else:
+                logger.warning("No unit-upgrade relationships created")
+
+        logger.info("✓ Database population complete!")
 
     def get_unit_by_name(self, name: str) -> Optional[dict]:
         """

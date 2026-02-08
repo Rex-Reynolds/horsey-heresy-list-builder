@@ -11,7 +11,9 @@ from src.bsdata.repository import (
     get_catalogue_path
 )
 from src.bsdata.catalogue_loader import SolarAuxiliaCatalogue
-from src.models import Unit
+from src.bsdata.detachment_loader import DetachmentLoader
+from src.models import Unit, Weapon, Upgrade, UnitUpgrade, Detachment
+from src.config import BSDATA_DIR
 
 console = Console()
 
@@ -185,8 +187,6 @@ def category(category):
 @bsdata.command()
 def status():
     """Show BSData repository status."""
-    from src.config import BSDATA_DIR
-
     if not BSDATA_DIR.exists():
         console.print("[yellow]BSData repository not cloned.[/yellow]")
         console.print("\nRun: [cyan]auxilia bsdata update[/cyan]")
@@ -205,9 +205,215 @@ def status():
 
     # Check if catalogue is loaded in database
     unit_count = Unit.select().count()
+    weapon_count = Weapon.select().count()
+    upgrade_count = Upgrade.select().count()
+    unit_upgrade_count = UnitUpgrade.select().count()
 
     if unit_count > 0:
-        console.print(f"[green]✓ Database populated ({unit_count} units)[/green]")
+        console.print(f"[green]✓ Database populated:[/green]")
+        console.print(f"  - {unit_count} units")
+        console.print(f"  - {weapon_count} weapons")
+        console.print(f"  - {upgrade_count} upgrades")
+        console.print(f"  - {unit_upgrade_count} unit-upgrade links")
     else:
         console.print("[yellow]⚠ Database empty[/yellow]")
         console.print("\nRun: [cyan]auxilia bsdata load[/cyan]")
+
+
+@bsdata.command()
+@click.option('--limit', default=50, help='Maximum number of weapons to display')
+def weapons(limit):
+    """List all available weapons."""
+    weapon_count = Weapon.select().count()
+
+    if weapon_count == 0:
+        console.print("[yellow]No weapons in database. Run 'auxilia bsdata load' first.[/yellow]")
+        return
+
+    console.print(f"\n[bold cyan]Weapons ({weapon_count} total, showing {min(limit, weapon_count)})[/bold cyan]\n")
+
+    table = Table(show_header=True, header_style="bold cyan")
+    table.add_column("Name", style="white")
+    table.add_column("Range", style="yellow")
+    table.add_column("Str", style="green")
+    table.add_column("AP", style="red")
+    table.add_column("Type", style="blue")
+    table.add_column("Cost", style="magenta")
+
+    weapons_query = Weapon.select().order_by(Weapon.name).limit(limit)
+
+    for weapon in weapons_query:
+        table.add_row(
+            weapon.name,
+            weapon.range_value or "-",
+            weapon.strength or "-",
+            weapon.ap or "-",
+            weapon.weapon_type or "-",
+            str(weapon.cost) if weapon.cost else "0",
+        )
+
+    console.print(table)
+
+    if weapon_count > limit:
+        console.print(f"\n[dim]Showing {limit} of {weapon_count} weapons. Use --limit to see more.[/dim]")
+
+
+@bsdata.command()
+@click.argument('name')
+def weapon(name):
+    """Show detailed weapon profile."""
+    weapon = Weapon.get_or_none(Weapon.name == name)
+
+    if not weapon:
+        # Try partial match
+        matches = Weapon.select().where(Weapon.name.contains(name)).limit(5)
+        match_list = list(matches)
+
+        if not match_list:
+            console.print(f"[yellow]Weapon '{name}' not found.[/yellow]")
+            return
+
+        if len(match_list) == 1:
+            weapon = match_list[0]
+        else:
+            console.print(f"[yellow]Multiple weapons match '{name}':[/yellow]\n")
+            for w in match_list:
+                console.print(f"  • {w.name}")
+            console.print(f"\n[cyan]Use exact name to view details[/cyan]")
+            return
+
+    # Display weapon details
+    panel_content = []
+    panel_content.append(f"[bold]Range:[/bold] {weapon.range_value or 'N/A'}")
+    panel_content.append(f"[bold]Strength:[/bold] {weapon.strength or 'N/A'}")
+    panel_content.append(f"[bold]AP:[/bold] {weapon.ap or 'N/A'}")
+    panel_content.append(f"[bold]Type:[/bold] {weapon.weapon_type or 'N/A'}")
+    panel_content.append(f"[bold]Cost:[/bold] {weapon.cost} points")
+
+    if weapon.special_rules:
+        import json
+        try:
+            rules = json.loads(weapon.special_rules)
+            if rules:
+                panel_content.append(f"\n[bold yellow]Special Rules:[/bold yellow]")
+                for rule in rules:
+                    panel_content.append(f"  • {rule}")
+        except json.JSONDecodeError:
+            pass
+
+    panel = Panel(
+        "\n".join(panel_content),
+        title=f"[bold cyan]{weapon.name}[/bold cyan]",
+        border_style="cyan"
+    )
+
+    console.print(panel)
+
+
+@bsdata.command()
+@click.argument('unit_name')
+def upgrades(unit_name):
+    """Show available upgrades for a unit."""
+    unit = Unit.get_or_none(Unit.name == unit_name)
+
+    if not unit:
+        # Try partial match
+        matches = Unit.select().where(Unit.name.contains(unit_name)).limit(5)
+        match_list = list(matches)
+
+        if not match_list:
+            console.print(f"[yellow]Unit '{unit_name}' not found.[/yellow]")
+            return
+
+        if len(match_list) == 1:
+            unit = match_list[0]
+        else:
+            console.print(f"[yellow]Multiple units match '{unit_name}':[/yellow]\n")
+            for u in match_list:
+                console.print(f"  • {u.name}")
+            console.print(f"\n[cyan]Use exact name to view upgrades[/cyan]")
+            return
+
+    # Get available upgrades
+    unit_upgrades = (UnitUpgrade
+                     .select(UnitUpgrade, Upgrade)
+                     .join(Upgrade)
+                     .where(UnitUpgrade.unit == unit))
+
+    upgrade_list = list(unit_upgrades)
+
+    if not upgrade_list:
+        console.print(f"[yellow]No upgrades found for '{unit.name}'.[/yellow]")
+        return
+
+    console.print(f"\n[bold cyan]Available Upgrades for {unit.name}[/bold cyan]\n")
+
+    table = Table(show_header=True, header_style="bold cyan")
+    table.add_column("Upgrade", style="white")
+    table.add_column("Type", style="yellow")
+    table.add_column("Cost", style="magenta")
+    table.add_column("Qty", style="green")
+    table.add_column("Group", style="blue")
+
+    for uu in upgrade_list:
+        upgrade = uu.upgrade
+        qty_str = f"{uu.min_quantity}-{uu.max_quantity}"
+        if uu.min_quantity == uu.max_quantity:
+            qty_str = str(uu.min_quantity)
+
+        table.add_row(
+            upgrade.name,
+            upgrade.upgrade_type or "-",
+            str(upgrade.cost),
+            qty_str,
+            uu.group_name or "-",
+        )
+
+    console.print(table)
+    console.print(f"\n[dim]Total: {len(upgrade_list)} upgrade options[/dim]")
+
+
+@bsdata.command()
+def detachments():
+    """List FOC detachment types."""
+    gst_path = BSDATA_DIR / "Horus Heresy 3rd Edition.gst"
+
+    if not gst_path.exists():
+        console.print("[yellow]Game system file not found. Run 'auxilia bsdata update' first.[/yellow]")
+        return
+
+    try:
+        loader = DetachmentLoader(gst_path)
+        detachments_list = loader.load_all_detachments()
+
+        if not detachments_list:
+            console.print("[yellow]No detachments found in game system file.[/yellow]")
+            return
+
+        console.print(f"\n[bold cyan]Force Organization Charts ({len(detachments_list)})[/bold cyan]\n")
+
+        for det in detachments_list:
+            console.print(f"\n[bold]{det['name']}[/bold] ({det['detachment_type']})")
+
+            import json
+            constraints = json.loads(det['constraints'])
+
+            if constraints:
+                table = Table(show_header=True, header_style="cyan", box=None)
+                table.add_column("Category", style="white")
+                table.add_column("Min", style="green")
+                table.add_column("Max", style="yellow")
+
+                for category, limits in constraints.items():
+                    table.add_row(
+                        category,
+                        str(limits.get('min', 0)),
+                        str(limits.get('max', '-')),
+                    )
+
+                console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error loading detachments: {e}[/red]")
+        import traceback
+        traceback.print_exc()
