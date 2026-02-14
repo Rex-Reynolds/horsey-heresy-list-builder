@@ -111,11 +111,17 @@ class SolarAuxiliaCatalogue:
 
             # Get category from our mapping and normalize to FOC
             unit_id = unit_data['id']
-            bsdata_category = self.category_map.get(unit_id, "Uncategorized")
+
+            # Skip nested children (e.g. "Rapier Crew" inside "Rapier Section")
+            # Only root-level units appear in the category map
+            if unit_id not in self.category_map:
+                continue
+
+            bsdata_category = self.category_map[unit_id]
             primary_category = normalize_category(bsdata_category)
 
-            # Get base cost
-            base_cost = unit_data['costs'].get('Point(s)', 0) or unit_data['costs'].get('Points', 0)
+            # Get base cost (unit's own cost + mandatory children)
+            base_cost = self.parser.compute_base_unit_cost(entry_element)
 
             units.append({
                 'bs_id': unit_data['id'],
@@ -275,26 +281,29 @@ class SolarAuxiliaCatalogue:
         Returns:
             Unit dict with full details, or None if not found
         """
-        entry = self.parser.find_entry_by_name(name)
+        # Look up raw XML element for cost computation
+        elements = self.parser._xpath(self.parser.root, f'.//selectionEntry[@name="{name}"]')
+        if not elements:
+            return None
 
-        if entry:
-            # Use category map and normalize to FOC
-            unit_id = entry['id']
-            bsdata_category = self.category_map.get(unit_id, "Uncategorized")
-            primary_category = normalize_category(bsdata_category)
-            base_cost = entry['costs'].get('Point(s)', 0) or entry['costs'].get('Points', 0)
+        element = elements[0]
+        entry = self.parser.parse_selection_entry(element)
 
-            return {
-                'bs_id': entry['id'],
-                'name': entry['name'],
-                'unit_type': primary_category,
-                'base_cost': int(base_cost),
-                'profiles': entry['profiles'],
-                'rules': entry['rules'],
-                'constraints': entry['constraints'],
-            }
+        # Use category map and normalize to FOC
+        unit_id = entry['id']
+        bsdata_category = self.category_map.get(unit_id, "Uncategorized")
+        primary_category = normalize_category(bsdata_category)
+        base_cost = self.parser.compute_base_unit_cost(element)
 
-        return None
+        return {
+            'bs_id': entry['id'],
+            'name': entry['name'],
+            'unit_type': primary_category,
+            'base_cost': base_cost,
+            'profiles': entry['profiles'],
+            'rules': entry['rules'],
+            'constraints': entry['constraints'],
+        }
 
     def get_all_unit_names(self) -> list[str]:
         """Get list of all available unit names."""

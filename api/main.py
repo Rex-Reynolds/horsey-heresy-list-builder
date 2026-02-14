@@ -2,6 +2,9 @@
 Solar Auxilia List Builder - FastAPI Backend
 REST API for army list building with validation and meta analysis.
 """
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -12,11 +15,28 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Roster, RosterEntry
+from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Detachment, Roster, RosterEntry
 from src.bsdata.foc_validator import FOCValidator
 from src.bsdata.points_calculator import PointsCalculator
 from src.analytics.unit_popularity import calculate_unit_popularity
 import json
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    """Manage database connection lifecycle."""
+    try:
+        db.connect(reuse_if_open=True)
+        unit_count = Unit.select().count()
+        logger.info(f"Database connected: {unit_count} units loaded")
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+    yield
+    if not db.is_closed():
+        db.close()
+
 
 # Initialize FastAPI
 app = FastAPI(
@@ -24,7 +44,8 @@ app = FastAPI(
     description="REST API for Warhammer: The Horus Heresy Solar Auxilia army list building",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -35,9 +56,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize database
-db.connect(reuse_if_open=True)
 
 # Pydantic models for request/response
 class UnitResponse(BaseModel):
@@ -102,6 +120,7 @@ async def root():
         "endpoints": {
             "units": "/api/units",
             "weapons": "/api/weapons",
+            "detachments": "/api/detachments",
             "rosters": "/api/rosters",
             "meta": "/api/meta"
         }
@@ -112,8 +131,14 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     try:
-        unit_count = Unit.select().count()
-        return {"status": "healthy", "units_loaded": unit_count}
+        return {
+            "status": "healthy",
+            "database": {
+                "units": Unit.select().count(),
+                "weapons": Weapon.select().count(),
+                "upgrades": Upgrade.select().count(),
+            }
+        }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
 
@@ -314,22 +339,29 @@ async def validate_roster(roster_id: int):
         points_remaining=points_remaining
     )
 
+# ===== DETACHMENTS =====
+
+@app.get("/api/detachments")
+async def get_detachments():
+    """Get all available detachment types."""
+    detachments = Detachment.select()
+    return [{"id": d.id, "name": d.name, "type": d.detachment_type} for d in detachments]
+
 # ===== META ANALYSIS =====
 
 @app.get("/api/meta/popular-units")
 async def get_popular_units(min_appearances: int = Query(3, ge=1)):
     """Get most popular units from tournament data."""
     try:
-        popularity = calculate_unit_popularity(min_appearances=min_appearances)
+        popularity = calculate_unit_popularity(min_lists=min_appearances)
         return {"units": popularity[:20]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Meta analysis error: {str(e)}")
 
 @app.get("/api/meta/trending-units")
 async def get_trending(months: int = Query(6, ge=1, le=24)):
-    """Get trending units (coming soon - requires tournament data)."""
-    # TODO: Implement trending calculation
-    return {"units": [], "message": "Trending analysis requires tournament data. Run 'auxilia tournament update' first."}
+    """Get trending units (not yet implemented)."""
+    raise HTTPException(status_code=501, detail="Trending analysis not yet implemented")
 
 @app.get("/api/meta/stats")
 async def get_meta_stats():

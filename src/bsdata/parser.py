@@ -137,7 +137,7 @@ class BattleScribeParser:
     def _parse_costs(self, element: etree.Element) -> dict:
         """Parse cost elements."""
         costs = {}
-        cost_elements = self._xpath(element, './/cost')
+        cost_elements = self._xpath(element, './costs/cost')
 
         for cost in cost_elements:
             cost_name = cost.get('name', 'Points')
@@ -145,6 +145,36 @@ class BattleScribeParser:
             costs[cost_name] = cost_value
 
         return costs
+
+    def _get_min_constraint(self, element: etree.Element) -> int:
+        """Get the minimum selection quantity from direct constraints."""
+        constraints = self._xpath(element, './constraints/constraint')
+        for constraint in constraints:
+            if constraint.get('type') == 'min' and constraint.get('field') == 'selections':
+                return int(float(constraint.get('value', 0)))
+        return 0
+
+    def compute_base_unit_cost(self, unit_element: etree.Element) -> int:
+        """
+        Compute the base cost for a unit entry.
+
+        This is the unit's own direct cost plus the cost of all mandatory
+        child selectionEntries (child_cost × min_quantity).
+        """
+        # Unit's own direct cost
+        own_costs = self._parse_costs(unit_element)
+        total = own_costs.get('Point(s)', 0) or own_costs.get('Points', 0)
+
+        # Add mandatory child selectionEntry costs
+        child_entries = self._xpath(unit_element, './selectionEntries/selectionEntry')
+        for child in child_entries:
+            min_qty = self._get_min_constraint(child)
+            if min_qty > 0:
+                child_costs = self._parse_costs(child)
+                child_cost = child_costs.get('Point(s)', 0) or child_costs.get('Points', 0)
+                total += child_cost * min_qty
+
+        return int(total)
 
     def _parse_profiles(self, element: etree.Element) -> list[dict]:
         """Parse profile elements (unit stats, weapon stats, etc.)."""
@@ -198,7 +228,7 @@ class BattleScribeParser:
     def _parse_constraints(self, element: etree.Element) -> list[dict]:
         """Parse constraints (min/max limits)."""
         constraints = []
-        constraint_elements = self._xpath(element, './/constraint')
+        constraint_elements = self._xpath(element, './constraints/constraint')
 
         for constraint in constraint_elements:
             constraints.append({

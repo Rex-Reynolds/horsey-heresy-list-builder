@@ -12,7 +12,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Roster, RosterEntry
 from src.bsdata.foc_validator import FOCValidator
 from src.bsdata.points_calculator import PointsCalculator
+from src.bsdata.category_mapping import STANDARD_FOC_ORDER
+from src.bsdata.detachment_loader import DetachmentLoader
 from src.analytics.unit_popularity import calculate_unit_popularity
+from src.config import BSDATA_DIR
 import json
 
 # Page config
@@ -24,7 +27,22 @@ st.set_page_config(
 )
 
 # Initialize database connection
-db.connect(reuse_if_open=True)
+try:
+    db.connect(reuse_if_open=True)
+except Exception:
+    st.error("Database not found. Run `auxilia bsdata load` to initialize.")
+    st.stop()
+
+
+# Load detachment names dynamically from .gst file
+@st.cache_data
+def load_detachment_names():
+    gst_path = BSDATA_DIR / "Horus Heresy 3rd Edition.gst"
+    loader = DetachmentLoader(gst_path)
+    return loader.get_detachment_names()
+
+
+DETACHMENT_NAMES = load_detachment_names()
 
 # Custom CSS
 st.markdown("""
@@ -74,12 +92,7 @@ with st.sidebar:
     # Create/Load Roster
     roster_name = st.text_input("Roster Name", value="My Solar Auxilia Force")
     points_limit = st.selectbox("Points Limit", [1000, 1500, 2000, 2500, 3000, 3500, 4000], index=4)
-    detachment_type = st.selectbox("Detachment", [
-        "Crusade Force Organization Chart",
-        "Crusade Primary Detachment",
-        "Auxiliary - Tactical Support",
-        "Auxiliary - First Strike",
-    ])
+    detachment_type = st.selectbox("Detachment", DETACHMENT_NAMES)
 
     if st.button("New Roster"):
         # Create new roster
@@ -157,7 +170,7 @@ with tab1:
 
     with col1:
         # Category filter
-        categories = ["All"] + ["HQ", "Troops", "Elites", "Fast Attack", "Heavy Support", "Lord of War"]
+        categories = ["All"] + [c for c in STANDARD_FOC_ORDER if c != "Special"]
         selected_category = st.selectbox("Category", categories)
 
         # Search
@@ -192,7 +205,7 @@ with tab1:
                                 char_cols = st.columns(4)
                                 for i, (key, value) in enumerate(profile['characteristics'].items()):
                                     char_cols[i % 4].metric(key, value)
-                except:
+                except Exception:
                     pass
 
                 # Show available upgrades
@@ -278,7 +291,7 @@ with tab3:
         # Unit popularity
         st.subheader("🔥 Most Popular Units")
 
-        popularity = calculate_unit_popularity(min_appearances=3)
+        popularity = calculate_unit_popularity(min_lists=3)
 
         if popularity:
             # Show top 10
