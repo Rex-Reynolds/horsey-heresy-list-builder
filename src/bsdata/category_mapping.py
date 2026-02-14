@@ -28,14 +28,14 @@ CATEGORY_TO_FOC = {
     "Heavy Assault": "Heavy Support",
     "Support": "Heavy Support",
     "Armour": "Heavy Support",
+    "War-engine": "Heavy Support",  # Walkers (Aethon Heavy Sentinel), NOT Lord of War
 
-    # Transports (often Heavy Support in Solar Auxilia)
-    "Transport": "Heavy Support",
-    "Heavy Transport": "Heavy Support",
+    # Dedicated Transport
+    "Transport": "Dedicated Transport",
+    "Heavy Transport": "Dedicated Transport",
 
     # Lord of War
     "Lord of War": "Lord of War",
-    "War-engine": "Lord of War",
 
     # Special categories
     "Allegiance": "Special",
@@ -51,6 +51,7 @@ STANDARD_FOC_ORDER = [
     "Elites",
     "Fast Attack",
     "Heavy Support",
+    "Dedicated Transport",
     "Lord of War",
     "Special",
 ]

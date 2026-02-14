@@ -1,4 +1,6 @@
 """BSData catalogue models."""
+import json
+
 from peewee import CharField, IntegerField, TextField, ForeignKeyField, CompositeKey
 from src.models.database import BaseModel
 
@@ -8,7 +10,8 @@ class Unit(BaseModel):
 
     bs_id = CharField(unique=True, index=True)  # BattleScribe UUID
     name = CharField(index=True)
-    unit_type = CharField(index=True)  # HQ, Troops, Elites, Fast Attack, Heavy Support
+    unit_type = CharField(index=True)  # Normalized FOC: HQ, Troops, Elites, etc.
+    bsdata_category = CharField(null=True, index=True)  # Original BSData category name
     base_cost = IntegerField()
     profiles = TextField()  # JSON: model stats (WS, BS, S, T, W, I, A, LD, SAV, INV)
     rules = TextField(null=True)  # JSON: special rules
@@ -62,5 +65,8 @@ class Detachment(BaseModel):
 
     bs_id = CharField(unique=True, index=True)
     name = CharField(index=True)  # "Crusade Primary Detachment"
-    detachment_type = CharField()  # "Primary", "Auxiliary"
-    constraints = TextField()  # JSON: {HQ: {min: 1, max: 2}, Troops: {min: 2, max: 6}, ...}
+    detachment_type = CharField()  # "Primary", "Auxiliary", "Apex"
+    parent_id = CharField(null=True)  # bs_id of parent (for sub-detachments)
+    constraints = TextField()  # JSON: {slot_name: {min, max}}
+    unit_restrictions = TextField(null=True)  # JSON: {slot_name: [allowed unit name patterns]}
+    faction = CharField(null=True, index=True)  # "Solar Auxilia", null = generic

@@ -9,7 +9,8 @@ from src.bsdata.repository import get_catalogue_path
 from src.bsdata.category_mapping import normalize_category
 from src.bsdata.catalogue_cache import CatalogueCache
 from src.bsdata.upgrade_extractor import UpgradeExtractor
-from src.models import Unit, Weapon, Upgrade, UnitUpgrade, db
+from src.bsdata.detachment_loader import DetachmentLoader
+from src.models import Unit, Weapon, Upgrade, UnitUpgrade, Detachment, db
 from src.config import BSDATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -95,7 +96,8 @@ class SolarAuxiliaCatalogue:
         Load all units from the catalogue.
 
         Returns:
-            List of unit dicts with full details
+            List of unit dicts with full details. Each dict includes an '_element'
+            key with the raw XML element for upgrade extraction.
         """
         logger.info("Loading all units from catalogue...")
 
@@ -127,12 +129,14 @@ class SolarAuxiliaCatalogue:
                 'bs_id': unit_data['id'],
                 'name': unit_data['name'],
                 'unit_type': primary_category,
+                'bsdata_category': bsdata_category,
                 'base_cost': int(base_cost),
                 'profiles': unit_data['profiles'],
                 'rules': unit_data['rules'],
                 'constraints': unit_data['constraints'],
                 'entry_links': unit_data['entry_links'],
                 'selection_entry_groups': unit_data['selection_entry_groups'],
+                '_element': entry_element,  # Raw XML for upgrade extraction
             })
 
         logger.info(f"Loaded {len(units)} units")
@@ -170,15 +174,15 @@ class SolarAuxiliaCatalogue:
             Upgrade.delete().execute()
             Weapon.delete().execute()
             Unit.delete().execute()
-            logger.info("✓ Cleared existing data")
+            Detachment.delete().execute()
+            logger.info("Cleared existing data")
 
             # Step 1: Populate weapons from Weapons.cat
             logger.info("Extracting weapons from Weapons.cat...")
             weapons = self.upgrade_extractor.extract_weapons_from_shared()
             if weapons:
-                # Use insert_many for efficiency
                 Weapon.insert_many(weapons).execute()
-                logger.info(f"✓ Inserted {len(weapons)} weapons into database")
+                logger.info(f"Inserted {len(weapons)} weapons into database")
             else:
                 logger.warning("No weapons extracted")
 
@@ -187,52 +191,67 @@ class SolarAuxiliaCatalogue:
             upgrades = self.upgrade_extractor.extract_upgrades_from_shared()
             if upgrades:
                 Upgrade.insert_many(upgrades).execute()
-                logger.info(f"✓ Inserted {len(upgrades)} upgrades into database")
+                logger.info(f"Inserted {len(upgrades)} upgrades into database")
             else:
                 logger.warning("No upgrades extracted")
 
-            # Step 3: Populate units and link to upgrades
+            # Step 3: Populate units and link to upgrades using XML-based extraction
             logger.info("Loading units from Solar Auxilia.cat...")
             units = self.load_all_units()
 
             unit_upgrade_links = []
+            inline_upgrade_count = 0
 
             for unit_data in units:
-                # Create unit
+                # Create unit record
                 unit = Unit.create(
                     bs_id=unit_data['bs_id'],
                     name=unit_data['name'],
                     unit_type=unit_data['unit_type'],
+                    bsdata_category=unit_data['bsdata_category'],
                     base_cost=unit_data['base_cost'],
                     profiles=json.dumps(unit_data['profiles']),
                     rules=json.dumps(unit_data['rules']),
                     constraints=json.dumps(unit_data['constraints']),
                 )
 
-                # Extract available upgrades for this unit
+                # Extract upgrades from raw XML element (new comprehensive approach)
                 try:
-                    unit_upgrades = self.upgrade_extractor.extract_unit_upgrades(unit_data)
+                    xml_element = unit_data['_element']
+                    unit_upgrades = self.upgrade_extractor.extract_all_unit_upgrades(xml_element)
 
                     for uu in unit_upgrades:
-                        # Look up upgrade by bs_id
                         upgrade_id = uu['upgrade_id']
 
-                        # Try to find in Weapon table first
-                        weapon = Weapon.get_or_none(Weapon.bs_id == upgrade_id)
-                        if weapon:
-                            # Create a synthetic Upgrade entry for this weapon if it doesn't exist
+                        if uu.get('is_inline') and uu.get('inline_data'):
+                            # Create inline Upgrade record that doesn't exist in shared cache
+                            inline_data = uu['inline_data']
                             upgrade = Upgrade.get_or_none(Upgrade.bs_id == upgrade_id)
                             if not upgrade:
                                 upgrade = Upgrade.create(
-                                    bs_id=upgrade_id,
-                                    name=uu['upgrade_name'],
-                                    cost=weapon.cost,
-                                    applicable_units=json.dumps([]),
-                                    upgrade_type='Weapon',
+                                    bs_id=inline_data['bs_id'],
+                                    name=inline_data['name'],
+                                    cost=inline_data['cost'],
+                                    applicable_units=inline_data['applicable_units'],
+                                    upgrade_type=inline_data['upgrade_type'],
+                                    upgrade_group=inline_data.get('upgrade_group'),
+                                    constraints=inline_data.get('constraints'),
                                 )
+                                inline_upgrade_count += 1
                         else:
-                            # Look up in Upgrade table
+                            # Look up in Weapon table first, then Upgrade table
                             upgrade = Upgrade.get_or_none(Upgrade.bs_id == upgrade_id)
+                            if not upgrade:
+                                weapon = Weapon.get_or_none(Weapon.bs_id == upgrade_id)
+                                if weapon:
+                                    # Create synthetic Upgrade for this weapon
+                                    upgrade = Upgrade.create(
+                                        bs_id=upgrade_id,
+                                        name=uu['upgrade_name'],
+                                        cost=weapon.cost,
+                                        applicable_units=json.dumps([]),
+                                        upgrade_type='Weapon',
+                                    )
 
                         if upgrade:
                             unit_upgrade_links.append({
@@ -241,7 +260,7 @@ class SolarAuxiliaCatalogue:
                                 'min_quantity': uu.get('min_quantity', 0),
                                 'max_quantity': uu.get('max_quantity', 1),
                                 'group_name': uu.get('group_name'),
-                                'constraints': json.dumps(uu.get('constraints')) if uu.get('constraints') else None,
+                                'constraints': None,
                             })
                         else:
                             logger.debug(f"Upgrade not found for ID {upgrade_id}: {uu['upgrade_name']}")
@@ -249,11 +268,12 @@ class SolarAuxiliaCatalogue:
                 except Exception as e:
                     logger.warning(f"Failed to extract upgrades for unit '{unit_data['name']}': {e}")
 
-            logger.info(f"✓ Inserted {len(units)} units into database")
+            logger.info(f"Inserted {len(units)} units into database")
+            if inline_upgrade_count:
+                logger.info(f"Created {inline_upgrade_count} inline upgrade records")
 
             # Step 4: Deduplicate and bulk insert unit-upgrade relationships
             if unit_upgrade_links:
-                # Deduplicate by (unit_id, upgrade_id) pair
                 seen = set()
                 unique_links = []
                 for link in unit_upgrade_links:
@@ -265,11 +285,25 @@ class SolarAuxiliaCatalogue:
                 logger.info(f"Deduplicating: {len(unit_upgrade_links)} -> {len(unique_links)} unique relationships")
 
                 UnitUpgrade.insert_many(unique_links).execute()
-                logger.info(f"✓ Created {len(unique_links)} unit-upgrade relationships")
+                logger.info(f"Created {len(unique_links)} unit-upgrade relationships")
             else:
                 logger.warning("No unit-upgrade relationships created")
 
-        logger.info("✓ Database population complete!")
+            # Step 5: Populate detachments
+            logger.info("Loading detachments from .gst file...")
+            try:
+                gst_path = BSDATA_DIR / "Horus Heresy 3rd Edition.gst"
+                det_loader = DetachmentLoader(gst_path)
+                detachments = det_loader.load_all_detachments()
+                if detachments:
+                    Detachment.insert_many(detachments).execute()
+                    logger.info(f"Inserted {len(detachments)} detachments into database")
+                else:
+                    logger.warning("No detachments extracted")
+            except Exception as e:
+                logger.warning(f"Failed to load detachments: {e}")
+
+        logger.info("Database population complete!")
 
     def get_unit_by_name(self, name: str) -> Optional[dict]:
         """
@@ -299,6 +333,7 @@ class SolarAuxiliaCatalogue:
             'bs_id': entry['id'],
             'name': entry['name'],
             'unit_type': primary_category,
+            'bsdata_category': bsdata_category,
             'base_cost': base_cost,
             'profiles': entry['profiles'],
             'rules': entry['rules'],
@@ -343,7 +378,6 @@ class SolarAuxiliaCatalogue:
         unit = self.get_unit_by_name(unit_name)
 
         if unit and unit['profiles']:
-            # Return first profile's characteristics
             first_profile = unit['profiles'][0]
             return first_profile.get('characteristics', {})
 

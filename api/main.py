@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Detachment, Roster, RosterEntry
 from src.bsdata.foc_validator import FOCValidator
 from src.bsdata.points_calculator import PointsCalculator
+from src.bsdata.detachment_loader import DetachmentLoader
 from src.analytics.unit_popularity import calculate_unit_popularity
 import json
 
@@ -63,6 +64,7 @@ class UnitResponse(BaseModel):
     bs_id: str
     name: str
     unit_type: str
+    bsdata_category: Optional[str] = None
     base_cost: int
     profiles: Optional[str]
     rules: Optional[str]
@@ -92,6 +94,10 @@ class RosterCreate(BaseModel):
 class RosterEntryCreate(BaseModel):
     unit_id: int
     quantity: int
+    upgrades: Optional[List[Dict[str, Any]]] = None
+
+class RosterEntryUpdate(BaseModel):
+    quantity: Optional[int] = None
     upgrades: Optional[List[Dict[str, Any]]] = None
 
 class RosterResponse(BaseModel):
@@ -168,6 +174,7 @@ async def get_units(
             bs_id=unit.bs_id,
             name=unit.name,
             unit_type=unit.unit_type,
+            bsdata_category=unit.bsdata_category,
             base_cost=unit.base_cost,
             profiles=unit.profiles,
             rules=unit.rules
@@ -185,6 +192,7 @@ async def get_unit(unit_id: int):
             bs_id=unit.bs_id,
             name=unit.name,
             unit_type=unit.unit_type,
+            bsdata_category=unit.bsdata_category,
             base_cost=unit.base_cost,
             profiles=unit.profiles,
             rules=unit.rules
@@ -317,6 +325,75 @@ async def add_roster_entry(roster_id: int, entry: RosterEntryCreate):
 
     return {"id": roster_entry.id, "total_cost": total_cost}
 
+@app.delete("/api/rosters/{roster_id}/entries/{entry_id}")
+async def delete_roster_entry(roster_id: int, entry_id: int):
+    """Remove a unit from a roster."""
+    try:
+        roster = Roster.get_by_id(roster_id)
+    except Roster.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Roster not found")
+
+    try:
+        entry = RosterEntry.get(
+            (RosterEntry.id == entry_id) & (RosterEntry.roster == roster)
+        )
+    except RosterEntry.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    entry.delete_instance()
+    roster.calculate_total_points()
+    return {"ok": True}
+
+@app.patch("/api/rosters/{roster_id}/entries/{entry_id}")
+async def update_roster_entry(roster_id: int, entry_id: int, update: RosterEntryUpdate):
+    """Update a roster entry (quantity or upgrades)."""
+    try:
+        roster = Roster.get_by_id(roster_id)
+    except Roster.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Roster not found")
+
+    try:
+        entry = RosterEntry.get(
+            (RosterEntry.id == entry_id) & (RosterEntry.roster == roster)
+        )
+    except RosterEntry.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    if update.quantity is not None:
+        entry.quantity = update.quantity
+
+    if update.upgrades is not None:
+        entry.upgrades = json.dumps(update.upgrades) if update.upgrades else None
+
+    # Recalculate cost
+    unit = entry.unit
+    upgrades = json.loads(entry.upgrades) if entry.upgrades else []
+    unit_cost = PointsCalculator.calculate_unit_cost(unit, upgrades)
+    entry.total_cost = unit_cost * entry.quantity
+    entry.save()
+
+    roster.calculate_total_points()
+    return {"id": entry.id, "total_cost": entry.total_cost, "quantity": entry.quantity}
+
+@app.get("/api/rosters/{roster_id}/entries")
+async def get_roster_entries(roster_id: int):
+    """Get all entries for a roster."""
+    try:
+        roster = Roster.get_by_id(roster_id)
+    except Roster.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Roster not found")
+
+    entries = RosterEntry.select().where(RosterEntry.roster == roster)
+    return [{
+        "id": e.id,
+        "unit_id": e.unit_id,
+        "unit_name": e.unit_name,
+        "quantity": e.quantity,
+        "upgrades": json.loads(e.upgrades) if e.upgrades else [],
+        "total_cost": e.total_cost,
+        "category": e.category,
+    } for e in entries]
+
 @app.post("/api/rosters/{roster_id}/validate", response_model=ValidationResponse)
 async def validate_roster(roster_id: int):
     """Validate a roster against FOC rules."""
@@ -342,10 +419,50 @@ async def validate_roster(roster_id: int):
 # ===== DETACHMENTS =====
 
 @app.get("/api/detachments")
-async def get_detachments():
+async def get_detachments(
+    faction: Optional[str] = Query(None, description="Filter by faction"),
+    detachment_type: Optional[str] = Query(None, description="Filter by type (Primary, Auxiliary, Apex)"),
+):
     """Get all available detachment types."""
-    detachments = Detachment.select()
-    return [{"id": d.id, "name": d.name, "type": d.detachment_type} for d in detachments]
+    query = Detachment.select()
+
+    if faction:
+        # Include generic (faction=null) + faction-specific
+        query = query.where(
+            (Detachment.faction == faction) | (Detachment.faction.is_null())
+        )
+    if detachment_type:
+        query = query.where(Detachment.detachment_type == detachment_type)
+
+    detachments = list(query)
+    if detachments:
+        return [{
+            "id": d.id,
+            "bs_id": d.bs_id,
+            "name": d.name,
+            "type": d.detachment_type,
+            "faction": d.faction,
+            "constraints": json.loads(d.constraints) if d.constraints else {},
+            "unit_restrictions": json.loads(d.unit_restrictions) if d.unit_restrictions else {},
+        } for d in detachments]
+
+    # Fallback: load from .gst file when DB is empty
+    gst_path = Path(__file__).parent.parent / "data" / "bsdata" / "Horus Heresy 3rd Edition.gst"
+    try:
+        loader = DetachmentLoader(gst_path)
+        loaded = loader.load_all_detachments()
+        return [{
+            "id": i + 1,
+            "bs_id": d["bs_id"],
+            "name": d["name"],
+            "type": d["detachment_type"],
+            "faction": d.get("faction"),
+            "constraints": json.loads(d["constraints"]) if d["constraints"] else {},
+            "unit_restrictions": json.loads(d["unit_restrictions"]) if d.get("unit_restrictions") else {},
+        } for i, d in enumerate(loaded)]
+    except Exception as e:
+        logger.error(f"Failed to load detachments from .gst: {e}")
+        return []
 
 # ===== META ANALYSIS =====
 

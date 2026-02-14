@@ -44,4 +44,25 @@ def initialize_database():
         Collection,
         CollectionItem,
     ], safe=True)
+
+    # Migrate: add new columns if they don't exist (SQLite ALTER TABLE)
+    _migrate_add_columns(db)
+
     db.close()
+
+
+def _migrate_add_columns(database):
+    """Add new columns to existing tables (safe for repeated runs)."""
+    migrations = [
+        ("unit", "bsdata_category", "VARCHAR(255)"),
+        ("detachment", "parent_id", "VARCHAR(255)"),
+        ("detachment", "unit_restrictions", "TEXT"),
+        ("detachment", "faction", "VARCHAR(255)"),
+    ]
+
+    for table, column, col_type in migrations:
+        try:
+            database.execute_sql(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+        except Exception:
+            # Column already exists
+            pass
