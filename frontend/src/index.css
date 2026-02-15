@@ -452,13 +452,17 @@ body::before {
 
 .data-readout td {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.88rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--color-text-primary);
-  padding: 7px 10px;
+  padding: 8px 10px;
   text-align: center;
   border-bottom: 1px solid rgba(36, 42, 48, 0.5);
   position: relative;
+}
+
+.stat-inv-header {
+  color: var(--color-gold-400);
 }
 
 .data-readout td:nth-child(even) {

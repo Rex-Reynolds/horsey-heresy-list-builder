@@ -20,9 +20,12 @@ export default function AppHeader() {
       {/* Top accent — ornate bronze line */}
       <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-500/50 to-transparent" />
 
-      <div className="flex items-center px-5 py-3.5 lg:px-7 lg:py-4">
-        <div className="flex items-center gap-4">
-          <AquilaEmblem className="hidden w-12 text-gold-500/40 sm:block" />
+      <div className="flex items-center justify-between px-5 py-3 lg:px-7 lg:py-3.5">
+        <div className="flex items-center gap-3.5">
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-sm border border-gold-600/25 bg-gold-900/15 sm:h-10 sm:w-10">
+            <AquilaEmblem className="w-7 text-gold-500/60 sm:w-8" />
+            <div className="absolute inset-0 rounded-sm ring-1 ring-inset ring-gold-500/10" />
+          </div>
           <div>
             <h1 className="text-imperial text-base leading-tight tracking-[0.14em] lg:text-[17px]">
               Solar Auxilia
@@ -31,6 +34,15 @@ export default function AppHeader() {
               Regimental Dataslate
             </p>
           </div>
+        </div>
+
+        {/* Status indicator — subtle terminal feel */}
+        <div className="hidden items-center gap-3 sm:flex">
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-valid/60 shadow-[0_0_4px_rgba(56,178,96,0.4)]" />
+            <span className="font-label text-[9px] font-semibold tracking-[0.2em] text-text-dim/60 uppercase">Online</span>
+          </div>
+          <span className="font-data text-[10px] tabular-nums text-text-dim/40">HH3.SA</span>
         </div>
       </div>
 

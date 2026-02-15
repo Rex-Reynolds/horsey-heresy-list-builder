@@ -242,11 +242,11 @@ export default function DetachmentPickerModal({
                             </div>
                           </div>
                           {visibleSlots.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
+                            <div className="mt-2.5 flex flex-wrap gap-2">
                               {visibleSlots.map(([slot, c]) => (
                                 <span
                                   key={slot}
-                                  className={`inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-[10px] ${
+                                  className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[11px] ${
                                     isDisabled
                                       ? 'border-edge-700/15 bg-plate-800/30 text-text-dim/40'
                                       : 'border-edge-600/25 bg-plate-700/40 text-text-secondary'
@@ -259,7 +259,7 @@ export default function DetachmentPickerModal({
                                 </span>
                               ))}
                               {remaining > 0 && (
-                                <span className="px-1.5 py-0.5 text-[10px] text-text-dim/40">
+                                <span className="px-2 py-1 text-[11px] text-text-dim/40">
                                   +{remaining} more
                                 </span>
                               )}

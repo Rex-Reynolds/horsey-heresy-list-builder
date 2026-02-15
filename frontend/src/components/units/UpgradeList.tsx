@@ -254,18 +254,20 @@ function UpgradeCard({
         <CheckIndicator checked={isSelected} />
       )}
       <div className="flex-1 min-w-0">
-        <span className={`text-[13px] font-medium ${isSelected ? 'text-text-primary' : 'text-text-secondary'}`}>
-          {upgrade.name}
-        </span>
-        {upgrade.upgrade_type && (
-          <span className={`ml-2 font-label rounded-sm border px-1.5 py-px text-[9px] font-semibold tracking-wider uppercase ${
-            isSelected
-              ? 'border-gold-600/20 bg-gold-900/15 text-gold-400/70'
-              : 'border-edge-600/20 bg-plate-700/30 text-text-dim/60'
-          }`}>
-            {upgrade.upgrade_type}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className={`text-[13px] font-medium leading-snug ${isSelected ? 'text-text-primary' : 'text-text-secondary'}`}>
+            {upgrade.name}
           </span>
-        )}
+          {upgrade.upgrade_type && (
+            <span className={`font-label rounded-sm border px-1.5 py-px text-[9px] font-semibold tracking-wider uppercase ${
+              isSelected
+                ? 'border-gold-600/20 bg-gold-900/15 text-gold-400/70'
+                : 'border-edge-600/20 bg-plate-700/30 text-text-dim/60'
+            }`}>
+              {upgrade.upgrade_type}
+            </span>
+          )}
+        </div>
       </div>
       {upgrade.cost > 0 && (
         <div className="flex flex-col items-end shrink-0">

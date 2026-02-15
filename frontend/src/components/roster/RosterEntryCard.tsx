@@ -38,7 +38,12 @@ export default function RosterEntryCard({ entry, onRemove, onUpdateQty, isNew }:
         <p className="truncate text-[13px] font-medium text-text-primary">{entry.name}</p>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="font-data text-xs font-medium tabular-nums text-gold-500/80">{entry.totalCost} pts</span>
-          {entry.quantity > 1 && (
+          {entry.upgradeCost > 0 && (
+            <span className="font-data text-[10px] tabular-nums text-text-dim/60">
+              ({entry.baseCost * entry.quantity} + {entry.upgradeCost * entry.quantity} upg)
+            </span>
+          )}
+          {entry.upgradeCost === 0 && entry.quantity > 1 && (
             <span className="font-data text-[10px] tabular-nums text-text-dim">({perModel}/model)</span>
           )}
         </div>

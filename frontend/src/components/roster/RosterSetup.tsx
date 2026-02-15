@@ -59,8 +59,31 @@ export default function RosterSetup() {
   }
 
   return (
-    <div className="flex h-full flex-col items-center justify-center p-8">
-      <div className="imperial-frame imperial-frame-animated relative w-full max-w-sm bg-plate-900/60 p-8">
+    <div className="relative flex h-full flex-col items-center justify-center p-8 overflow-hidden">
+      {/* Atmospheric background — radial glow + chevron pattern */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(130,102,36,0.08)_0%,transparent_70%)]" />
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 40px,
+            rgba(180,143,60,0.3) 40px,
+            rgba(180,143,60,0.3) 41px
+          )`,
+        }} />
+        <div className="absolute inset-0 opacity-[0.02]" style={{
+          backgroundImage: `repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 40px,
+            rgba(180,143,60,0.3) 40px,
+            rgba(180,143,60,0.3) 41px
+          )`,
+        }} />
+      </div>
+
+      <div className="imperial-frame imperial-frame-animated relative w-full max-w-sm bg-plate-900/80 p-8 shadow-[0_0_80px_rgba(130,102,36,0.06)]">
         {/* Inner corner ornaments */}
         <div className="imperial-frame-inner imperial-frame-inner-animated pointer-events-none absolute inset-0" />
 
@@ -69,7 +92,7 @@ export default function RosterSetup() {
           {/* Emblem */}
           <div className="text-center">
             <AnimatedAquila />
-            <h2 className="text-imperial text-base tracking-[0.14em]">New Roster</h2>
+            <h2 className="text-imperial text-lg tracking-[0.14em]">New Roster</h2>
             <p className="mt-1.5 text-xs text-text-dim">Configure your force allocation</p>
           </div>
 

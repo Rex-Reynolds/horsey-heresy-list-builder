@@ -39,7 +39,10 @@ export default function CategoryFilter({ selected, onChange, counts }: Props) {
               </span>
             )}
             {active && (
-              <span className={`absolute bottom-0 left-1/2 h-[2px] w-3/5 -translate-x-1/2 rounded-t-full ${colors.dot} opacity-60`} />
+              <>
+                <span className={`absolute bottom-0 left-1/2 h-[2px] w-4/5 -translate-x-1/2 rounded-t-full ${colors.dot} opacity-70`} />
+                <span className={`absolute bottom-0 left-1/2 h-[4px] w-2/5 -translate-x-1/2 blur-[3px] ${colors.dot} opacity-30`} />
+              </>
             )}
           </button>
         );
