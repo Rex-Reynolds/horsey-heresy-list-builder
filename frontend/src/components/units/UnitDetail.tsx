@@ -16,8 +16,8 @@ interface Props {
 
 export default function UnitDetail({ unit }: Props) {
   const { data: upgradeData, isLoading: upgradesLoading } = useUnitUpgrades(unit.id);
-  const groups = upgradeData?.groups ?? [];
-  const ungrouped = upgradeData?.ungrouped ?? [];
+  const groups = useMemo(() => upgradeData?.groups ?? [], [upgradeData?.groups]);
+  const ungrouped = useMemo(() => upgradeData?.ungrouped ?? [], [upgradeData?.ungrouped]);
 
   const [selectedUpgrades, setSelectedUpgrades] = useState<Set<number>>(new Set());
   const { rosterId, addEntry, addDetachment, syncFromResponse } = useRosterStore();
