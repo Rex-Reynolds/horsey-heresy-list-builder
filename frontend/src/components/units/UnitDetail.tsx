@@ -333,8 +333,8 @@ export default function UnitDetail({ unit }: Props) {
         <p className="text-[13px] text-danger">{addError}</p>
       )}
 
-      {/* Add footer */}
-      <div ref={footerRef} className="flex items-center justify-between border-t border-edge-700/30 pt-3">
+      {/* Floating add footer — sticky at bottom of expanded area */}
+      <div ref={footerRef} className="floating-add-footer flex items-center justify-between">
         <div>
           <span className="font-data text-base font-medium tabular-nums text-gold-300">
             {totalCost}

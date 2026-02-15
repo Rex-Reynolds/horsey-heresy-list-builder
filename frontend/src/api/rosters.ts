@@ -111,8 +111,16 @@ export function useSetDoctrine(rosterId: number | null) {
   });
 }
 
+export interface DoctrineInfo {
+  id: string;
+  name: string;
+  tercio?: string;
+  effect?: string;
+  flavour?: string;
+}
+
 export function useDoctrines() {
-  return useQuery<Array<{ id: string; name: string }>>({
+  return useQuery<DoctrineInfo[]>({
     queryKey: ['doctrines'],
     queryFn: async () => {
       const { data } = await client.get('/api/doctrines');

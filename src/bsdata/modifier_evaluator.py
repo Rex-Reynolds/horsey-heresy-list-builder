@@ -225,9 +225,47 @@ class ModifierEvaluator:
         return total
 
 
+DOCTRINE_DESCRIPTIONS = {
+    "f2be-abfe-311c-afe2": {
+        "tercio": "Veletaris Tercio",
+        "effect": "Veletaris Tercio slot caps scale with Tercio Unlock count and auxiliary cost is halved.",
+        "flavour": "Elite shock infantry doctrine — Veletaris storm sections form the cohort's spearhead.",
+    },
+    "1241-4ccd-80b8-8ff2": {
+        "tercio": "Infantry Tercio",
+        "effect": "Infantry Tercio slot caps scale with Tercio Unlock count and auxiliary cost is halved.",
+        "flavour": "Massed infantry doctrine — Lasrifle sections advance in overwhelming numbers.",
+    },
+    "7f98-e8eb-f86e-180d": {
+        "tercio": "Scout Tercio",
+        "effect": "Scout Tercio slot caps scale with Tercio Unlock count and auxiliary cost is halved.",
+        "flavour": "Reconnaissance doctrine — Sentinel squadrons and outriders secure forward positions.",
+    },
+    "1d7a-eb2d-5d0f-0fa4": {
+        "tercio": "Armour Tercio",
+        "effect": "Armour Tercio slot caps scale with Tercio Unlock count and auxiliary cost is halved.",
+        "flavour": "Armoured warfare doctrine — Leman Russ and Malcador squadrons lead the assault.",
+    },
+    "c9ef-b204-e951-6b7e": {
+        "tercio": "Artillery Tercio",
+        "effect": "Artillery Tercio slot caps scale with Tercio Unlock count and auxiliary cost is halved.",
+        "flavour": "Siege doctrine — massed artillery batteries reduce fortifications to rubble.",
+    },
+    "28ba-8660-5266-8674": {
+        "tercio": "Iron Tercio",
+        "effect": "Iron Tercio slot caps increase and auxiliary cost is halved.",
+        "flavour": "Mechanicum alliance doctrine — Cybernetica cohorts bolster the battleline.",
+    },
+}
+
+
 def get_available_doctrines() -> list[dict]:
     """Return the list of available Cohort Doctrines for UI selection."""
     return [
-        {'id': cat_id, 'name': name}
+        {
+            'id': cat_id,
+            'name': name,
+            **DOCTRINE_DESCRIPTIONS.get(cat_id, {}),
+        }
         for cat_id, name in COHORT_DOCTRINES.items()
     ]

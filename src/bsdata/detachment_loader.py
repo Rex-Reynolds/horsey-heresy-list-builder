@@ -43,6 +43,22 @@ GENERIC_DETACHMENT_KEYWORDS = [
 # Categories to skip (locked "Prime" variants, etc.)
 SKIP_CATEGORY_PREFIXES = ["Prime ", "Officer of the Line"]
 
+# Slot name prefixes to exclude — faction-specific slots irrelevant to Solar Auxilia
+NON_SA_SLOT_PREFIXES = [
+    "EotL",           # "Enemies of the Line" — per-legion slots
+    "Rewards of Treachery",  # Blackshields only
+    "Clade Operative",       # Mechanicum/Assassin
+    "Cult Operative",        # Ruinstorm
+    "Legiones Thallaxes",    # Mechanicum
+    "Lord of Automata",      # Mechanicum
+    "Master of Automata",    # Mechanicum
+    "Transport - Logisticae",   # Logisticae sub-faction only
+    "Heavy Transport - Logisticae",  # Logisticae sub-faction only
+    "Command - Centurions Only",     # Blackshields
+    "Recon - Land Raider Explorator Only",  # Specific legion character
+    "War-engine - Upgraded by The Iron-clad",  # Iron Hands character
+]
+
 # Cost type IDs from BSData
 COST_TYPE_AUXILIARY = "3e8e-05ee-be52-12d6"
 COST_TYPE_APEX = "159d-855c-533d-f592"
@@ -336,6 +352,24 @@ class DetachmentLoader:
 
         return None  # Generic
 
+    def _is_faction_gated_to_non_sa(self, element) -> bool:
+        """Check if element has modifiers conditioned on a specific non-SA primary catalogue.
+
+        BSData uses instanceOf conditions on primary-catalogue to gate slots to specific
+        factions (e.g., Blackshields). If any such condition references a catalogue that
+        isn't Solar Auxilia, this slot shouldn't appear for SA rosters.
+        """
+        modifiers = self.parser._xpath(element, './modifiers/modifier')
+        for mod in modifiers:
+            conditions = self.parser._xpath(mod, './/condition')
+            for cond in conditions:
+                if (cond.get('type') == 'instanceOf'
+                        and cond.get('scope') == 'primary-catalogue'
+                        and cond.get('childId')
+                        and cond.get('childId') != SA_CATALOGUE_ID):
+                    return True
+        return False
+
     def _parse_category_slots(self, force_element) -> tuple:
         """
         Parse categoryLinks to extract slot constraints and unit restrictions.
@@ -363,6 +397,10 @@ class DetachmentLoader:
 
             # Skip hidden categories
             if cat_link.get('hidden') == 'true':
+                continue
+
+            # Skip slot names that are clearly non-SA (EotL per-legion, Mechanicum, etc.)
+            if any(raw_name.startswith(prefix) for prefix in NON_SA_SLOT_PREFIXES):
                 continue
 
             # Parse slot name and unit restriction from the raw name

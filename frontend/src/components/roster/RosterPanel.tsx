@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 import { useUIStore } from '../../stores/uiStore.ts';
 import { useDetachments } from '../../api/detachments.ts';
@@ -14,57 +14,10 @@ import PointsBar from '../layout/PointsBar.tsx';
 import type { PointsSegment } from '../layout/PointsBar.tsx';
 import RosterSetup from './RosterSetup.tsx';
 import DetachmentSection from './DetachmentSection.tsx';
+import DetachmentPickerModal from './DetachmentPickerModal.tsx';
 import ValidationResults from './ValidationResults.tsx';
 import ExportButton from './ExportButton.tsx';
 import DoctrinePicker from './DoctrinePicker.tsx';
-
-const TYPE_ORDER = ['Primary', 'Auxiliary', 'Apex', 'Lord of War', 'Allied', 'Other'];
-
-const PICKER_SECTION_COLORS: Record<string, string> = {
-  Primary: 'border-l-gold-500/60 text-gold-400/80',
-  Auxiliary: 'border-l-steel/40 text-steel/80',
-  Apex: 'border-l-royal/40 text-royal/80',
-  'Lord of War': 'border-l-gold-500/40 text-gold-400/60',
-  Allied: 'border-l-edge-400/30 text-text-dim',
-};
-
-const PICKER_STRIPE_COLORS: Record<string, string> = {
-  Primary: 'border-l-gold-500',
-  Auxiliary: 'border-l-steel',
-  Apex: 'border-l-royal',
-  'Lord of War': 'border-l-gold-500',
-  Allied: 'border-l-edge-400',
-};
-
-function getDetachmentDisabledReason(
-  det: Detachment,
-  composition: { primary_count: number; primary_max: number; auxiliary_budget: number; auxiliary_used: number; apex_budget: number; apex_used: number; warlord_available: boolean; warlord_count: number },
-): string | null {
-  const isWarlord = det.name.includes('Warlord');
-
-  if (det.type === 'Primary' && !isWarlord && composition.primary_count >= composition.primary_max) {
-    return 'Primary already added';
-  }
-
-  if (isWarlord) {
-    if (!composition.warlord_available) return 'Requires 3000+ pts';
-    if (composition.warlord_count >= 1) return 'Warlord already added';
-  }
-
-  const auxCost = det.costs?.auxiliary ?? 0;
-  if (auxCost > 0 && auxCost > composition.auxiliary_budget - composition.auxiliary_used) {
-    if (composition.auxiliary_budget === 0) return 'Add Command units first';
-    return `Aux full (${composition.auxiliary_used}/${composition.auxiliary_budget})`;
-  }
-
-  const apexCost = det.costs?.apex ?? 0;
-  if (apexCost > 0 && apexCost > composition.apex_budget - composition.apex_used) {
-    if (composition.apex_budget === 0) return 'No Apex slots';
-    return `Apex full (${composition.apex_used}/${composition.apex_budget})`;
-  }
-
-  return null;
-}
 
 export default function RosterPanel() {
   const {
@@ -106,23 +59,6 @@ export default function RosterPanel() {
   const addDetMutation = useAddDetachment(rosterId);
   const removeDetMutation = useRemoveDetachment(rosterId);
   const validateMutation = useValidateRoster(rosterId);
-
-  const grouped = useMemo(() => {
-    const groups: Record<string, Detachment[]> = {};
-    for (const d of availableDetachments) {
-      const type = d.type || 'Other';
-      if (!groups[type]) groups[type] = [];
-      groups[type].push(d);
-    }
-    const sorted: [string, Detachment[]][] = [];
-    for (const type of TYPE_ORDER) {
-      if (groups[type]) sorted.push([type, groups[type]]);
-    }
-    for (const [type, dets] of Object.entries(groups)) {
-      if (!TYPE_ORDER.includes(type)) sorted.push([type, dets]);
-    }
-    return sorted;
-  }, [availableDetachments]);
 
   function handleAddDetachment(det: Detachment) {
     if (addDetMutation.isPending) return;
@@ -217,8 +153,8 @@ export default function RosterPanel() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="border-b border-edge-700/40 p-4">
+      {/* Sticky header */}
+      <div className="sticky-roster-header border-b border-edge-700/40 p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-[13px] font-semibold tracking-[0.12em] text-gold-400 uppercase">
             {rosterName}
@@ -316,113 +252,25 @@ export default function RosterPanel() {
         {/* Cohort Doctrine */}
         {detachments.length > 0 && <DoctrinePicker />}
 
-        {/* Add Detachment */}
-        {!showDetPicker ? (
-          <button
-            onClick={() => { setShowDetPicker(true); setAddError(null); }}
-            className="font-label w-full rounded-sm border border-dashed border-edge-500/30 py-3 text-xs font-semibold tracking-wider text-text-dim uppercase transition-all hover:border-gold-600/30 hover:text-gold-400 hover:shadow-[0_0_12px_rgba(130,102,36,0.04)]"
-          >
-            + Add Detachment
-          </button>
-        ) : (
-          <div className="animate-fade-in glow-border rounded-sm bg-plate-800/80 p-3 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <p className="font-label text-[11px] font-bold tracking-[0.12em] text-text-secondary uppercase">
-                Select Detachment
-              </p>
-              <button
-                onClick={() => setShowDetPicker(false)}
-                className="text-xs text-text-dim transition-colors hover:text-text-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-
-            {addError && (
-              <p className="rounded-sm bg-danger/8 px-2.5 py-1.5 text-xs text-danger">{addError}</p>
-            )}
-
-            <div className="max-h-[400px] overflow-y-auto space-y-3">
-              {grouped.map(([type, dets]) => {
-                const sectionColor = PICKER_SECTION_COLORS[type] ?? 'border-l-edge-500/30 text-text-dim';
-                return (
-                  <div key={type}>
-                    <p className={`font-label mb-1.5 border-l-2 pl-2 text-[11px] font-bold tracking-[0.15em] uppercase ${sectionColor}`}>
-                      {type}
-                    </p>
-                    <div className="space-y-1">
-                      {dets.map((d) => {
-                        const disabledReason = getDetachmentDisabledReason(d, composition);
-                        const isDisabled = disabledReason !== null || addDetMutation.isPending;
-                        const stripe = PICKER_STRIPE_COLORS[type] ?? 'border-l-edge-500';
-                        const finite = d.constraints
-                          ? Object.entries(d.constraints).filter(([, c]) => c.max < 100)
-                          : [];
-                        const visibleSlots = finite.slice(0, 6);
-                        const remaining = finite.length - visibleSlots.length;
-                        return (
-                          <button
-                            key={d.id}
-                            onClick={() => !isDisabled && handleAddDetachment(d)}
-                            disabled={isDisabled}
-                            className={`block w-full rounded-sm border-l-2 text-left transition-all ${stripe} ${
-                              isDisabled
-                                ? 'cursor-not-allowed opacity-50 bg-plate-900/30'
-                                : 'bg-plate-900/50 hover:bg-plate-700/40 hover:shadow-[0_0_8px_rgba(130,102,36,0.04)]'
-                            }`}
-                          >
-                            <div className="px-3 py-2">
-                              {/* Name + disabled reason */}
-                              <div className="flex items-center justify-between gap-2">
-                                <span className={`text-[13px] font-medium ${isDisabled ? 'text-text-dim/60' : 'text-text-primary'}`}>
-                                  {d.name}
-                                  {d.faction && (
-                                    <span className="ml-1 text-[11px] text-text-dim">[{d.faction}]</span>
-                                  )}
-                                </span>
-                                {disabledReason && (
-                                  <span className="shrink-0 rounded-sm border border-danger/20 bg-danger/8 px-1.5 py-0.5 font-label text-[10px] font-semibold tracking-wider text-danger/70 uppercase">
-                                    {disabledReason}
-                                  </span>
-                                )}
-                              </div>
-                              {/* Slot chips — always show */}
-                              {visibleSlots.length > 0 && (
-                                <div className="mt-1.5 flex flex-wrap gap-1">
-                                  {visibleSlots.map(([slot, c]) => (
-                                    <span
-                                      key={slot}
-                                      className={`inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[10px] ${
-                                        isDisabled
-                                          ? 'border-edge-700/15 bg-plate-800/30 text-text-dim/40'
-                                          : 'border-edge-600/25 bg-plate-700/40 text-text-secondary'
-                                      }`}
-                                    >
-                                      <span className="font-label font-semibold tracking-wider uppercase">{slot}</span>
-                                      <span className="font-data text-text-dim">
-                                        {c.min > 0 ? `${c.min}\u2013` : ''}{c.max}
-                                      </span>
-                                    </span>
-                                  ))}
-                                  {remaining > 0 && (
-                                    <span className="px-1.5 py-0.5 text-[10px] text-text-dim/40">
-                                      +{remaining} more
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* Add Detachment button */}
+        <button
+          onClick={() => { setShowDetPicker(true); setAddError(null); }}
+          className="font-label w-full rounded-sm border border-dashed border-edge-500/30 py-3 text-xs font-semibold tracking-wider text-text-dim uppercase transition-all hover:border-gold-600/30 hover:text-gold-400 hover:shadow-[0_0_12px_rgba(130,102,36,0.04)]"
+        >
+          + Add Detachment
+        </button>
       </div>
+
+      {/* Detachment picker modal */}
+      <DetachmentPickerModal
+        open={showDetPicker}
+        detachments={availableDetachments}
+        composition={composition}
+        addError={addError}
+        isPending={addDetMutation.isPending}
+        onSelect={handleAddDetachment}
+        onClose={() => setShowDetPicker(false)}
+      />
 
       {/* Footer */}
       <div className="space-y-2 border-t border-edge-700/40 p-4">

@@ -6,7 +6,7 @@ import { useUIStore } from '../../stores/uiStore.ts';
 import { useUnitAvailability } from '../../hooks/useUnitAvailability.ts';
 import client from '../../api/client.ts';
 import type { Unit } from '../../types/index.ts';
-import { NATIVE_TO_DISPLAY_GROUP } from '../../types/index.ts';
+import { NATIVE_TO_DISPLAY_GROUP, DISPLAY_GROUP_ORDER, FILTER_COLORS } from '../../types/index.ts';
 import CategoryFilter from '../common/CategoryFilter.tsx';
 import SearchInput from '../common/SearchInput.tsx';
 import LoadingSpinner from '../common/LoadingSpinner.tsx';
@@ -14,11 +14,20 @@ import EmptyState from '../common/EmptyState.tsx';
 import UnitCard from './UnitCard.tsx';
 import UnitDetail from './UnitDetail.tsx';
 
+type SortMode = 'name' | 'cost-asc' | 'cost-desc';
+
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'cost-asc', label: 'Cost \u2191' },
+  { value: 'cost-desc', label: 'Cost \u2193' },
+];
+
 export default function UnitBrowser() {
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>('name');
 
   const { rosterId, detachments, addEntry, syncFromResponse } = useRosterStore();
   const addToast = useUIStore((s) => s.addToast);
@@ -55,11 +64,61 @@ export default function UnitBrowser() {
   const hasDetachments = !!rosterId && detachments.length > 0;
 
   const displayUnits = useMemo(() => {
-    if (!hasDetachments) return units.map((u) => ({ unit: u, availability: undefined as ReturnType<typeof getAvailability> | undefined }));
-    return units
-      .map((u) => ({ unit: u, availability: getAvailability(u.unit_type, u.name, u.id, u.constraints) }))
-      .filter((item) => !availableOnly || item.availability!.status === 'addable');
-  }, [units, hasDetachments, getAvailability, availableOnly]);
+    const items = !hasDetachments
+      ? units.map((u) => ({ unit: u, availability: undefined as ReturnType<typeof getAvailability> | undefined }))
+      : units
+          .map((u) => ({ unit: u, availability: getAvailability(u.unit_type, u.name, u.id, u.constraints) }))
+          .filter((item) => !availableOnly || item.availability!.status === 'addable');
+
+    // Sort
+    return items.sort((a, b) => {
+      switch (sortMode) {
+        case 'cost-asc': {
+          const costA = a.unit.base_cost * Math.max(a.unit.model_min, 1);
+          const costB = b.unit.base_cost * Math.max(b.unit.model_min, 1);
+          return costA - costB || a.unit.name.localeCompare(b.unit.name);
+        }
+        case 'cost-desc': {
+          const costA = a.unit.base_cost * Math.max(a.unit.model_min, 1);
+          const costB = b.unit.base_cost * Math.max(b.unit.model_min, 1);
+          return costB - costA || a.unit.name.localeCompare(b.unit.name);
+        }
+        default:
+          return a.unit.name.localeCompare(b.unit.name);
+      }
+    });
+  }, [units, hasDetachments, getAvailability, availableOnly, sortMode]);
+
+  // Group units by display category for group headers (only when no filter active)
+  const showGroupHeaders = !category && !search && sortMode === 'name';
+  const groupedUnits = useMemo(() => {
+    if (!showGroupHeaders) return null;
+    const groups: { group: string; dotColor: string; items: typeof displayUnits }[] = [];
+    const byGroup = new Map<string, typeof displayUnits>();
+
+    for (const item of displayUnits) {
+      const group = NATIVE_TO_DISPLAY_GROUP[item.unit.unit_type] ?? 'Other';
+      if (!byGroup.has(group)) byGroup.set(group, []);
+      byGroup.get(group)!.push(item);
+    }
+
+    for (const group of DISPLAY_GROUP_ORDER) {
+      const items = byGroup.get(group);
+      if (items && items.length > 0) {
+        const dotColor = FILTER_COLORS[group]?.dot ?? 'bg-edge-400';
+        groups.push({ group, dotColor, items });
+      }
+    }
+
+    // Any remaining
+    for (const [group, items] of byGroup) {
+      if (!(DISPLAY_GROUP_ORDER as readonly string[]).includes(group) && items.length > 0) {
+        groups.push({ group, dotColor: 'bg-edge-400', items });
+      }
+    }
+
+    return groups;
+  }, [displayUnits, showGroupHeaders]);
 
   // Quick-add mutation
   const quickAddMutation = useMutation({
@@ -113,25 +172,65 @@ export default function UnitBrowser() {
     );
   }, [rosterId, quickAddMutation, getAvailability, addEntry, addToast, setNewEntryId, syncFromResponse]);
 
-  return (
-    <div className="mx-auto max-w-4xl space-y-3.5 2xl:max-w-6xl">
-      {/* Header */}
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-imperial heading-imperial text-sm">Unit Compendium</h2>
-        {!isLoading && !error && displayUnits.length > 0 && (
-          <span className="font-data text-[11px] tabular-nums text-text-dim">
-            {displayUnits.length} unit{displayUnits.length !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
+  function renderUnitCard(item: { unit: Unit; availability: ReturnType<typeof getAvailability> | undefined }) {
+    const { unit, availability } = item;
+    return (
+      <UnitCard
+        key={unit.id}
+        unit={unit}
+        expanded={expandedId === unit.id}
+        onClick={() => setExpandedId(expandedId === unit.id ? null : unit.id)}
+        availability={availability?.status}
+        onQuickAdd={hasDetachments && availability?.status === 'addable' ? handleQuickAdd : undefined}
+      >
+        <UnitDetail unit={unit} />
+      </UnitCard>
+    );
+  }
 
-      {/* Toolbar */}
-      <div className="space-y-2.5">
+  return (
+    <div className="mx-auto max-w-4xl 2xl:max-w-6xl">
+      {/* Sticky toolbar */}
+      <div className="sticky-toolbar space-y-3">
+        {/* Header */}
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-imperial heading-imperial text-sm">Unit Compendium</h2>
+          {!isLoading && !error && displayUnits.length > 0 && (
+            <span className="font-data text-[11px] tabular-nums text-text-dim">
+              {displayUnits.length} unit{displayUnits.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {/* Category filter */}
         <CategoryFilter selected={category} onChange={setCategory} counts={unitCounts} />
+
+        {/* Search + sort + available */}
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <SearchInput value={search} onChange={setSearch} />
           </div>
+
+          {/* Sort dropdown */}
+          <div className="relative">
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className={`font-label h-[36px] appearance-none rounded-sm border px-2.5 pr-7 text-[11px] font-semibold tracking-wider uppercase outline-none transition-all ${
+                sortMode !== 'name'
+                  ? 'sort-btn-active'
+                  : 'border-edge-600/40 bg-plate-800/30 text-text-dim hover:text-text-secondary'
+              }`}
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+
           {hasDetachments && (
             <button
               onClick={() => setAvailableOnly((v) => !v)}
@@ -148,31 +247,42 @@ export default function UnitBrowser() {
       </div>
 
       {/* Content */}
-      {isLoading && <LoadingSpinner />}
+      <div className="mt-3">
+        {isLoading && <LoadingSpinner />}
 
-      {error && (
-        <div className="rounded-sm border border-danger/20 bg-danger/5 p-3.5 text-sm text-danger">
-          Failed to load units. Is the API server running?
-        </div>
-      )}
+        {error && (
+          <div className="rounded-sm border border-danger/20 bg-danger/5 p-3.5 text-sm text-danger">
+            Failed to load units. Is the API server running?
+          </div>
+        )}
 
-      {!isLoading && !error && displayUnits.length === 0 && (
-        <EmptyState message={availableOnly ? 'No available units in this category' : 'No units found'} icon="🔍" />
-      )}
+        {!isLoading && !error && displayUnits.length === 0 && (
+          <EmptyState message={availableOnly ? 'No available units in this category' : 'No units found'} icon="search" />
+        )}
 
-      <div className="stagger-list grid grid-cols-1 gap-1.5 2xl:grid-cols-2">
-        {displayUnits.map(({ unit, availability }) => (
-          <UnitCard
-            key={unit.id}
-            unit={unit}
-            expanded={expandedId === unit.id}
-            onClick={() => setExpandedId(expandedId === unit.id ? null : unit.id)}
-            availability={availability?.status}
-            onQuickAdd={hasDetachments && availability?.status === 'addable' ? handleQuickAdd : undefined}
-          >
-            <UnitDetail unit={unit} />
-          </UnitCard>
-        ))}
+        {/* Grouped view with category headers */}
+        {groupedUnits ? (
+          <div className="space-y-1">
+            {groupedUnits.map(({ group, dotColor, items }) => (
+              <div key={group}>
+                <div className="category-group-header mb-1.5 mt-3 first:mt-0">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
+                  <span className="font-label text-[11px] font-bold tracking-[0.12em] text-text-secondary uppercase">
+                    {group}
+                  </span>
+                  <span className="font-data text-[10px] tabular-nums text-text-dim">{items.length}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5 2xl:grid-cols-2">
+                  {items.map(renderUnitCard)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="stagger-list grid grid-cols-1 gap-1.5 2xl:grid-cols-2">
+            {displayUnits.map(renderUnitCard)}
+          </div>
+        )}
       </div>
     </div>
   );

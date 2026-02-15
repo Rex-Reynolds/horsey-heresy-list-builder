@@ -683,3 +683,197 @@ body::before {
     radial-gradient(ellipse at 50% 40%, rgba(130, 102, 36, 0.04) 0%, transparent 60%),
     radial-gradient(ellipse at 50% 50%, rgba(16, 19, 26, 0.6) 0%, var(--color-void) 100%);
 }
+
+/* ── Sticky toolbar glass effect ── */
+.sticky-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: linear-gradient(180deg, var(--color-void) 60%, rgba(12, 15, 20, 0.92) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding-bottom: 12px;
+  margin-bottom: -4px;
+}
+
+.sticky-toolbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 5%, var(--color-edge-700) 30%, var(--color-gold-700) 50%, var(--color-edge-700) 70%, transparent 95%);
+  opacity: 0.5;
+}
+
+/* ── Sticky roster header ── */
+.sticky-roster-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: linear-gradient(180deg, var(--color-plate-950) 70%, rgba(16, 19, 26, 0.95) 100%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ── Confirm dialog overlay ── */
+.confirm-overlay {
+  background: rgba(12, 15, 20, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  background: rgba(12, 15, 20, 0.80);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-modal-in {
+  animation: modalIn 0.2s ease-out both;
+}
+
+/* ── Sort toggle ── */
+.sort-btn-active {
+  border-color: rgba(180, 143, 60, 0.25);
+  background: rgba(180, 143, 60, 0.06);
+  color: var(--color-gold-400);
+}
+
+/* ── Category group header ── */
+.category-group-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 4px;
+}
+
+.category-group-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-edge-600), transparent 80%);
+}
+
+/* ── Floating unit detail footer ── */
+.floating-add-footer {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(0deg, var(--color-plate-800) 60%, rgba(28, 34, 41, 0.95) 100%);
+  border-top: 1px solid rgba(36, 42, 48, 0.5);
+  margin: 0 -16px -14px;
+  padding: 12px 16px;
+  z-index: 5;
+}
+
+/* ── Inline slot validation ── */
+.slot-warning {
+  border-left: 2px solid var(--color-caution);
+  background: rgba(196, 154, 32, 0.03);
+  padding-left: 6px;
+  margin-left: -8px;
+}
+
+.slot-error {
+  border-left: 2px solid var(--color-danger);
+  background: rgba(196, 64, 64, 0.03);
+  padding-left: 6px;
+  margin-left: -8px;
+}
+
+/* ── Aquila path-draw animation ── */
+@keyframes aquilaDraw {
+  from { stroke-dashoffset: 600; opacity: 0.3; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes aquilaFill {
+  from { fill-opacity: 0; }
+  to { fill-opacity: 1; }
+}
+
+.aquila-draw path,
+.aquila-draw circle {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: aquilaDraw 1.8s ease-out forwards;
+  fill-opacity: 0;
+}
+
+.aquila-draw path:nth-child(1) { animation-delay: 0s; }
+.aquila-draw path:nth-child(2) { animation-delay: 0.2s; }
+.aquila-draw path:nth-child(3) { animation-delay: 0.4s; }
+.aquila-draw circle:nth-child(4) { animation-delay: 0.6s; }
+.aquila-draw circle:nth-child(5) { animation-delay: 0.7s; }
+
+.aquila-fill path,
+.aquila-fill circle {
+  animation: aquilaFill 0.6s ease-out forwards;
+}
+
+.aquila-fill path:nth-child(1) { animation-delay: 1.2s; }
+.aquila-fill path:nth-child(2) { animation-delay: 1.3s; }
+.aquila-fill path:nth-child(3) { animation-delay: 1.4s; }
+.aquila-fill circle:nth-child(4) { animation-delay: 1.5s; }
+.aquila-fill circle:nth-child(5) { animation-delay: 1.5s; }
+
+/* ── Staggered setup form reveal ── */
+@keyframes setupReveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.setup-stagger > * {
+  opacity: 0;
+  animation: setupReveal 0.4s ease-out forwards;
+}
+
+.setup-stagger > *:nth-child(1) { animation-delay: 1.6s; }
+.setup-stagger > *:nth-child(2) { animation-delay: 1.8s; }
+.setup-stagger > *:nth-child(3) { animation-delay: 2.0s; }
+.setup-stagger > *:nth-child(4) { animation-delay: 2.2s; }
+.setup-stagger > *:nth-child(5) { animation-delay: 2.3s; }
+.setup-stagger > *:nth-child(6) { animation-delay: 2.4s; }
+
+/* Frame bracket animation for setup */
+@keyframes bracketSlide {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 0.7; transform: scale(1); }
+}
+
+.imperial-frame-animated::before,
+.imperial-frame-animated::after {
+  animation: bracketSlide 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.imperial-frame-animated::before { animation-delay: 1.0s; }
+.imperial-frame-animated::after { animation-delay: 1.1s; }
+
+.imperial-frame-inner-animated::before,
+.imperial-frame-inner-animated::after {
+  animation: bracketSlide 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.imperial-frame-inner-animated::before { animation-delay: 1.15s; }
+.imperial-frame-inner-animated::after { animation-delay: 1.2s; }
+
+/* ── Modal search input ── */
+.modal-search {
+  border: 1px solid rgba(46, 54, 63, 0.6);
+  background: rgba(28, 34, 41, 0.9);
+  transition: all 0.2s ease;
+}
+.modal-search:focus {
+  border-color: rgba(130, 102, 36, 0.4);
+  box-shadow: 0 0 0 1px rgba(130, 102, 36, 0.06);
+}
