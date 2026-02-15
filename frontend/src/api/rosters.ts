@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import client from './client.ts';
 import type { RosterResponse, ValidationResponse, SelectedUpgrade } from '../types/index.ts';
 
@@ -23,28 +23,23 @@ export function useRoster(rosterId: number | null) {
 }
 
 export function useAddDetachment(rosterId: number | null) {
-  const qc = useQueryClient();
   return useMutation<any, Error, { detachment_id: number; detachment_type: string }>({
     mutationFn: async (body) => {
       const { data } = await client.post(`/api/rosters/${rosterId}/detachments`, body);
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roster', rosterId] }),
   });
 }
 
 export function useRemoveDetachment(rosterId: number | null) {
-  const qc = useQueryClient();
   return useMutation<void, Error, number>({
     mutationFn: async (detId) => {
       await client.delete(`/api/rosters/${rosterId}/detachments/${detId}`);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roster', rosterId] }),
   });
 }
 
 export function useAddEntry(rosterId: number | null, detachmentId: number | null) {
-  const qc = useQueryClient();
   return useMutation<
     { id: number; total_cost: number },
     Error,
@@ -57,24 +52,20 @@ export function useAddEntry(rosterId: number | null, detachmentId: number | null
       );
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roster', rosterId] }),
   });
 }
 
 export function useDeleteEntry(rosterId: number | null, detachmentId: number | null) {
-  const qc = useQueryClient();
   return useMutation<void, Error, number>({
     mutationFn: async (entryId) => {
       await client.delete(
         `/api/rosters/${rosterId}/detachments/${detachmentId}/entries/${entryId}`,
       );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roster', rosterId] }),
   });
 }
 
 export function useUpdateEntry(rosterId: number | null, detachmentId: number | null) {
-  const qc = useQueryClient();
   return useMutation<
     { id: number; total_cost: number; quantity: number },
     Error,
@@ -87,7 +78,6 @@ export function useUpdateEntry(rosterId: number | null, detachmentId: number | n
       );
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roster', rosterId] }),
   });
 }
 
@@ -101,13 +91,11 @@ export function useValidateRoster(rosterId: number | null) {
 }
 
 export function useSetDoctrine(rosterId: number | null) {
-  const qc = useQueryClient();
   return useMutation<RosterResponse, Error, { doctrine_id: string | null }>({
     mutationFn: async (body) => {
       const { data } = await client.patch(`/api/rosters/${rosterId}/doctrine`, body);
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roster', rosterId] }),
   });
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 import { useUIStore } from '../../stores/uiStore.ts';
 import { useDetachments } from '../../api/detachments.ts';
@@ -18,6 +18,9 @@ import DetachmentPickerModal from './DetachmentPickerModal.tsx';
 import ValidationResults from './ValidationResults.tsx';
 import ExportButton from './ExportButton.tsx';
 import DoctrinePicker from './DoctrinePicker.tsx';
+import CompositionSummary from './CompositionSummary.tsx';
+import OnboardingHint from './OnboardingHint.tsx';
+import ConfirmDialog from '../common/ConfirmDialog.tsx';
 
 export default function RosterPanel() {
   const {
@@ -40,25 +43,65 @@ export default function RosterPanel() {
 
   const [showDetPicker, setShowDetPicker] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [confirmNewRoster, setConfirmNewRoster] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState(rosterName);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const newEntryId = useUIStore((s) => s.newEntryId);
   const setSlotFilter = useUIStore((s) => s.setSlotFilter);
+  const setSlotFilterContext = useUIStore((s) => s.setSlotFilterContext);
+  const addToast = useUIStore((s) => s.addToast);
+  const setMobileRosterOpen = useUIStore((s) => s.setMobileRosterOpen);
 
   // Map a native slot name to a display group for the unit browser filter
-  function handleSlotClick(slotName: string) {
+  function handleSlotClick(slotName: string, detachmentName: string, filled: number, max: number) {
     const baseName = slotName.includes(' - ') ? slotName.split(' - ', 1)[0].trim() : slotName;
+    let displayGroup = baseName;
     for (const [group, slots] of Object.entries(SLOT_DISPLAY_GROUPS)) {
       if ((slots as readonly string[]).includes(baseName)) {
-        setSlotFilter(group);
-        return;
+        displayGroup = group;
+        break;
       }
     }
-    setSlotFilter(baseName);
+    setSlotFilter(displayGroup);
+    setSlotFilterContext({ slotName, detachmentName, filled, max });
+
+    // On mobile, close the roster drawer so user sees the browser
+    if (window.innerWidth < 1024) {
+      setMobileRosterOpen(false);
+    }
   }
 
   const { data: availableDetachments = [] } = useDetachments();
   const addDetMutation = useAddDetachment(rosterId);
   const removeDetMutation = useRemoveDetachment(rosterId);
   const validateMutation = useValidateRoster(rosterId);
+
+  // Auto-validate when roster content changes (debounced)
+  const totalEntries = detachments.reduce((s, d) => s + d.entries.length, 0);
+  const autoValidateTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    if (!rosterId || totalEntries === 0) return;
+    clearTimeout(autoValidateTimer.current);
+    autoValidateTimer.current = setTimeout(() => {
+      validateMutation.mutate(undefined, {
+        onSuccess: (data) => setValidation(data.is_valid, data.errors),
+      });
+    }, 800);
+    return () => clearTimeout(autoValidateTimer.current);
+  }, [rosterId, totalEntries, totalPoints, detachments.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const commitRename = useCallback(() => {
+    const trimmed = draftName.trim();
+    if (trimmed && trimmed !== rosterName && rosterId) {
+      client.patch(`/api/rosters/${rosterId}`, { name: trimmed }).then(({ data }) => {
+        syncFromResponse(data);
+      });
+    } else {
+      setDraftName(rosterName);
+    }
+    setEditingName(false);
+  }, [draftName, rosterName, rosterId, syncFromResponse]);
 
   function handleAddDetachment(det: Detachment) {
     if (addDetMutation.isPending) return;
@@ -92,6 +135,10 @@ export default function RosterPanel() {
   }
 
   function handleRemoveDetachment(detId: number) {
+    // Snapshot for undo
+    const det = detachments.find((d) => d.id === detId);
+    const detSnapshot = det ? { ...det, entries: [...det.entries] } : null;
+
     removeDetMutation.mutate(detId, {
       onSuccess: () => {
         removeDetachment(detId);
@@ -100,11 +147,34 @@ export default function RosterPanel() {
             syncFromResponse(resp);
           });
         }
+        // Undo toast
+        if (detSnapshot) {
+          addToast(`${detSnapshot.name} removed`, 'success', () => {
+            // Re-add detachment via API
+            if (!rosterId) return;
+            client.post(`/api/rosters/${rosterId}/detachments`, {
+              detachment_id: detSnapshot.detachmentId,
+              detachment_type: detSnapshot.type,
+            }).then(() => {
+              client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
+                syncFromResponse(resp);
+              });
+              addToast(`${detSnapshot.name} restored`, 'info');
+            }).catch(() => {
+              addToast('Failed to restore detachment', 'error');
+            });
+          });
+        }
       },
     });
   }
 
   function handleRemoveEntry(detachmentId: number, entryId: number) {
+    // Snapshot for undo
+    const det = detachments.find((d) => d.id === detachmentId);
+    const entry = det?.entries.find((e) => e.id === entryId);
+    const entrySnapshot = entry ? { ...entry } : null;
+
     removeEntry(detachmentId, entryId);
     if (rosterId) {
       client.delete(`/api/rosters/${rosterId}/detachments/${detachmentId}/entries/${entryId}`)
@@ -112,6 +182,24 @@ export default function RosterPanel() {
           client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
             syncFromResponse(resp);
           });
+          // Undo toast
+          if (entrySnapshot) {
+            addToast(`${entrySnapshot.name} removed`, 'success', () => {
+              // Re-add entry via API
+              client.post(`/api/rosters/${rosterId}/detachments/${detachmentId}/entries`, {
+                unit_id: entrySnapshot.unitId,
+                quantity: entrySnapshot.quantity,
+                upgrades: entrySnapshot.upgrades,
+              }).then(() => {
+                client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
+                  syncFromResponse(resp);
+                });
+                addToast(`${entrySnapshot.name} restored`, 'info');
+              }).catch(() => {
+                addToast('Failed to restore unit', 'error');
+              });
+            });
+          }
         });
     }
   }
@@ -138,7 +226,6 @@ export default function RosterPanel() {
     return <RosterSetup />;
   }
 
-  const totalEntries = detachments.reduce((s, d) => s + d.entries.length, 0);
   const auxRemaining = composition.auxiliary_budget - composition.auxiliary_used;
   const apexRemaining = composition.apex_budget - composition.apex_used;
 
@@ -151,16 +238,45 @@ export default function RosterPanel() {
     }))
     .filter((s) => s.points > 0);
 
+  // Determine onboarding step
+  const onboardingStep = detachments.length === 0
+    ? 1
+    : totalEntries === 0
+      ? 2
+      : null;
+
   return (
     <div className="flex h-full flex-col">
       {/* Sticky header */}
       <div className="sticky-roster-header border-b border-edge-700/40 p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-[13px] font-semibold tracking-[0.12em] text-gold-400 uppercase">
-            {rosterName}
-          </h2>
+          {editingName ? (
+            <input
+              ref={nameInputRef}
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitRename();
+                if (e.key === 'Escape') { setDraftName(rosterName); setEditingName(false); }
+              }}
+              className="font-display w-full bg-transparent text-[13px] font-semibold tracking-[0.12em] text-gold-400 uppercase outline-none border-b border-gold-600/40 focus:border-gold-400"
+              autoFocus
+            />
+          ) : (
+            <button
+              onClick={() => { setDraftName(rosterName); setEditingName(true); }}
+              className="font-display text-[13px] font-semibold tracking-[0.12em] text-gold-400 uppercase transition-colors hover:text-gold-300"
+              title="Click to rename"
+            >
+              {rosterName}
+            </button>
+          )}
           <button
-            onClick={clearRoster}
+            onClick={() => {
+              if (detachments.length === 0) { clearRoster(); return; }
+              setConfirmNewRoster(true);
+            }}
             className="font-label text-[11px] font-semibold tracking-wider text-text-dim uppercase transition-colors hover:text-danger"
           >
             New
@@ -169,7 +285,8 @@ export default function RosterPanel() {
         <PointsBar current={totalPoints} limit={pointsLimit} segments={pointsSegments} />
 
         {/* Budget chips */}
-        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2">
+        <div className="divider-glow mt-3 mb-3" />
+        <div className="flex flex-wrap gap-x-3 gap-y-2">
           <BudgetChip
             label="Primary"
             current={composition.primary_count}
@@ -199,54 +316,48 @@ export default function RosterPanel() {
             />
           )}
         </div>
+
+        {/* Composition Summary */}
+        {detachments.length > 0 && totalEntries > 0 && (
+          <CompositionSummary detachments={detachments} totalPoints={totalPoints} />
+        )}
       </div>
 
       {/* Detachments */}
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
-        {detachments.length === 0 && totalEntries === 0 ? (
-          /* Empty state — no detachments yet */
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-gold-700/20 bg-gold-900/10">
-              <svg className="h-6 w-6 text-gold-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-            </div>
-            <div>
-              <p className="font-label text-xs font-semibold tracking-wider text-text-secondary uppercase">
-                No detachments yet
-              </p>
-              <p className="mt-1.5 max-w-[220px] text-[13px] leading-relaxed text-text-dim">
-                Add a Primary Detachment below to start building your force.
-              </p>
-            </div>
-            <svg className="h-5 w-5 animate-bounce text-text-dim/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
+        {/* Onboarding hints */}
+        {onboardingStep === 1 && (
+          <OnboardingHint
+            step={1}
+            onAction={() => { setShowDetPicker(true); setAddError(null); }}
+          />
+        )}
+
+        {onboardingStep === 2 && (
+          <OnboardingHint
+            step={2}
+            onAction={() => {
+              if (window.innerWidth < 1024) {
+                setMobileRosterOpen(false);
+              }
+            }}
+          />
+        )}
+
+        {detachments.length > 0 && (
+          <div className="stagger-list space-y-2">
+            {detachments.map((det) => (
+              <DetachmentSection
+                key={det.id}
+                detachment={det}
+                onRemoveEntry={handleRemoveEntry}
+                onUpdateQty={handleUpdateQty}
+                onRemoveDetachment={handleRemoveDetachment}
+                onSlotClick={(slotName, filled, max) => handleSlotClick(slotName, det.name, filled, max)}
+                newEntryId={newEntryId}
+              />
+            ))}
           </div>
-        ) : (
-          <>
-            <div className="stagger-list space-y-2">
-              {detachments.map((det) => (
-                <DetachmentSection
-                  key={det.id}
-                  detachment={det}
-                  onRemoveEntry={handleRemoveEntry}
-                  onUpdateQty={handleUpdateQty}
-                  onRemoveDetachment={handleRemoveDetachment}
-                  onSlotClick={handleSlotClick}
-                  newEntryId={newEntryId}
-                />
-              ))}
-            </div>
-            {/* Guidance when detachments exist but are empty */}
-            {detachments.length > 0 && totalEntries === 0 && (
-              <div className="rounded-sm border border-edge-600/20 bg-plate-800/15 px-4 py-3 text-center">
-                <p className="text-[13px] text-text-dim">
-                  Click a slot name above or browse units to add them to your roster.
-                </p>
-              </div>
-            )}
-          </>
         )}
 
         {/* Cohort Doctrine */}
@@ -297,6 +408,16 @@ export default function RosterPanel() {
         </button>
         <ExportButton />
       </div>
+
+      <ConfirmDialog
+        open={confirmNewRoster}
+        title="Start New Roster"
+        message="This will discard your current roster and all detachments. Are you sure?"
+        confirmLabel="Discard"
+        variant="danger"
+        onConfirm={() => { setConfirmNewRoster(false); clearRoster(); }}
+        onCancel={() => setConfirmNewRoster(false)}
+      />
     </div>
   );
 }

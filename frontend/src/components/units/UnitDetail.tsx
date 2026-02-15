@@ -46,8 +46,8 @@ export default function UnitDetail({ unit }: Props) {
     return () => clearTimeout(timer);
   }, []);
 
-  const { statBlocks, traits } = parseProfiles(unit.profiles);
-  const rules = parseRules(unit.rules);
+  const { statBlocks, traits } = useMemo(() => parseProfiles(unit.profiles), [unit.profiles]);
+  const rules = useMemo(() => parseRules(unit.rules), [unit.rules]);
 
   const upgradeGroupMap = useMemo(() => {
     const map = new Map<number, string>();
@@ -415,7 +415,7 @@ function DetachmentSuggestions({
             <button
               onClick={() => onAdd(d.id, d.type)}
               disabled={loading}
-              className="font-label shrink-0 rounded-sm bg-gold-600/70 px-2.5 py-1 text-[11px] font-semibold tracking-wider text-white uppercase transition-all hover:bg-gold-500 disabled:opacity-30"
+              className="font-label shrink-0 rounded-sm bg-gold-600/70 px-2.5 py-1 text-[11px] font-semibold tracking-wider text-white uppercase transition-all hover:bg-gold-500 disabled:opacity-25"
             >
               + Add
             </button>

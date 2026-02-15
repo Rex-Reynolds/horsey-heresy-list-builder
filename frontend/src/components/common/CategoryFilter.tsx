@@ -9,7 +9,7 @@ interface Props {
 export default function CategoryFilter({ selected, onChange, counts }: Props) {
   const categories = ['All', ...DISPLAY_GROUP_ORDER];
   return (
-    <div className="scrollbar-hide -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+    <div className="category-filter-scroll scrollbar-hide -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
       {categories.map((cat) => {
         const value = cat === 'All' ? null : cat;
         const active = selected === value;

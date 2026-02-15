@@ -23,7 +23,7 @@ export default function UpgradeList({ groups, ungrouped, selected, onToggle, loa
     .reduce((sum, u) => sum + u.cost, 0);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <h4 className="font-label text-[11px] font-semibold tracking-wider text-text-dim uppercase">
           Upgrades
@@ -82,14 +82,14 @@ function UpgradeGroupSection({
   return (
     <div className={`rounded-sm border transition-colors ${
       hasSelection
-        ? 'border-gold-600/20 bg-gold-500/[0.03]'
+        ? 'border-gold-600/25 bg-gold-500/[0.03] shadow-[0_0_8px_rgba(158,124,52,0.04)]'
         : 'border-edge-700/25 bg-plate-800/20'
     }`}>
       {/* Group header — click to toggle */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-plate-700/20"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-plate-700/20"
       >
         {/* Expand indicator */}
         <svg
@@ -113,49 +113,38 @@ function UpgradeGroupSection({
           )}
         </span>
 
-        {/* Selection count + cost */}
+        {/* Selection indicator + type label + cost */}
         <span className="flex items-center gap-2">
-          {!isRadio && (
+          {isRadio ? (
+            <span className="font-label rounded-sm border border-edge-600/20 bg-plate-700/30 px-1.5 py-px text-[9px] font-semibold tracking-wider text-text-dim/70 uppercase">
+              Choose 1
+            </span>
+          ) : (
             <span className="font-data text-[10px] tabular-nums text-text-dim">
               {selectedInGroup}/{group.max_quantity}
             </span>
           )}
           {groupCost > 0 && (
-            <span className="font-data text-[10px] tabular-nums text-gold-400/70">+{groupCost}</span>
+            <span className="font-data text-[11px] font-semibold tabular-nums text-gold-400">+{groupCost} pts</span>
           )}
         </span>
       </button>
 
-      {/* Upgrade items */}
+      {/* Upgrade cards */}
       {open && (
-        <div className="border-t border-edge-700/15 py-0.5">
+        <div className="border-t border-edge-700/15 p-1.5 space-y-1">
           {group.upgrades.map((u) => {
             const isSelected = selected.has(u.id);
             const disabled = !isSelected && atMax;
             return (
-              <button
+              <UpgradeCard
                 key={u.id}
-                type="button"
-                onClick={() => !disabled && onToggle(u.id, group.group_name)}
+                upgrade={u}
+                isSelected={isSelected}
                 disabled={disabled}
-                className={`flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-[13px] transition-all disabled:cursor-not-allowed disabled:opacity-25 ${
-                  isSelected
-                    ? 'bg-gold-500/8 text-text-primary'
-                    : 'text-text-secondary hover:bg-plate-700/30 hover:text-text-primary'
-                }`}
-              >
-                {isRadio ? (
-                  <RadioIndicator checked={isSelected} />
-                ) : (
-                  <CheckIndicator checked={isSelected} />
-                )}
-                <span className="flex-1">{u.name}</span>
-                {u.cost > 0 && (
-                  <span className={`font-data text-xs tabular-nums ${isSelected ? 'text-gold-400/70' : 'text-text-dim'}`}>
-                    +{u.cost}
-                  </span>
-                )}
-              </button>
+                isRadio={isRadio}
+                onClick={() => !disabled && onToggle(u.id, group.group_name)}
+              />
             );
           })}
         </div>
@@ -181,14 +170,14 @@ function UngroupedSection({
   return (
     <div className={`rounded-sm border transition-colors ${
       hasSelection
-        ? 'border-gold-600/20 bg-gold-500/[0.03]'
+        ? 'border-gold-600/25 bg-gold-500/[0.03] shadow-[0_0_8px_rgba(158,124,52,0.04)]'
         : 'border-edge-700/25 bg-plate-800/20'
     }`}>
       {showLabel && (
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-plate-700/20"
+          className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-plate-700/20"
         >
           <svg
             className={`h-2.5 w-2.5 shrink-0 text-text-dim transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
@@ -203,33 +192,83 @@ function UngroupedSection({
         </button>
       )}
       {open && (
-        <div className={showLabel ? 'border-t border-edge-700/15 py-0.5' : 'py-0.5'}>
+        <div className={showLabel ? 'border-t border-edge-700/15 p-1.5 space-y-1' : 'p-1.5 space-y-1'}>
           {upgrades.map((u) => {
             const isSelected = selected.has(u.id);
             return (
-              <button
+              <UpgradeCard
                 key={u.id}
-                type="button"
+                upgrade={u}
+                isSelected={isSelected}
+                disabled={false}
+                isRadio={false}
                 onClick={() => onToggle(u.id)}
-                className={`flex w-full cursor-pointer items-center gap-2.5 px-2.5 py-1.5 text-left text-[13px] transition-all ${
-                  isSelected
-                    ? 'bg-gold-500/8 text-text-primary'
-                    : 'text-text-secondary hover:bg-plate-700/30 hover:text-text-primary'
-                }`}
-              >
-                <CheckIndicator checked={isSelected} />
-                <span className="flex-1">{u.name}</span>
-                {u.cost > 0 && (
-                  <span className={`font-data text-xs tabular-nums ${isSelected ? 'text-gold-400/70' : 'text-text-dim'}`}>
-                    +{u.cost}
-                  </span>
-                )}
-              </button>
+              />
             );
           })}
         </div>
       )}
     </div>
+  );
+}
+
+/** Card-style upgrade selector */
+function UpgradeCard({
+  upgrade,
+  isSelected,
+  disabled,
+  isRadio,
+  onClick,
+}: {
+  upgrade: Upgrade;
+  isSelected: boolean;
+  disabled: boolean;
+  isRadio: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex w-full items-center gap-3 rounded-sm border px-3 py-2 text-left transition-all disabled:cursor-not-allowed disabled:opacity-25 ${
+        isSelected
+          ? 'border-gold-500/30 bg-gold-500/8 shadow-[0_0_10px_rgba(158,124,52,0.06)]'
+          : 'border-edge-700/20 bg-plate-800/15 hover:border-edge-500/30 hover:bg-plate-700/25'
+      }`}
+    >
+      {isRadio ? (
+        <RadioIndicator checked={isSelected} />
+      ) : (
+        <CheckIndicator checked={isSelected} />
+      )}
+      <div className="flex-1 min-w-0">
+        <span className={`text-[13px] font-medium ${isSelected ? 'text-text-primary' : 'text-text-secondary'}`}>
+          {upgrade.name}
+        </span>
+        {upgrade.upgrade_type && (
+          <span className={`ml-2 font-label rounded-sm border px-1.5 py-px text-[9px] font-semibold tracking-wider uppercase ${
+            isSelected
+              ? 'border-gold-600/20 bg-gold-900/15 text-gold-400/70'
+              : 'border-edge-600/20 bg-plate-700/30 text-text-dim/60'
+          }`}>
+            {upgrade.upgrade_type}
+          </span>
+        )}
+      </div>
+      {upgrade.cost > 0 && (
+        <span className={`font-data text-sm font-semibold tabular-nums shrink-0 ${
+          isSelected ? 'text-gold-400' : 'text-text-dim'
+        }`}>
+          +{upgrade.cost}
+        </span>
+      )}
+      {upgrade.cost === 0 && (
+        <span className="font-data text-[11px] tabular-nums text-text-dim/40 shrink-0">
+          Free
+        </span>
+      )}
+    </button>
   );
 }
 

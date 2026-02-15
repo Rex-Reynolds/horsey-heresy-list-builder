@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useUnits } from '../../api/units.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
@@ -29,14 +29,18 @@ export default function UnitBrowser() {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('name');
 
-  const { rosterId, detachments, addEntry, syncFromResponse } = useRosterStore();
+  const { rosterId, detachments, addEntry, syncFromResponse, totalPoints, pointsLimit } = useRosterStore();
   const addToast = useUIStore((s) => s.addToast);
   const setNewEntryId = useUIStore((s) => s.setNewEntryId);
+  const setLastAddedInfo = useUIStore((s) => s.setLastAddedInfo);
   const getAvailability = useUnitAvailability();
 
   // React to slot-click filter from roster panel
   const slotFilter = useUIStore((s) => s.slotFilter);
   const setSlotFilter = useUIStore((s) => s.setSlotFilter);
+  const slotFilterContext = useUIStore((s) => s.slotFilterContext);
+  const setSlotFilterContext = useUIStore((s) => s.setSlotFilterContext);
+
   useEffect(() => {
     if (slotFilter) {
       setCategory(slotFilter);
@@ -44,6 +48,12 @@ export default function UnitBrowser() {
       setSlotFilter(null); // Consume the filter
     }
   }, [slotFilter, setSlotFilter]);
+
+  function clearSlotContext() {
+    setSlotFilterContext(null);
+    setCategory(null);
+    setAvailableOnly(false);
+  }
 
   const { data: units = [], isLoading, error } = useUnits(
     category ?? undefined,
@@ -161,6 +171,7 @@ export default function UnitBrowser() {
           });
           addToast(`${unit.name} added`);
           setNewEntryId(data.id);
+          setLastAddedInfo({ unitName: unit.name, detachmentName: det.name });
           client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
             syncFromResponse(resp);
           });
@@ -170,7 +181,28 @@ export default function UnitBrowser() {
         },
       },
     );
-  }, [rosterId, quickAddMutation, getAvailability, addEntry, addToast, setNewEntryId, syncFromResponse]);
+  }, [rosterId, quickAddMutation, getAvailability, addEntry, addToast, setNewEntryId, setLastAddedInfo, syncFromResponse]);
+
+  // Keyboard navigation
+  const listRef = useRef<HTMLDivElement>(null);
+  const flatUnitIds = useMemo(() => displayUnits.map((i) => i.unit.id), [displayUnits]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!flatUnitIds.length) return;
+    const currentIdx = expandedId ? flatUnitIds.indexOf(expandedId) : -1;
+
+    if (e.key === 'ArrowDown' || e.key === 'j') {
+      e.preventDefault();
+      const nextIdx = currentIdx < flatUnitIds.length - 1 ? currentIdx + 1 : 0;
+      setExpandedId(flatUnitIds[nextIdx]);
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
+      e.preventDefault();
+      const prevIdx = currentIdx > 0 ? currentIdx - 1 : flatUnitIds.length - 1;
+      setExpandedId(flatUnitIds[prevIdx]);
+    } else if (e.key === 'Escape') {
+      setExpandedId(null);
+    }
+  }, [flatUnitIds, expandedId]);
 
   function renderUnitCard(item: { unit: Unit; availability: ReturnType<typeof getAvailability> | undefined }) {
     const { unit, availability } = item;
@@ -189,21 +221,67 @@ export default function UnitBrowser() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl 2xl:max-w-6xl">
+    <div className="mx-auto max-w-3xl xl:max-w-5xl">
       {/* Sticky toolbar */}
       <div className="sticky-toolbar space-y-3">
         {/* Header */}
         <div className="flex items-baseline justify-between">
           <h2 className="text-imperial heading-imperial text-sm">Unit Compendium</h2>
-          {!isLoading && !error && displayUnits.length > 0 && (
-            <span className="font-data text-[11px] tabular-nums text-text-dim">
-              {displayUnits.length} unit{displayUnits.length !== 1 ? 's' : ''}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {rosterId && (
+              <span className={`font-data text-[11px] tabular-nums ${
+                pointsLimit - totalPoints < 0 ? 'text-danger' : 'text-text-dim'
+              }`}>
+                {pointsLimit - totalPoints} pts left
+              </span>
+            )}
+            {!isLoading && !error && displayUnits.length > 0 && (
+              <span className="font-data text-[11px] tabular-nums text-text-dim">
+                {displayUnits.length} unit{displayUnits.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         </div>
 
+        {/* Slot-aware contextual banner */}
+        {slotFilterContext && (
+          <div className="slot-context-banner flex items-center justify-between gap-3 rounded-sm border border-gold-600/25 bg-gold-900/15 px-3.5 py-2.5">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <svg className="h-3.5 w-3.5 shrink-0 text-gold-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="font-label text-[11px] font-semibold tracking-wider text-gold-400/80 uppercase">
+                  Showing units for
+                </span>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="font-display text-[12px] font-semibold tracking-wide text-gold-300 uppercase">
+                  {slotFilterContext.detachmentName}
+                </span>
+                <span className="text-text-dim/40">&rarr;</span>
+                <span className="font-label text-[12px] font-semibold tracking-wide text-text-secondary uppercase">
+                  {slotFilterContext.slotName}
+                </span>
+                <span className="font-data text-[11px] tabular-nums text-text-dim">
+                  ({slotFilterContext.filled}/{slotFilterContext.max === 999 ? '\u221e' : slotFilterContext.max} filled)
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={clearSlotContext}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-edge-600/30 text-text-dim transition-colors hover:border-gold-600/30 hover:text-gold-400"
+              title="Clear filter"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         {/* Category filter */}
-        <CategoryFilter selected={category} onChange={setCategory} counts={unitCounts} />
+        <CategoryFilter selected={category} onChange={(cat) => { setCategory(cat); if (!cat) setSlotFilterContext(null); }} counts={unitCounts} />
 
         {/* Search + sort + available */}
         <div className="flex items-center gap-2">
@@ -247,7 +325,7 @@ export default function UnitBrowser() {
       </div>
 
       {/* Content */}
-      <div className="mt-3">
+      <div className="mt-3 outline-none" ref={listRef} tabIndex={-1} onKeyDown={handleKeyDown}>
         {isLoading && <LoadingSpinner />}
 
         {error && (
@@ -272,14 +350,14 @@ export default function UnitBrowser() {
                   </span>
                   <span className="font-data text-[10px] tabular-nums text-text-dim">{items.length}</span>
                 </div>
-                <div className="grid grid-cols-1 gap-1.5 2xl:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1.5 xl:grid-cols-2">
                   {items.map(renderUnitCard)}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="stagger-list grid grid-cols-1 gap-1.5 2xl:grid-cols-2">
+          <div className="stagger-list grid grid-cols-1 gap-1.5 xl:grid-cols-2">
             {displayUnits.map(renderUnitCard)}
           </div>
         )}

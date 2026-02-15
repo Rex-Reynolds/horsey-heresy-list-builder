@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import sys
@@ -15,6 +16,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from peewee import prefetch
 from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Detachment, Roster, RosterDetachment, RosterEntry
 from src.bsdata.points_calculator import PointsCalculator
 from src.bsdata.detachment_loader import DetachmentLoader
@@ -27,6 +29,10 @@ import json
 
 # Singleton composition validator
 composition_validator = CompositionValidator()
+
+# Module-level caches for static data (only changes on DB re-seed)
+_detachments_cache: list | None = None
+_doctrines_cache: list | None = None
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +69,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip compression for all responses (min 500 bytes)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Pydantic models for request/response
 class UnitResponse(BaseModel):
@@ -334,17 +343,34 @@ async def get_weapons(
 # ===== ROSTERS =====
 
 def _build_roster_response(roster: Roster) -> dict:
-    """Build full roster response with detachments and slot status."""
+    """Build full roster response with detachments and slot status.
+
+    Uses prefetch() to batch-load detachments → entries → units in 3 queries
+    instead of 1 + N + M (N+1 pattern).
+    """
     modifier_eval = ModifierEvaluator(roster)
+
+    # Batch-load: detachments (with Detachment FK join), entries (with Unit FK join)
+    rd_query = (
+        RosterDetachment
+        .select(RosterDetachment, Detachment)
+        .join(Detachment, on=(RosterDetachment.detachment == Detachment.id))
+        .switch(RosterDetachment)
+        .where(RosterDetachment.roster == roster)
+        .order_by(RosterDetachment.sort_order)
+    )
+    entry_query = (
+        RosterEntry
+        .select(RosterEntry, Unit)
+        .join(Unit, on=(RosterEntry.unit == Unit.id))
+    )
+    prefetched_dets = prefetch(rd_query, entry_query)
+
     detachments = []
-    for rd in RosterDetachment.select().where(
-        RosterDetachment.roster == roster
-    ).order_by(RosterDetachment.sort_order):
+    for rd in prefetched_dets:
         slots = rd.get_slot_status(modifier_eval=modifier_eval)
         entries = []
-        for entry in RosterEntry.select().where(
-            RosterEntry.roster_detachment == rd
-        ):
+        for entry in rd.entries:
             unit = entry.unit
             entries.append({
                 "id": entry.id,
@@ -427,6 +453,29 @@ async def get_roster(roster_id: int):
     except Roster.DoesNotExist:
         raise HTTPException(status_code=404, detail="Roster not found")
 
+    return _build_roster_response(roster)
+
+
+class RosterUpdate(BaseModel):
+    name: Optional[str] = None
+    points_limit: Optional[int] = None
+
+@app.patch("/api/rosters/{roster_id}")
+async def update_roster(roster_id: int, body: RosterUpdate):
+    """Update roster name or points limit."""
+    try:
+        roster = Roster.get_by_id(roster_id)
+    except Roster.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Roster not found")
+
+    if body.name is not None:
+        name = body.name.strip()
+        if not name:
+            raise HTTPException(status_code=422, detail="Roster name cannot be empty")
+        roster.name = name
+    if body.points_limit is not None:
+        roster.points_limit = body.points_limit
+    roster.save()
     return _build_roster_response(roster)
 
 
@@ -516,14 +565,26 @@ async def get_roster_detachments(roster_id: int):
         raise HTTPException(status_code=404, detail="Roster not found")
 
     modifier_eval = ModifierEvaluator(roster)
+
+    rd_query = (
+        RosterDetachment
+        .select(RosterDetachment, Detachment)
+        .join(Detachment, on=(RosterDetachment.detachment == Detachment.id))
+        .switch(RosterDetachment)
+        .where(RosterDetachment.roster == roster)
+        .order_by(RosterDetachment.sort_order)
+    )
+    entry_query = (
+        RosterEntry
+        .select(RosterEntry, Unit)
+        .join(Unit, on=(RosterEntry.unit == Unit.id))
+    )
+    prefetched_dets = prefetch(rd_query, entry_query)
+
     result = []
-    for rd in RosterDetachment.select().where(
-        RosterDetachment.roster == roster
-    ).order_by(RosterDetachment.sort_order):
+    for rd in prefetched_dets:
         entries = []
-        for entry in RosterEntry.select().where(
-            RosterEntry.roster_detachment == rd
-        ):
+        for entry in rd.entries:
             unit = entry.unit
             entries.append({
                 "id": entry.id,
@@ -848,48 +909,50 @@ async def get_detachments(
     faction: Optional[str] = Query(None, description="Filter by faction"),
     detachment_type: Optional[str] = Query(None, description="Filter by type (Primary, Auxiliary, Apex)"),
 ):
-    """Get all available detachment types."""
-    query = Detachment.select()
+    """Get all available detachment types. Cached at module level (only changes on DB re-seed)."""
+    global _detachments_cache
 
+    # Rebuild cache if empty
+    if _detachments_cache is None:
+        query = Detachment.select()
+        detachments = list(query)
+        if detachments:
+            _detachments_cache = [{
+                "id": d.id,
+                "bs_id": d.bs_id,
+                "name": d.name,
+                "type": d.detachment_type,
+                "faction": d.faction,
+                "constraints": json.loads(d.constraints) if d.constraints else {},
+                "unit_restrictions": json.loads(d.unit_restrictions) if d.unit_restrictions else {},
+                "costs": json.loads(d.costs) if d.costs else {},
+            } for d in detachments]
+        else:
+            # Fallback: load from .gst file when DB is empty
+            gst_path = Path(__file__).parent.parent / "data" / "bsdata" / "Horus Heresy 3rd Edition.gst"
+            try:
+                loader = DetachmentLoader(gst_path)
+                loaded = loader.load_all_detachments()
+                _detachments_cache = [{
+                    "id": i + 1,
+                    "bs_id": d["bs_id"],
+                    "name": d["name"],
+                    "type": d["detachment_type"],
+                    "faction": d.get("faction"),
+                    "constraints": json.loads(d["constraints"]) if d["constraints"] else {},
+                    "unit_restrictions": json.loads(d["unit_restrictions"]) if d.get("unit_restrictions") else {},
+                    "costs": json.loads(d["costs"]) if d.get("costs") else {},
+                } for i, d in enumerate(loaded)]
+            except Exception as e:
+                logger.error(f"Failed to load detachments from .gst: {e}")
+                return []
+
+    result = _detachments_cache
     if faction:
-        # Include generic (faction=null) + faction-specific
-        query = query.where(
-            (Detachment.faction == faction) | (Detachment.faction.is_null())
-        )
+        result = [d for d in result if d["faction"] == faction or d["faction"] is None]
     if detachment_type:
-        query = query.where(Detachment.detachment_type == detachment_type)
-
-    detachments = list(query)
-    if detachments:
-        return [{
-            "id": d.id,
-            "bs_id": d.bs_id,
-            "name": d.name,
-            "type": d.detachment_type,
-            "faction": d.faction,
-            "constraints": json.loads(d.constraints) if d.constraints else {},
-            "unit_restrictions": json.loads(d.unit_restrictions) if d.unit_restrictions else {},
-            "costs": json.loads(d.costs) if d.costs else {},
-        } for d in detachments]
-
-    # Fallback: load from .gst file when DB is empty
-    gst_path = Path(__file__).parent.parent / "data" / "bsdata" / "Horus Heresy 3rd Edition.gst"
-    try:
-        loader = DetachmentLoader(gst_path)
-        loaded = loader.load_all_detachments()
-        return [{
-            "id": i + 1,
-            "bs_id": d["bs_id"],
-            "name": d["name"],
-            "type": d["detachment_type"],
-            "faction": d.get("faction"),
-            "constraints": json.loads(d["constraints"]) if d["constraints"] else {},
-            "unit_restrictions": json.loads(d["unit_restrictions"]) if d.get("unit_restrictions") else {},
-            "costs": json.loads(d["costs"]) if d.get("costs") else {},
-        } for i, d in enumerate(loaded)]
-    except Exception as e:
-        logger.error(f"Failed to load detachments from .gst: {e}")
-        return []
+        result = [d for d in result if d["type"] == detachment_type]
+    return result
 
 
 @app.get("/api/display-groups")
@@ -905,8 +968,11 @@ class DoctrineUpdate(BaseModel):
 
 @app.get("/api/doctrines")
 async def list_doctrines():
-    """Get available Cohort Doctrines."""
-    return get_available_doctrines()
+    """Get available Cohort Doctrines. Cached at module level."""
+    global _doctrines_cache
+    if _doctrines_cache is None:
+        _doctrines_cache = get_available_doctrines()
+    return _doctrines_cache
 
 @app.patch("/api/rosters/{roster_id}/doctrine")
 async def set_roster_doctrine(roster_id: int, body: DoctrineUpdate):

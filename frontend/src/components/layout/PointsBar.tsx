@@ -29,6 +29,8 @@ const SEGMENT_COLORS_DIM: Record<string, string> = {
 export default function PointsBar({ current, limit, segments }: Props) {
   const pct = limit > 0 ? Math.min((current / limit) * 100, 100) : 0;
   const over = current > limit;
+  const remaining = limit - current;
+  const nearLimit = !over && pct >= 90;
 
   // Flash the points number when value changes
   const [flash, setFlash] = useState(false);
@@ -53,6 +55,9 @@ export default function PointsBar({ current, limit, segments }: Props) {
   // Build segment widths relative to the filled portion
   const hasSegments = segments && segments.length > 0 && current > 0;
 
+  // Hover tooltip state
+  const [hoveredSeg, setHoveredSeg] = useState<number | null>(null);
+
   return (
     <div>
       {/* Labels */}
@@ -65,23 +70,33 @@ export default function PointsBar({ current, limit, segments }: Props) {
           <span className="font-data text-sm tabular-nums text-text-secondary">{limit}</span>
           <span className="font-label ml-0.5 text-[10px] font-semibold tracking-[0.15em] text-text-dim uppercase">pts</span>
         </div>
-        {over && (
-          <span className="font-data text-xs font-semibold text-danger animate-pulse">
-            +{current - limit} over
-          </span>
-        )}
+        <div className="flex items-baseline gap-2">
+          {over ? (
+            <span className="font-data text-xs font-semibold text-danger animate-pulse">
+              +{current - limit} over
+            </span>
+          ) : remaining > 0 ? (
+            <span className={`font-data text-xs tabular-nums transition-colors ${
+              nearLimit ? 'text-caution/80 animate-pulse' : 'text-text-dim/60'
+            }`}>
+              {remaining} remaining
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {/* Track */}
       <div className={`relative h-4 overflow-hidden rounded-sm border transition-all ${
         over
           ? 'border-danger/40 shadow-[0_0_12px_rgba(196,64,64,0.15)]'
-          : 'border-edge-600/35'
+          : nearLimit
+            ? 'border-caution/30 shadow-[0_0_10px_rgba(196,154,32,0.1)]'
+            : 'border-edge-600/35'
       } bg-plate-800`}>
         {/* Segmented fill */}
         {hasSegments ? (
           <div
-            className="flex h-full transition-all duration-700 ease-out"
+            className="relative flex h-full transition-all duration-700 ease-out"
             style={{ width: `${pct}%` }}
           >
             {segments!.map((seg, i) => {
@@ -95,10 +110,21 @@ export default function PointsBar({ current, limit, segments }: Props) {
               return (
                 <div
                   key={i}
-                  className={`h-full ${color} ${i > 0 ? 'border-l border-void/30' : ''}`}
+                  className={`relative h-full ${color} ${i > 0 ? 'border-l border-void/30' : ''} transition-colors hover:brightness-125`}
                   style={{ width: `${segPct}%` }}
-                  title={`${seg.label}: ${seg.points} pts`}
-                />
+                  onMouseEnter={() => setHoveredSeg(i)}
+                  onMouseLeave={() => setHoveredSeg(null)}
+                >
+                  {/* Hover tooltip */}
+                  {hoveredSeg === i && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-20 pointer-events-none whitespace-nowrap">
+                      <div className="rounded-sm border border-edge-600/50 bg-plate-900/95 px-2.5 py-1.5 shadow-lg backdrop-blur-sm">
+                        <p className="font-label text-[11px] font-semibold tracking-wider text-text-primary uppercase">{seg.label}</p>
+                        <p className="font-data text-[11px] tabular-nums text-gold-400">{seg.points} pts</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

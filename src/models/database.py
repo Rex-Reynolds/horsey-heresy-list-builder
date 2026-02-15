@@ -3,8 +3,13 @@ from datetime import datetime
 from peewee import SqliteDatabase, Model, DateTimeField
 from src.config import DB_PATH
 
-# Initialize SQLite database connection
-db = SqliteDatabase(str(DB_PATH))
+# Initialize SQLite database connection with performance pragmas
+db = SqliteDatabase(str(DB_PATH), pragmas={
+    'journal_mode': 'wal',
+    'cache_size': -8000,  # 8MB
+    'synchronous': 'normal',
+    'foreign_keys': 1,
+})
 
 
 class BaseModel(Model):

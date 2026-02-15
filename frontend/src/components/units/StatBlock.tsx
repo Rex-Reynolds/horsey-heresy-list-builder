@@ -45,10 +45,17 @@ export default function StatBlock({ stats }: Props) {
   const showInv = stats.some((s) => s.INV && s.INV !== '-' && s.INV !== '');
 
   return (
-    <div className="overflow-hidden rounded-sm border border-edge-600/30">
+    <div className="stat-block-frame relative overflow-hidden rounded-sm border border-edge-600/30">
+      {/* Imperial corner accents */}
+      <div className="absolute top-0 left-0 h-3 w-3 border-t-2 border-l-2 border-gold-600/50 rounded-tl-sm" />
+      <div className="absolute top-0 right-0 h-3 w-3 border-t-2 border-r-2 border-gold-600/50 rounded-tr-sm" />
+      <div className="absolute bottom-0 left-0 h-3 w-3 border-b-2 border-l-2 border-gold-600/30 rounded-bl-sm" />
+      <div className="absolute bottom-0 right-0 h-3 w-3 border-b-2 border-r-2 border-gold-600/30 rounded-br-sm" />
+
       {/* Gold accent bar */}
-      <div className="h-[2px] bg-gradient-to-r from-gold-700 via-gold-500 to-gold-700" />
-      <div className="overflow-x-auto">
+      <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-500 to-transparent" />
+
+      <div className="stat-scroll-container relative overflow-x-auto">
         <table className="data-readout w-full">
           <thead>
             <tr>
@@ -76,6 +83,9 @@ export default function StatBlock({ stats }: Props) {
           </tbody>
         </table>
       </div>
+
+      {/* Bottom accent */}
+      <div className="h-[1px] bg-gradient-to-r from-transparent via-gold-700/40 to-transparent" />
     </div>
   );
 }

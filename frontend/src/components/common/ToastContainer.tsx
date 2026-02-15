@@ -24,6 +24,17 @@ export default function ToastContainer() {
             </svg>
           )}
           <span className="text-[13px] font-medium">{toast.message}</span>
+          {toast.onUndo && (
+            <button
+              onClick={() => {
+                toast.onUndo!();
+                removeToast(toast.id);
+              }}
+              className="ml-1 font-label text-[12px] font-semibold tracking-wider text-gold-400 underline underline-offset-2 transition-colors hover:text-gold-300 uppercase"
+            >
+              Undo
+            </button>
+          )}
           <button
             onClick={() => removeToast(toast.id)}
             className="ml-2 shrink-0 opacity-50 transition-opacity hover:opacity-100"

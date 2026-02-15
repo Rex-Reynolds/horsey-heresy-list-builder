@@ -19,6 +19,23 @@ const STRIPE_COLORS: Record<string, string> = {
   Allied: 'border-l-edge-400',
 };
 
+const SECTION_HINTS: Record<string, (comp: CompositionStatus) => string | null> = {
+  Primary: (comp) =>
+    comp.primary_count === 0
+      ? 'Every roster needs a Primary detachment. Start here.'
+      : null,
+  Auxiliary: (comp) =>
+    comp.auxiliary_budget === 0
+      ? 'Add Command units to unlock Auxiliary slots.'
+      : comp.auxiliary_used >= comp.auxiliary_budget
+        ? `Auxiliary budget full (${comp.auxiliary_used}/${comp.auxiliary_budget}).`
+        : `${comp.auxiliary_budget - comp.auxiliary_used} Auxiliary slot${comp.auxiliary_budget - comp.auxiliary_used !== 1 ? 's' : ''} available.`,
+  Apex: (comp) =>
+    comp.apex_budget === 0
+      ? 'Apex slots require specific High Command units.'
+      : `${comp.apex_budget - comp.apex_used} Apex slot${comp.apex_budget - comp.apex_used !== 1 ? 's' : ''} available.`,
+};
+
 function getDisabledReason(
   det: Detachment,
   composition: CompositionStatus,
@@ -138,7 +155,7 @@ export default function DetachmentPickerModal({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search detachments..."
             autoFocus
-            className="modal-search w-full rounded-sm px-3 py-2 text-sm text-text-primary placeholder-text-dim outline-none"
+            className="modal-search w-full rounded-sm px-3 py-2 text-sm text-text-primary placeholder:text-text-dim outline-none"
           />
         </div>
 
@@ -153,11 +170,27 @@ export default function DetachmentPickerModal({
           )}
           {grouped.map(([type, dets]) => {
             const sectionColor = SECTION_COLORS[type] ?? 'border-l-edge-500/30 text-text-dim';
+            const hintFn = SECTION_HINTS[type];
+            const hint = hintFn ? hintFn(composition) : null;
+            const isPrimarySection = type === 'Primary' && composition.primary_count === 0;
+
             return (
               <div key={type}>
-                <p className={`font-label mb-2 border-l-2 pl-2 text-[11px] font-bold tracking-[0.15em] uppercase ${sectionColor}`}>
-                  {type}
-                </p>
+                <div className="mb-2">
+                  <p className={`font-label border-l-2 pl-2 text-[11px] font-bold tracking-[0.15em] uppercase ${sectionColor}`}>
+                    {type}
+                    {isPrimarySection && (
+                      <span className="ml-2 font-normal normal-case tracking-normal text-gold-400/60">
+                        — start here
+                      </span>
+                    )}
+                  </p>
+                  {hint && (
+                    <p className="mt-1 pl-3.5 text-[11px] leading-relaxed text-text-dim/70">
+                      {hint}
+                    </p>
+                  )}
+                </div>
                 <div className="space-y-1.5">
                   {dets.map((d) => {
                     const disabledReason = getDisabledReason(d, composition);
@@ -175,8 +208,10 @@ export default function DetachmentPickerModal({
                         disabled={isDisabled}
                         className={`block w-full rounded-sm border-l-2 text-left transition-all ${stripe} ${
                           isDisabled
-                            ? 'cursor-not-allowed opacity-50 bg-plate-900/30'
-                            : 'bg-plate-800/40 hover:bg-plate-700/50 hover:shadow-[0_0_12px_rgba(130,102,36,0.04)]'
+                            ? 'cursor-not-allowed opacity-40 bg-plate-900/30'
+                            : isPrimarySection
+                              ? 'bg-gold-900/10 hover:bg-gold-900/20 hover:shadow-[0_0_16px_rgba(130,102,36,0.06)] border border-r-0 border-y-0 border-gold-600/10'
+                              : 'bg-plate-800/40 hover:bg-plate-700/50 hover:shadow-[0_0_12px_rgba(130,102,36,0.04)]'
                         }`}
                       >
                         <div className="px-4 py-3">
@@ -188,7 +223,7 @@ export default function DetachmentPickerModal({
                               )}
                             </span>
                             {disabledReason && (
-                              <span className="shrink-0 rounded-sm border border-danger/20 bg-danger/8 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-danger/70 uppercase">
+                              <span className="shrink-0 rounded-sm border border-edge-600/20 bg-plate-700/40 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-text-dim/70 uppercase">
                                 {disabledReason}
                               </span>
                             )}

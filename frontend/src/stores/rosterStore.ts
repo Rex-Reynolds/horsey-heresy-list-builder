@@ -191,6 +191,8 @@ export const useRosterStore = create<RosterState>((set) => ({
   syncFromResponse: (resp) =>
     set(() => {
       const detachments = mapResponseDetachments(resp.detachments);
+      // Persist roster ID for session restore
+      try { localStorage.setItem('sa_roster_id', String(resp.id)); } catch {}
       return {
         rosterId: resp.id,
         rosterName: resp.name,
@@ -207,7 +209,8 @@ export const useRosterStore = create<RosterState>((set) => ({
   setValidation: (isValid, errors) =>
     set({ isValid, validationErrors: errors }),
 
-  clearRoster: () =>
+  clearRoster: () => {
+    try { localStorage.removeItem('sa_roster_id'); } catch {}
     set({
       rosterId: null,
       rosterName: '',
@@ -218,5 +221,6 @@ export const useRosterStore = create<RosterState>((set) => ({
       totalPoints: 0,
       isValid: null,
       validationErrors: [],
-    }),
+    });
+  },
 }));

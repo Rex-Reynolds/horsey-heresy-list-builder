@@ -4,13 +4,14 @@ import type { SlotStatus } from '../../types/index.ts';
 import { SLOT_FILL_COLORS } from '../../types/index.ts';
 import RosterEntryCard from './RosterEntryCard.tsx';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
+import ForceOrgGrid from './ForceOrgGrid.tsx';
 
 interface Props {
   detachment: RosterDetachment;
   onRemoveEntry: (detachmentId: number, entryId: number) => void;
   onUpdateQty: (detachmentId: number, entryId: number, qty: number) => void;
   onRemoveDetachment?: (detachmentId: number) => void;
-  onSlotClick?: (slotName: string) => void;
+  onSlotClick?: (slotName: string, filled: number, max: number) => void;
   newEntryId?: number | null;
 }
 
@@ -82,13 +83,17 @@ function SlotRow({
       ? 'slot-warning'
       : '';
 
+  const isRequired = status.min > 0 && isEmpty;
+
   return (
-    <div className={`py-1.5 ${validationClass} ${isClickable && isEmpty ? 'slot-row-empty px-2 -mx-1 my-0.5' : ''}`}>
+    <div className={`py-1.5 ${validationClass} ${isClickable && isEmpty ? 'slot-row-empty px-2 -mx-1 my-0.5' : ''} ${isRequired ? 'animate-pulse-glow' : ''}`}>
       <button
         type="button"
         onClick={isClickable ? onClick : undefined}
         className={`flex w-full items-center justify-between text-left gap-2 ${
-          isClickable ? 'cursor-pointer transition-colors hover:bg-plate-700/25 -mx-1 px-1 rounded-sm' : ''
+          isClickable
+            ? `cursor-pointer transition-colors -mx-1 px-1 rounded-sm ${isRequired ? 'hover:bg-gold-900/15' : 'hover:bg-plate-700/25'}`
+            : ''
         }`}
         disabled={!isClickable}
       >
@@ -113,11 +118,15 @@ function SlotRow({
           )}
 
           {isClickable && isEmpty && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-normal tracking-normal normal-case text-text-dim/50 transition-colors group-hover:text-gold-500/50">
-              <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <span className={`inline-flex items-center gap-1 text-[11px] font-medium tracking-normal normal-case transition-colors ${
+              status.min > 0
+                ? 'text-gold-500/70 hover:text-gold-400'
+                : 'text-text-dim/50 hover:text-gold-500/50'
+            }`}>
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" d="M12 5v14M5 12h14" />
               </svg>
-              browse
+              {status.min > 0 ? 'add units' : 'browse'}
             </span>
           )}
         </div>
@@ -174,11 +183,14 @@ export default function DetachmentSection({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const detPoints = detachment.entries.reduce((s, e) => s + e.totalCost, 0);
 
-  const entriesBySlot: Record<string, RosterEntry[]> = {};
-  for (const entry of detachment.entries) {
-    if (!entriesBySlot[entry.category]) entriesBySlot[entry.category] = [];
-    entriesBySlot[entry.category].push(entry);
-  }
+  const entriesBySlot = useMemo(() => {
+    const map: Record<string, RosterEntry[]> = {};
+    for (const entry of detachment.entries) {
+      if (!map[entry.category]) map[entry.category] = [];
+      map[entry.category].push(entry);
+    }
+    return map;
+  }, [detachment.entries]);
 
   // Split slots into relevant (shown), discoverable (locked, togglable), and irrelevant (never shown)
   const { relevantSlots, discoverableSlots } = useMemo(() => {
@@ -258,6 +270,14 @@ export default function DetachmentSection({
           </div>
         </div>
 
+        {/* Force Org Grid — visual summary */}
+        {!collapsed && relevantSlots.length > 2 && (
+          <ForceOrgGrid
+            slots={relevantSlots}
+            onSlotClick={onSlotClick}
+          />
+        )}
+
         {/* Body */}
         {!collapsed && (
           <div className="border-t border-edge-700/15 px-3.5 py-2 space-y-0.5">
@@ -266,7 +286,7 @@ export default function DetachmentSection({
                 <SlotRow
                   name={slotName}
                   status={status}
-                  onClick={onSlotClick ? () => onSlotClick(slotName) : undefined}
+                  onClick={onSlotClick ? () => onSlotClick(slotName, status.filled, status.max) : undefined}
                 />
                 {(entriesBySlot[slotName] || []).map((entry) => (
                   <div key={entry.id} className="ml-2">

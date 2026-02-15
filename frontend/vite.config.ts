@@ -12,4 +12,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          query: ['@tanstack/react-query'],
+          state: ['zustand', 'axios'],
+        },
+      },
+    },
+  },
 })
