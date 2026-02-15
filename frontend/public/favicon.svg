@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="8" fill="#151a21"/>
+  <rect x="1" y="1" width="62" height="62" rx="7" fill="none" stroke="#5e4818" stroke-width="1" opacity="0.3"/>
+  <!-- Left wing -->
+  <path d="M28 32 L10 24 L15 29 L7 27 L17 32 L7 37 L15 35 L10 40 Z" fill="#b48f3c" opacity="0.7"/>
+  <!-- Right wing -->
+  <path d="M36 32 L54 24 L49 29 L57 27 L47 32 L57 37 L49 35 L54 40 Z" fill="#b48f3c" opacity="0.7"/>
+  <!-- Center star -->
+  <path d="M32 18 L34 28 L40 24 L35 30 L44 30 L35 33 L40 38 L34 34 L32 44 L30 34 L24 38 L29 33 L20 30 L29 30 L24 24 L30 28 Z" fill="#b48f3c"/>
+  <!-- Inner rings -->
+  <circle cx="32" cy="31" r="4.5" fill="#b48f3c" opacity="0.9"/>
+  <circle cx="32" cy="31" r="2.5" fill="#151a21"/>
+  <circle cx="32" cy="31" r="1.5" fill="#b48f3c" opacity="0.5"/>
+</svg>

@@ -11,6 +11,7 @@ export interface Unit {
   unit_type: string; // Native HH3 slot name (e.g., "Armour", "Recon")
   bsdata_category: string | null;
   base_cost: number;
+  cost_per_model: number;
   profiles: string | null;
   rules: string | null;
   constraints: UnitConstraint[] | null;
@@ -18,6 +19,7 @@ export interface Unit {
   model_max: number | null;
   is_legacy: boolean;
   has_required_upgrades: boolean;
+  default_upgrades?: SelectedUpgrade[] | null;
 }
 
 export interface Upgrade {
@@ -95,10 +97,14 @@ export interface RosterEntryResponse {
   unit_name: string;
   quantity: number;
   upgrades: SelectedUpgrade[];
+  upgrade_names?: string[];
+  upgrade_cost?: number;
   total_cost: number;
   category: string; // Native HH3 slot name
   model_min: number;
   model_max: number | null;
+  cost_per_model: number;
+  base_cost: number;
 }
 
 export interface SelectedUpgrade {

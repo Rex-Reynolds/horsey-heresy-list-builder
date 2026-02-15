@@ -180,8 +180,8 @@ export default function DetachmentPickerModal({
                   <p className={`font-label border-l-2 pl-2 text-[11px] font-bold tracking-[0.15em] uppercase ${sectionColor}`}>
                     {type}
                     {isPrimarySection && (
-                      <span className="ml-2 font-normal normal-case tracking-normal text-gold-400/60">
-                        — start here
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gold-500/30 bg-gold-900/20 px-1.5 py-px font-normal normal-case tracking-normal text-[10px] text-gold-400">
+                        Recommended
                       </span>
                     )}
                   </p>

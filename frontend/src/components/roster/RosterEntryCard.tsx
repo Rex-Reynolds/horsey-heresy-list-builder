@@ -1,16 +1,33 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { RosterEntry } from '../../stores/rosterStore.ts';
 import { SLOT_STRIPE_COLORS } from '../../types/index.ts';
+import RosterEntryExpanded from './RosterEntryExpanded.tsx';
 
 interface Props {
   entry: RosterEntry;
+  detachmentId: number;
   onRemove: (id: number) => void;
   onUpdateQty: (id: number, qty: number) => void;
+  onDuplicate?: (entry: RosterEntry) => void;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
   isNew?: boolean;
 }
 
-export default function RosterEntryCard({ entry, onRemove, onUpdateQty, isNew }: Props) {
+export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, expanded, onToggleExpand, isNew }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const prevQtyRef = useRef(entry.quantity);
+  const [costBumped, setCostBumped] = useState(false);
+
+  // Trigger cost bump animation when quantity changes
+  useEffect(() => {
+    if (prevQtyRef.current !== entry.quantity) {
+      prevQtyRef.current = entry.quantity;
+      setCostBumped(true); // eslint-disable-line react-hooks/set-state-in-effect -- syncing from prop change
+      const timer = setTimeout(() => setCostBumped(false), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [entry.quantity]);
 
   // Auto-scroll newly added entries into view
   useEffect(() => {
@@ -27,82 +44,109 @@ export default function RosterEntryCard({ entry, onRemove, onUpdateQty, isNew }:
   const atMin = entry.quantity <= modelMin;
   const atMax = modelMax !== null && entry.quantity >= modelMax;
   const isFixed = modelMax !== null && modelMin === modelMax;
-  const perModel = entry.quantity > 0 ? Math.round(entry.totalCost / entry.quantity) : 0;
+  const perModel = entry.costPerModel;
 
   const stripe = SLOT_STRIPE_COLORS[entry.category] ?? 'border-l-edge-500';
 
   return (
-    <div ref={cardRef} className={`group flex items-center gap-2.5 rounded-sm border-l-2 ${stripe} bg-plate-800/20 px-3 py-2 transition-all hover:bg-plate-800/40 ${isNew ? 'animate-entry-flash' : ''}`}>
-      {/* Info */}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-text-primary">{entry.name}</p>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="font-data text-xs font-medium tabular-nums text-gold-500/80">{entry.totalCost} pts</span>
-          {entry.upgradeCost > 0 && (
-            <span className="font-data text-[10px] tabular-nums text-text-dim/60">
-              ({entry.baseCost * entry.quantity} + {entry.upgradeCost * entry.quantity} upg)
-            </span>
-          )}
-          {entry.upgradeCost === 0 && entry.quantity > 1 && (
-            <span className="font-data text-[10px] tabular-nums text-text-dim">({perModel}/model)</span>
+    <div ref={cardRef} className={`group rounded-sm border-l-2 ${stripe} bg-plate-800/20 transition-all ${expanded ? 'glow-border-active bg-plate-800/40' : 'hover:bg-plate-800/40'} ${isNew ? 'animate-entry-flash' : ''}`}>
+      <div className="flex items-center gap-2.5 px-3 py-2">
+        {/* Info — clickable to expand */}
+        <div
+          className={`min-w-0 flex-1 ${onToggleExpand ? 'cursor-pointer' : ''}`}
+          onClick={onToggleExpand}
+        >
+          <p className="truncate text-[13px] font-medium text-text-primary">{entry.name}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className={`font-data text-xs font-medium tabular-nums text-gold-500/80 ${costBumped ? 'animate-points-flash' : ''}`}>{entry.totalCost} pts</span>
+            {entry.upgradeCost > 0 && (
+              <span className="font-data text-[10px] tabular-nums text-text-dim/60">
+                ({entry.totalCost - entry.upgradeCost} + {entry.upgradeCost} upg)
+              </span>
+            )}
+            {perModel > 0 && entry.quantity > 1 && (
+              <span className="font-data text-[10px] tabular-nums text-text-dim">({perModel}/model)</span>
+            )}
+          </div>
+          {/* Upgrade names — shown when available */}
+          {entry.upgradeNames && entry.upgradeNames.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {entry.upgradeNames.map((name, i) => (
+                <span key={i} className="rounded-sm border border-edge-700/20 bg-plate-700/30 px-1.5 py-px text-[10px] text-text-dim">
+                  {name}
+                </span>
+              ))}
+            </div>
           )}
         </div>
-        {/* Upgrade names — shown when available */}
-        {entry.upgradeNames && entry.upgradeNames.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {entry.upgradeNames.map((name, i) => (
-              <span key={i} className="rounded-sm border border-edge-700/20 bg-plate-700/30 px-1.5 py-px text-[10px] text-text-dim">
-                {name}
+
+        {/* Quantity — models stepper */}
+        {isFixed ? (
+          <span className="font-data text-xs tabular-nums text-text-dim" title={`${entry.quantity} models (fixed)`}>
+            {entry.quantity}
+          </span>
+        ) : (
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => !atMin && onUpdateQty(entry.id, entry.quantity - 1)}
+              disabled={atMin}
+              className="flex h-7 w-7 items-center justify-center rounded-sm border border-edge-600/30 bg-plate-700/40 text-sm text-text-secondary transition-colors hover:border-edge-400/50 hover:text-text-primary disabled:opacity-15 max-lg:h-11 max-lg:w-11"
+              title={atMin ? `Minimum ${modelMin} models` : `Remove model (-${perModel} pts)`}
+            >
+              -
+            </button>
+            <div className="flex min-w-[3rem] flex-col items-center px-1">
+              <span className="font-data text-xs tabular-nums text-text-secondary leading-tight">
+                {entry.quantity}
               </span>
-            ))}
+              <span className="text-[9px] text-text-dim leading-tight">
+                {modelMax !== null ? `of ${modelMax}` : 'models'}
+              </span>
+            </div>
+            <button
+              onClick={() => !atMax && onUpdateQty(entry.id, entry.quantity + 1)}
+              disabled={atMax}
+              className="flex h-7 w-7 items-center justify-center rounded-sm border border-edge-600/30 bg-plate-700/40 text-sm text-text-secondary transition-colors hover:border-edge-400/50 hover:text-text-primary disabled:opacity-15 max-lg:h-11 max-lg:w-11"
+              title={atMax ? `Maximum ${modelMax} models` : `Add model (+${perModel} pts)`}
+            >
+              +
+            </button>
           </div>
         )}
+
+        {/* Duplicate */}
+        {onDuplicate && (
+          <button
+            onClick={() => onDuplicate(entry)}
+            className="flex h-5 w-5 items-center justify-center text-text-dim opacity-0 transition-all hover:text-gold-400 group-hover:opacity-100 max-lg:h-11 max-lg:w-11 max-lg:opacity-60"
+            title="Duplicate"
+          >
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Remove */}
+        <button
+          onClick={() => onRemove(entry.id)}
+          className="flex h-5 w-5 items-center justify-center text-text-dim opacity-0 transition-all hover:text-danger group-hover:opacity-100 max-lg:h-11 max-lg:w-11 max-lg:opacity-60"
+          title="Remove"
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
-      {/* Quantity — models stepper */}
-      {isFixed ? (
-        <span className="font-data text-xs tabular-nums text-text-dim" title={`${entry.quantity} models (fixed)`}>
-          {entry.quantity}
-        </span>
-      ) : (
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => !atMin && onUpdateQty(entry.id, entry.quantity - 1)}
-            disabled={atMin}
-            className="flex h-7 w-7 items-center justify-center rounded-sm border border-edge-600/30 bg-plate-700/40 text-sm text-text-secondary transition-colors hover:border-edge-400/50 hover:text-text-primary disabled:opacity-15 max-lg:h-11 max-lg:w-11"
-            title={atMin ? `Minimum ${modelMin} models` : `Remove model (-${perModel} pts)`}
-          >
-            -
-          </button>
-          <div className="flex min-w-[3rem] flex-col items-center px-1">
-            <span className="font-data text-xs tabular-nums text-text-secondary leading-tight">
-              {entry.quantity}
-            </span>
-            <span className="text-[9px] text-text-dim leading-tight">
-              {modelMax !== null ? `of ${modelMax}` : 'models'}
-            </span>
-          </div>
-          <button
-            onClick={() => !atMax && onUpdateQty(entry.id, entry.quantity + 1)}
-            disabled={atMax}
-            className="flex h-7 w-7 items-center justify-center rounded-sm border border-edge-600/30 bg-plate-700/40 text-sm text-text-secondary transition-colors hover:border-edge-400/50 hover:text-text-primary disabled:opacity-15 max-lg:h-11 max-lg:w-11"
-            title={atMax ? `Maximum ${modelMax} models` : `Add model (+${perModel} pts)`}
-          >
-            +
-          </button>
-        </div>
+      {/* Expanded: upgrade editor */}
+      {expanded && (
+        <RosterEntryExpanded
+          entry={entry}
+          detachmentId={detachmentId}
+          onClose={() => onToggleExpand?.()}
+        />
       )}
-
-      {/* Remove */}
-      <button
-        onClick={() => onRemove(entry.id)}
-        className="flex h-5 w-5 items-center justify-center text-text-dim opacity-0 transition-all hover:text-danger group-hover:opacity-100 max-lg:h-11 max-lg:w-11 max-lg:opacity-60"
-        title="Remove"
-      >
-        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
     </div>
   );
 }

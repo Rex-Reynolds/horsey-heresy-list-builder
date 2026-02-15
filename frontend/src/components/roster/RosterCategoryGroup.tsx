@@ -3,12 +3,13 @@ import RosterEntryCard from './RosterEntryCard.tsx';
 
 interface Props {
   category: string;
+  detachmentId: number;
   entries: RosterEntry[];
   onRemove: (id: number) => void;
   onUpdateQty: (id: number, qty: number) => void;
 }
 
-export default function RosterCategoryGroup({ category, entries, onRemove, onUpdateQty }: Props) {
+export default function RosterCategoryGroup({ category, detachmentId, entries, onRemove, onUpdateQty }: Props) {
   if (entries.length === 0) return null;
 
   const catTotal = entries.reduce((s, e) => s + e.totalCost, 0);
@@ -24,6 +25,7 @@ export default function RosterCategoryGroup({ category, entries, onRemove, onUpd
           <RosterEntryCard
             key={e.id}
             entry={e}
+            detachmentId={detachmentId}
             onRemove={onRemove}
             onUpdateQty={onUpdateQty}
           />

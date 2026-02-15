@@ -102,6 +102,10 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Pydantic models for request/response
+class DefaultUpgrade(BaseModel):
+    upgrade_id: str  # bs_id
+    quantity: int = 1
+
 class UnitResponse(BaseModel):
     id: int
     bs_id: str
@@ -109,6 +113,7 @@ class UnitResponse(BaseModel):
     unit_type: str  # Native HH3 slot name
     bsdata_category: Optional[str] = None
     base_cost: int
+    cost_per_model: int = 0
     profiles: Optional[str]
     rules: Optional[str]
     constraints: Optional[List[Dict[str, Any]]] = None
@@ -116,6 +121,7 @@ class UnitResponse(BaseModel):
     model_max: Optional[int] = None
     is_legacy: bool = False
     has_required_upgrades: bool = False
+    default_upgrades: Optional[List[DefaultUpgrade]] = None
 
 class WeaponResponse(BaseModel):
     id: int
@@ -252,6 +258,11 @@ async def get_units(
         .distinct()
     )
 
+    # Pre-compute default upgrades for required-upgrade units
+    default_upgrades_cache: Dict[int, list] = {}
+    for uid in required_upgrade_unit_ids:
+        default_upgrades_cache[uid] = compute_default_upgrades(uid)
+
     units = []
     for unit in query:
         unit_constraints = None
@@ -260,6 +271,7 @@ async def get_units(
                 unit_constraints = json.loads(unit.constraints)
             except (json.JSONDecodeError, TypeError):
                 pass
+        has_required = unit.id in required_upgrade_unit_ids
         units.append(UnitResponse(
             id=unit.id,
             bs_id=unit.bs_id,
@@ -267,13 +279,15 @@ async def get_units(
             unit_type=unit.unit_type,
             bsdata_category=unit.bsdata_category,
             base_cost=unit.base_cost,
+            cost_per_model=unit.cost_per_model or 0,
             profiles=unit.profiles,
             rules=unit.rules,
             constraints=unit_constraints,
             model_min=unit.model_min or 1,
             model_max=unit.model_max,
             is_legacy=bool(unit.is_legacy),
-            has_required_upgrades=unit.id in required_upgrade_unit_ids,
+            has_required_upgrades=has_required,
+            default_upgrades=default_upgrades_cache.get(unit.id) if has_required else None,
         ))
 
     return units
@@ -301,6 +315,7 @@ async def get_unit(unit_id: int):
             unit_type=unit.unit_type,
             bsdata_category=unit.bsdata_category,
             base_cost=unit.base_cost,
+            cost_per_model=unit.cost_per_model or 0,
             profiles=unit.profiles,
             rules=unit.rules,
             constraints=unit_constraints,
@@ -387,6 +402,60 @@ async def get_weapons(
 
 # ===== ROSTERS =====
 
+def compute_default_upgrades(unit_id: int) -> list:
+    """For each required upgrade group (min_quantity > 0), pick the cheapest options.
+
+    Returns a list of {"upgrade_id": bs_id, "quantity": 1} dicts.
+    """
+    unit_upgrades = (
+        UnitUpgrade
+        .select(UnitUpgrade, Upgrade)
+        .join(Upgrade)
+        .where(UnitUpgrade.unit == unit_id, UnitUpgrade.min_quantity > 0, UnitUpgrade.group_name.is_null(False))
+    )
+
+    groups: Dict[str, Dict[str, Any]] = {}
+    for uu in unit_upgrades:
+        if uu.group_name not in groups:
+            groups[uu.group_name] = {
+                "min": uu.min_quantity,
+                "upgrades": [],
+            }
+        groups[uu.group_name]["upgrades"].append(uu.upgrade)
+
+    defaults = []
+    for group in groups.values():
+        # Sort by cost ascending, pick cheapest min_quantity
+        sorted_upgrades = sorted(group["upgrades"], key=lambda u: u.cost)
+        for u in sorted_upgrades[:group["min"]]:
+            defaults.append({"upgrade_id": u.bs_id, "quantity": 1})
+
+    return defaults
+
+
+def _resolve_upgrade_info(upgrades_json: list) -> tuple:
+    """Resolve upgrade bs_ids to names and total cost.
+
+    Returns (upgrade_names: list[str], upgrade_cost: int).
+    """
+    names = []
+    cost = 0
+    for u in upgrades_json:
+        bs_id = u.get('upgrade_id')
+        if not bs_id:
+            continue
+        upgrade = Upgrade.get_or_none(Upgrade.bs_id == bs_id)
+        if upgrade:
+            names.append(upgrade.name)
+            cost += upgrade.cost * u.get('quantity', 1)
+        else:
+            weapon = Weapon.get_or_none(Weapon.bs_id == bs_id)
+            if weapon:
+                names.append(weapon.name)
+                cost += weapon.cost * u.get('quantity', 1)
+    return names, cost
+
+
 def _build_roster_response(roster: Roster) -> dict:
     """Build full roster response with detachments and slot status.
 
@@ -417,16 +486,22 @@ def _build_roster_response(roster: Roster) -> dict:
         entries = []
         for entry in rd.entries:
             unit = entry.unit
+            upgrades_list = json.loads(entry.upgrades) if entry.upgrades else []
+            upgrade_names, upgrade_cost = _resolve_upgrade_info(upgrades_list)
             entries.append({
                 "id": entry.id,
                 "unit_id": entry.unit_id,
                 "unit_name": entry.unit_name,
                 "quantity": entry.quantity,
-                "upgrades": json.loads(entry.upgrades) if entry.upgrades else [],
+                "upgrades": upgrades_list,
+                "upgrade_names": upgrade_names,
+                "upgrade_cost": upgrade_cost,
                 "total_cost": entry.total_cost,
                 "category": entry.category,
                 "model_min": unit.model_min or 1,
                 "model_max": unit.model_max,
+                "cost_per_model": unit.cost_per_model or 0,
+                "base_cost": unit.base_cost,
             })
         detachments.append({
             "id": rd.id,
@@ -635,16 +710,22 @@ async def get_roster_detachments(roster_id: int):
         entries = []
         for entry in rd.entries:
             unit = entry.unit
+            upgrades_list = json.loads(entry.upgrades) if entry.upgrades else []
+            upgrade_names, upgrade_cost = _resolve_upgrade_info(upgrades_list)
             entries.append({
                 "id": entry.id,
                 "unit_id": entry.unit_id,
                 "unit_name": entry.unit_name,
                 "quantity": entry.quantity,
-                "upgrades": json.loads(entry.upgrades) if entry.upgrades else [],
+                "upgrades": upgrades_list,
+                "upgrade_names": upgrade_names,
+                "upgrade_cost": upgrade_cost,
                 "total_cost": entry.total_cost,
                 "category": entry.category,
                 "model_min": unit.model_min or 1,
                 "model_max": unit.model_max,
+                "cost_per_model": unit.cost_per_model or 0,
+                "base_cost": unit.base_cost,
             })
         result.append({
             "id": rd.id,
@@ -824,8 +905,8 @@ async def add_entry_to_detachment(request: Request, roster_id: int, det_id: int,
     selected_bs_ids = [u['upgrade_id'] for u in upgrades if 'upgrade_id' in u]
     validate_upgrade_selection(unit.id, selected_bs_ids)
 
-    # Calculate cost
-    total_cost = PointsCalculator.calculate_unit_cost(unit, upgrades) * entry.quantity
+    # Calculate cost (base_cost already includes min squad; extra models use cost_per_model)
+    total_cost = PointsCalculator.calculate_unit_cost(unit, upgrades, entry.quantity)
 
     # Create entry with matched slot key (base or restricted variant)
     roster_entry = RosterEntry.create(
@@ -913,17 +994,15 @@ async def update_entry_in_detachment(
         entry.quantity = update.quantity
 
     if update.upgrades is not None:
-        # Validate upgrade group constraints
-        if update.upgrades:
-            selected_bs_ids = [u['upgrade_id'] for u in update.upgrades if 'upgrade_id' in u]
-            validate_upgrade_selection(entry.unit_id, selected_bs_ids)
+        # Validate upgrade group constraints (even for empty list — clears all upgrades)
+        selected_bs_ids = [u['upgrade_id'] for u in update.upgrades if 'upgrade_id' in u]
+        validate_upgrade_selection(entry.unit_id, selected_bs_ids)
         entry.upgrades = json.dumps(update.upgrades) if update.upgrades else None
 
-    # Recalculate cost
+    # Recalculate cost (base_cost already includes min squad; extra models use cost_per_model)
     unit = entry.unit
     upgrades = json.loads(entry.upgrades) if entry.upgrades else []
-    unit_cost = PointsCalculator.calculate_unit_cost(unit, upgrades)
-    entry.total_cost = unit_cost * entry.quantity
+    entry.total_cost = PointsCalculator.calculate_unit_cost(unit, upgrades, entry.quantity)
     entry.save()
 
     roster.calculate_total_points()

@@ -1,3 +1,5 @@
+import { useRosterStore } from '../../stores/rosterStore.ts';
+
 function AquilaEmblem({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 28" fill="currentColor" className={className}>
@@ -15,6 +17,9 @@ function AquilaEmblem({ className = '' }: { className?: string }) {
 }
 
 export default function AppHeader() {
+  const isValid = useRosterStore((s) => s.isValid);
+  const errorCount = useRosterStore((s) => s.validationErrors.length);
+
   return (
     <header className="relative z-10 bg-plate-900">
       {/* Top accent — ornate bronze line */}
@@ -38,6 +43,16 @@ export default function AppHeader() {
 
         {/* Status indicator — subtle terminal feel */}
         <div className="hidden items-center gap-3 sm:flex">
+          {isValid !== null && !isValid && errorCount > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-danger/20">
+                <span className="font-data text-[9px] font-bold text-danger">{errorCount}</span>
+              </span>
+              <span className="font-label text-[9px] font-semibold tracking-[0.15em] text-danger/70 uppercase">
+                {errorCount === 1 ? 'Error' : 'Errors'}
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-valid/60 shadow-[0_0_4px_rgba(56,178,96,0.4)]" />
             <span className="font-label text-[9px] font-semibold tracking-[0.2em] text-text-dim/60 uppercase">Online</span>

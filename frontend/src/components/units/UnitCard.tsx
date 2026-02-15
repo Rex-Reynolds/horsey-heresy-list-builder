@@ -74,7 +74,7 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
   const hasModelRange = unit.model_max !== null && unit.model_max !== undefined
     && (unit.model_min > 1 || unit.model_max > 1);
 
-  const totalCost = unit.base_cost * Math.max(unit.model_min, 1);
+  const totalCost = unit.base_cost;
   const isExpensive = totalCost >= 200;
 
   const weaponSummary = useMemo(() => extractWeaponSummary(unit.profiles), [unit.profiles]);
@@ -152,14 +152,14 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
             {totalCost}
             <span className="text-[10px] font-normal text-gold-500/50">pts</span>
           </span>
-          {unit.model_min > 1 && (
+          {unit.cost_per_model > 0 && (
             <span className="font-data text-[10px] tabular-nums text-text-dim">
-              ({unit.base_cost}/ea)
+              ({unit.cost_per_model}/ea)
             </span>
           )}
         </div>
 
-        {/* Quick add button — always visible (subtle), brighter on hover */}
+        {/* Quick add button — wrench for defaults, + for plain */}
         {onQuickAdd && !expanded && (
           <span
             role="button"
@@ -167,11 +167,17 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
             onClick={(e) => onQuickAdd(unit, e)}
             onKeyDown={(e) => { if (e.key === 'Enter') onQuickAdd(unit, e as unknown as React.MouseEvent); }}
             className="quick-add-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-valid/20 bg-valid/5 text-valid/60 transition-all hover:border-valid/40 hover:bg-valid/15 hover:text-valid"
-            title="Quick add (no upgrades)"
+            title={unit.has_required_upgrades ? 'Quick add (with defaults)' : 'Quick add (no upgrades)'}
           >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" d="M12 5v14M5 12h14" />
-            </svg>
+            {unit.has_required_upgrades ? (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.384 3.079A.75.75 0 015 17.656V4.344a.75.75 0 011.036-.693l5.384 3.079a.75.75 0 010 1.268l-5.384 3.08M15 12h6m-3-3v6" />
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+              </svg>
+            )}
           </span>
         )}
 

@@ -252,6 +252,37 @@ class SolarAuxiliaCatalogue:
 
         return max(total_min, 1), total_max or None
 
+    def _extract_cost_per_model(self, unit_element) -> int:
+        """
+        Extract the cost of one additional model for expandable units.
+
+        Finds child selectionEntry[@type="model"] where max > min (the
+        expandable model slot) and returns that child's Point(s) cost.
+        Returns 0 for single-model units or units with no expandable children.
+        """
+        model_children = self.parser._xpath(
+            unit_element, './selectionEntries/selectionEntry[@type="model"]'
+        )
+        if not model_children:
+            return 0
+
+        for child in model_children:
+            constraints = self.parser._parse_constraints(child)
+            child_min = 0
+            child_max = None
+            for c in constraints:
+                if c['field'] == 'selections' and c['scope'] == 'parent':
+                    if c['type'] == 'min':
+                        child_min = int(c['value'])
+                    elif c['type'] == 'max':
+                        child_max = int(c['value'])
+            # Expandable model: max > min (can add more)
+            if child_max is not None and child_max > child_min:
+                costs = self.parser._parse_costs(child)
+                return int(costs.get('Point(s)', 0) or costs.get('Points', 0))
+
+        return 0
+
     def load_all_units(self) -> list[dict]:
         """
         Load all units from the catalogue.
@@ -294,12 +325,16 @@ class SolarAuxiliaCatalogue:
             # Extract model count bounds from child model entries
             model_min, model_max = self._extract_model_bounds(entry_element)
 
+            # Extract per-model cost for expandable units
+            cost_per_model = self._extract_cost_per_model(entry_element)
+
             units.append({
                 'bs_id': unit_data['id'],
                 'name': unit_data['name'],
                 'unit_type': bsdata_category,  # Native HH3 slot name
                 'bsdata_category': bsdata_category,
                 'base_cost': int(base_cost),
+                'cost_per_model': cost_per_model,
                 'profiles': unit_data['profiles'],
                 'rules': unit_data['rules'],
                 'constraints': unit_data['constraints'],
@@ -442,6 +477,7 @@ class SolarAuxiliaCatalogue:
                     unit_type=unit_data['unit_type'],
                     bsdata_category=unit_data['bsdata_category'],
                     base_cost=unit_data['base_cost'],
+                    cost_per_model=unit_data.get('cost_per_model', 0),
                     profiles=json.dumps(unit_data['profiles']),
                     rules=json.dumps(unit_data['rules']),
                     constraints=json.dumps(unit_data['constraints']),

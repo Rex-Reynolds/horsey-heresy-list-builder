@@ -7,6 +7,7 @@ export interface RosterEntry {
   name: string;
   category: string; // Native HH3 slot name
   baseCost: number;
+  costPerModel: number;
   upgrades: SelectedUpgrade[];
   upgradeNames: string[];
   upgradeCost: number;
@@ -55,6 +56,7 @@ interface RosterState {
   addEntry: (detachmentId: number, entry: RosterEntry) => void;
   removeEntry: (detachmentId: number, entryId: number) => void;
   updateQuantity: (detachmentId: number, entryId: number, quantity: number) => void;
+  updateEntry: (detachmentId: number, entryId: number, updates: Partial<Pick<RosterEntry, 'upgrades' | 'upgradeNames' | 'upgradeCost' | 'totalCost' | 'quantity'>>) => void;
   setComposition: (composition: CompositionStatus) => void;
   setDoctrine: (doctrine: string | null) => void;
   syncFromResponse: (resp: {
@@ -93,10 +95,11 @@ function mapResponseEntry(e: RosterEntryResponse): RosterEntry {
     unitId: e.unit_id,
     name: e.unit_name,
     category: e.category,
-    baseCost: e.total_cost / Math.max(e.quantity, 1), // Approximate
+    baseCost: e.base_cost,
+    costPerModel: e.cost_per_model ?? 0,
     upgrades: e.upgrades,
-    upgradeNames: [],
-    upgradeCost: 0,
+    upgradeNames: e.upgrade_names ?? [],
+    upgradeCost: e.upgrade_cost ?? 0,
     quantity: e.quantity,
     totalCost: e.total_cost,
     modelMin: e.model_min ?? 1,
@@ -171,10 +174,26 @@ export const useRosterStore = create<RosterState>((set) => ({
         d.id === detachmentId
           ? {
               ...d,
+              entries: d.entries.map((e) => {
+                if (e.id !== entryId) return e;
+                const extraModels = Math.max(0, quantity - e.modelMin);
+                const totalCost = e.baseCost + e.costPerModel * extraModels + e.upgradeCost;
+                return { ...e, quantity, totalCost };
+              }),
+            }
+          : d,
+      );
+      return { detachments, totalPoints: calcTotal(detachments) };
+    }),
+
+  updateEntry: (detachmentId, entryId, updates) =>
+    set((s) => {
+      const detachments = s.detachments.map((d) =>
+        d.id === detachmentId
+          ? {
+              ...d,
               entries: d.entries.map((e) =>
-                e.id === entryId
-                  ? { ...e, quantity, totalCost: (e.baseCost + e.upgradeCost) * quantity }
-                  : e,
+                e.id === entryId ? { ...e, ...updates } : e,
               ),
             }
           : d,

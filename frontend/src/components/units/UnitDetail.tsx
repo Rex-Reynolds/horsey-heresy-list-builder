@@ -20,7 +20,7 @@ export default function UnitDetail({ unit }: Props) {
   const ungrouped = useMemo(() => upgradeData?.ungrouped ?? [], [upgradeData?.ungrouped]);
 
   const [selectedUpgrades, setSelectedUpgrades] = useState<Set<number>>(new Set());
-  const { rosterId, addEntry, addDetachment, syncFromResponse } = useRosterStore();
+  const { rosterId, addEntry, addDetachment, syncFromResponse, totalPoints, pointsLimit } = useRosterStore();
   const [targetDetId, setTargetDetId] = useState<number | null>(null);
 
   const [addError, setAddError] = useState<string | null>(null);
@@ -91,6 +91,8 @@ export default function UnitDetail({ unit }: Props) {
   const perModelCost = unit.base_cost + upgradeCost;
   const modelCount = Math.max(unit.model_min, 1);
   const totalCost = perModelCost * modelCount;
+  const projectedTotal = totalPoints + totalCost;
+  const projectedOver = rosterId !== null && projectedTotal > pointsLimit;
 
   function handleAdd() {
     if (!rosterId || !effectiveDetId) return;
@@ -337,13 +339,18 @@ export default function UnitDetail({ unit }: Props) {
       {/* Floating add footer — sticky at bottom of expanded area */}
       <div ref={footerRef} className="floating-add-footer flex items-center justify-between">
         <div>
-          <span className="font-data text-base font-medium tabular-nums text-gold-300">
+          <span className={`font-data text-base font-medium tabular-nums ${projectedOver ? 'text-danger' : 'text-gold-300'}`}>
             {totalCost}
           </span>
           <span className="ml-1 text-xs text-text-dim">pts</span>
           {modelCount > 1 && (
             <span className="ml-2 font-data text-[11px] text-text-dim">
               ({perModelCost}/model &times; {modelCount})
+            </span>
+          )}
+          {projectedOver && (
+            <span className="ml-2 font-data text-[11px] text-danger">
+              ({projectedTotal}/{pointsLimit})
             </span>
           )}
         </div>

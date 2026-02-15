@@ -34,6 +34,7 @@ export default function RosterPanel() {
     validationErrors,
     addDetachment,
     removeDetachment,
+    addEntry,
     removeEntry,
     updateQuantity,
     setValidation,
@@ -51,6 +52,7 @@ export default function RosterPanel() {
   const setSlotFilter = useUIStore((s) => s.setSlotFilter);
   const setSlotFilterContext = useUIStore((s) => s.setSlotFilterContext);
   const addToast = useUIStore((s) => s.addToast);
+  const setNewEntryId = useUIStore((s) => s.setNewEntryId);
   const setMobileRosterOpen = useUIStore((s) => s.setMobileRosterOpen);
 
   // Map a native slot name to a display group for the unit browser filter
@@ -204,6 +206,37 @@ export default function RosterPanel() {
     }
   }
 
+  function handleDuplicateEntry(detachmentId: number, entry: import('../../stores/rosterStore.ts').RosterEntry) {
+    if (!rosterId) return;
+    client.post(`/api/rosters/${rosterId}/detachments/${detachmentId}/entries`, {
+      unit_id: entry.unitId,
+      quantity: entry.quantity,
+      upgrades: entry.upgrades,
+    }).then(({ data }) => {
+      addEntry(detachmentId, {
+        id: data.id,
+        unitId: entry.unitId,
+        name: entry.name,
+        category: entry.category,
+        baseCost: entry.baseCost,
+        upgrades: entry.upgrades,
+        upgradeNames: entry.upgradeNames,
+        upgradeCost: entry.upgradeCost,
+        quantity: entry.quantity,
+        totalCost: data.total_cost,
+        modelMin: entry.modelMin,
+        modelMax: entry.modelMax,
+      });
+      addToast(`Duplicated ${entry.name}`);
+      setNewEntryId(data.id);
+      client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
+        syncFromResponse(resp);
+      });
+    }).catch((err) => {
+      addToast(err?.response?.data?.detail ?? 'Failed to duplicate', 'error');
+    });
+  }
+
   function handleUpdateQty(detachmentId: number, entryId: number, qty: number) {
     updateQuantity(detachmentId, entryId, qty);
     if (rosterId) {
@@ -212,14 +245,6 @@ export default function RosterPanel() {
         { quantity: qty },
       );
     }
-  }
-
-  function handleValidate() {
-    validateMutation.mutate(undefined, {
-      onSuccess: (data) => {
-        setValidation(data.is_valid, data.errors);
-      },
-    });
   }
 
   if (!rosterId) {
@@ -353,6 +378,7 @@ export default function RosterPanel() {
                 onRemoveEntry={handleRemoveEntry}
                 onUpdateQty={handleUpdateQty}
                 onRemoveDetachment={handleRemoveDetachment}
+                onDuplicateEntry={handleDuplicateEntry}
                 onSlotClick={(slotName, filled, max) => handleSlotClick(slotName, det.name, filled, max)}
                 newEntryId={newEntryId}
               />
@@ -362,6 +388,25 @@ export default function RosterPanel() {
 
         {/* Cohort Doctrine */}
         {detachments.length > 0 && <DoctrinePicker />}
+
+        {/* Always-on validation — shown when entries exist */}
+        {totalEntries > 0 && (
+          <ValidationResults
+            isValid={isValid}
+            errors={validationErrors}
+            onErrorClick={(err) => {
+              const match = err.match(/^\[(.+?)\]\s+(.+?):/);
+              if (match) {
+                const [, detName, slotName] = match;
+                const det = detachments.find((d) => d.name === detName);
+                if (det) {
+                  const slot = det.slots[slotName];
+                  handleSlotClick(slotName, detName, slot?.filled ?? 0, slot?.max ?? 0);
+                }
+              }
+            }}
+          />
+        )}
 
         {/* Add Detachment button */}
         <button
@@ -385,42 +430,6 @@ export default function RosterPanel() {
 
       {/* Footer */}
       <div className="space-y-2 border-t border-edge-700/40 p-4">
-        <ValidationResults
-          isValid={isValid}
-          errors={validationErrors}
-          onErrorClick={(err) => {
-            // Parse "[DetachmentName] SlotName: ..." format
-            const match = err.match(/^\[(.+?)\]\s+(.+?):/);
-            if (match) {
-              const [, detName, slotName] = match;
-              const det = detachments.find((d) => d.name === detName);
-              if (det) {
-                const slot = det.slots[slotName];
-                handleSlotClick(slotName, detName, slot?.filled ?? 0, slot?.max ?? 0);
-              }
-            }
-          }}
-        />
-        <button
-          onClick={handleValidate}
-          disabled={totalEntries === 0 || validateMutation.isPending}
-          className="font-label flex w-full items-center justify-center gap-2 rounded-sm border border-edge-600/30 bg-plate-700/50 py-2 text-xs font-semibold tracking-wider text-text-secondary uppercase transition-all hover:border-gold-600/20 hover:bg-plate-600/50 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-25"
-        >
-          {validateMutation.isPending ? 'Validating...' : 'Validate Roster'}
-          {isValid !== null && !validateMutation.isPending && (
-            <span className={`flex h-4 w-4 items-center justify-center rounded-full ${
-              isValid ? 'bg-valid/20' : 'bg-danger/20'
-            }`}>
-              {isValid ? (
-                <svg className="h-2.5 w-2.5 text-valid" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <span className="font-data text-[9px] font-bold text-danger">{validationErrors.length}</span>
-              )}
-            </span>
-          )}
-        </button>
         <ExportButton />
       </div>
 

@@ -11,6 +11,7 @@ interface Props {
   onRemoveEntry: (detachmentId: number, entryId: number) => void;
   onUpdateQty: (detachmentId: number, entryId: number, qty: number) => void;
   onRemoveDetachment?: (detachmentId: number) => void;
+  onDuplicateEntry?: (detachmentId: number, entry: RosterEntry) => void;
   onSlotClick?: (slotName: string, filled: number, max: number) => void;
   newEntryId?: number | null;
 }
@@ -175,12 +176,14 @@ export default function DetachmentSection({
   onRemoveEntry,
   onUpdateQty,
   onRemoveDetachment,
+  onDuplicateEntry,
   onSlotClick,
   newEntryId,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [showAllSlots, setShowAllSlots] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
   const detPoints = detachment.entries.reduce((s, e) => s + e.totalCost, 0);
 
   const entriesBySlot = useMemo(() => {
@@ -292,8 +295,12 @@ export default function DetachmentSection({
                   <div key={entry.id} className="ml-2">
                     <RosterEntryCard
                       entry={entry}
+                      detachmentId={detachment.id}
                       onRemove={(id) => onRemoveEntry(detachment.id, id)}
                       onUpdateQty={(id, qty) => onUpdateQty(detachment.id, id, qty)}
+                      onDuplicate={onDuplicateEntry ? (e) => onDuplicateEntry(detachment.id, e) : undefined}
+                      expanded={expandedEntryId === entry.id}
+                      onToggleExpand={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
                       isNew={entry.id === newEntryId}
                     />
                   </div>
@@ -327,8 +334,12 @@ export default function DetachmentSection({
                     <div key={entry.id} className="ml-2">
                       <RosterEntryCard
                         entry={entry}
+                        detachmentId={detachment.id}
                         onRemove={(id) => onRemoveEntry(detachment.id, id)}
                         onUpdateQty={(id, qty) => onUpdateQty(detachment.id, id, qty)}
+                        onDuplicate={onDuplicateEntry ? (e) => onDuplicateEntry(detachment.id, e) : undefined}
+                        expanded={expandedEntryId === entry.id}
+                        onToggleExpand={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
                       />
                     </div>
                   ))}

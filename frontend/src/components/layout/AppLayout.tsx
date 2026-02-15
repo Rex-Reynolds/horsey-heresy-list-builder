@@ -16,6 +16,19 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
   const totalEntries = detachments.reduce((s, d) => s + d.entries.length, 0);
   const over = totalPoints > pointsLimit;
 
+  // Compute total slot fill across all detachments
+  let slotFilled = 0;
+  let slotMax = 0;
+  for (const det of detachments) {
+    for (const status of Object.values(det.slots)) {
+      if (status.max > 0 && status.max < 999) {
+        slotFilled += Math.min(status.filled, status.max);
+        slotMax += status.max;
+      }
+    }
+  }
+  const slotPct = slotMax > 0 ? Math.min((slotFilled / slotMax) * 100, 100) : 0;
+
   const lastAddedInfo = useUIStore((s) => s.lastAddedInfo);
 
   return (
@@ -40,8 +53,18 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
 
       <button
         onClick={onOpen}
-        className="mobile-bottom-bar flex w-full items-center justify-between px-5 py-3.5"
+        className="mobile-bottom-bar flex w-full flex-col px-5 py-3.5"
       >
+        {/* Slot fill progress bar */}
+        {slotMax > 0 && (
+          <div className="mb-2 w-full slot-fill-bar">
+            <div
+              className={`slot-fill-bar-inner ${slotFilled >= slotMax ? 'bg-valid/80' : 'bg-gold-500/60'}`}
+              style={{ width: `${slotPct}%` }}
+            />
+          </div>
+        )}
+        <div className="flex w-full items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-baseline gap-1.5">
             <span className={`font-data text-lg font-semibold tabular-nums ${over ? 'text-danger' : 'text-gold-400'}`}>
@@ -82,6 +105,7 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
           <svg className="h-4 w-4 text-gold-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
           </svg>
+        </div>
         </div>
       </button>
     </div>

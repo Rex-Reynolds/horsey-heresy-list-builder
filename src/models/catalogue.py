@@ -17,6 +17,7 @@ class Unit(BaseModel):
     rules = TextField(null=True)  # JSON: special rules
     constraints = TextField(null=True)  # JSON: min/max model counts
     budget_categories = TextField(null=True)  # JSON: list of budget-relevant category IDs
+    cost_per_model = IntegerField(default=0)  # Cost of one additional model beyond minimum
     model_min = IntegerField(default=1)
     model_max = IntegerField(null=True)  # None = no upper bound
     is_legacy = BooleanField(default=False)  # Expanded/Legacy unit from Legacies PDF

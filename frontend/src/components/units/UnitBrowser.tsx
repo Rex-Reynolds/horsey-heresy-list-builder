@@ -6,7 +6,7 @@ import { useUIStore } from '../../stores/uiStore.ts';
 import { useUnitAvailability } from '../../hooks/useUnitAvailability.ts';
 import client from '../../api/client.ts';
 import type { Unit } from '../../types/index.ts';
-import { NATIVE_TO_DISPLAY_GROUP, DISPLAY_GROUP_ORDER, FILTER_COLORS } from '../../types/index.ts';
+import { NATIVE_TO_DISPLAY_GROUP, DISPLAY_GROUP_ORDER, FILTER_COLORS, SLOT_DISPLAY_GROUPS } from '../../types/index.ts';
 import CategoryFilter from '../common/CategoryFilter.tsx';
 import SearchInput from '../common/SearchInput.tsx';
 import LoadingSpinner from '../common/LoadingSpinner.tsx';
@@ -73,6 +73,27 @@ export default function UnitBrowser() {
 
   const hasDetachments = !!rosterId && detachments.length > 0;
 
+  // Compute open slots per display group
+  const slotCounts = useMemo(() => {
+    if (!hasDetachments) return undefined;
+    const counts: Record<string, { open: number; total: number }> = {};
+    for (const [group, nativeSlots] of Object.entries(SLOT_DISPLAY_GROUPS)) {
+      let open = 0;
+      let total = 0;
+      for (const det of detachments) {
+        for (const [slotKey, status] of Object.entries(det.slots)) {
+          const baseName = slotKey.includes(' - ') ? slotKey.split(' - ', 1)[0].trim() : slotKey;
+          if ((nativeSlots as readonly string[]).includes(baseName) && status.max > 0 && status.max < 999) {
+            total += status.max;
+            open += Math.max(0, status.max - status.filled);
+          }
+        }
+      }
+      if (total > 0) counts[group] = { open, total };
+    }
+    return counts;
+  }, [hasDetachments, detachments]);
+
   const displayUnits = useMemo(() => {
     const items = !hasDetachments
       ? units.map((u) => ({ unit: u, availability: undefined as ReturnType<typeof getAvailability> | undefined }))
@@ -84,14 +105,10 @@ export default function UnitBrowser() {
     return items.sort((a, b) => {
       switch (sortMode) {
         case 'cost-asc': {
-          const costA = a.unit.base_cost * Math.max(a.unit.model_min, 1);
-          const costB = b.unit.base_cost * Math.max(b.unit.model_min, 1);
-          return costA - costB || a.unit.name.localeCompare(b.unit.name);
+          return a.unit.base_cost - b.unit.base_cost || a.unit.name.localeCompare(b.unit.name);
         }
         case 'cost-desc': {
-          const costA = a.unit.base_cost * Math.max(a.unit.model_min, 1);
-          const costB = b.unit.base_cost * Math.max(b.unit.model_min, 1);
-          return costB - costA || a.unit.name.localeCompare(b.unit.name);
+          return b.unit.base_cost - a.unit.base_cost || a.unit.name.localeCompare(b.unit.name);
         }
         default:
           return a.unit.name.localeCompare(b.unit.name);
@@ -132,11 +149,11 @@ export default function UnitBrowser() {
 
   // Quick-add mutation
   const quickAddMutation = useMutation({
-    mutationFn: async ({ detId, unitId, quantity }: { detId: number; unitId: number; quantity: number }) => {
+    mutationFn: async ({ detId, unitId, quantity, upgrades }: { detId: number; unitId: number; quantity: number; upgrades?: { upgrade_id: string; quantity: number }[] }) => {
       const { data } = await client.post(`/api/rosters/${rosterId}/detachments/${detId}/entries`, {
         unit_id: unitId,
         quantity,
-        upgrades: [],
+        upgrades: upgrades ?? [],
       });
       return data;
     },
@@ -151,8 +168,10 @@ export default function UnitBrowser() {
     if (!det) return;
 
     const quantity = Math.max(unit.model_min, 1);
+    const upgrades = unit.default_upgrades ?? [];
+    const hasDefaults = upgrades.length > 0;
     quickAddMutation.mutate(
-      { detId: det.id, unitId: unit.id, quantity },
+      { detId: det.id, unitId: unit.id, quantity, upgrades },
       {
         onSuccess: (data) => {
           addEntry(det.id, {
@@ -161,19 +180,38 @@ export default function UnitBrowser() {
             name: unit.name,
             category: unit.unit_type,
             baseCost: unit.base_cost,
-            upgrades: [],
-            upgradeNames: [],
+            upgrades,
+            upgradeNames: [], // Will be resolved on next sync
             upgradeCost: 0,
             quantity,
             totalCost: data.total_cost,
             modelMin: unit.model_min,
             modelMax: unit.model_max ?? null,
           });
-          addToast(`${unit.name} added`);
+          const suffix = hasDefaults ? ' (with defaults)' : '';
+          const newTotal = totalPoints + data.total_cost;
+          if (newTotal > pointsLimit) {
+            addToast(`${unit.name} added${suffix} (${newTotal}/${pointsLimit} pts — over limit)`, 'info');
+          } else {
+            addToast(`${unit.name} added${suffix}`);
+          }
           setNewEntryId(data.id);
           setLastAddedInfo({ unitName: unit.name, detachmentName: det.name });
           client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
             syncFromResponse(resp);
+            // Auto-clear slot filter if the slot is now full
+            if (slotFilterContext) {
+              const updatedDet = resp.detachments?.find((d: { name: string }) => d.name === slotFilterContext.detachmentName);
+              if (updatedDet) {
+                const slot = updatedDet.slots?.[slotFilterContext.slotName];
+                if (slot && slot.filled >= slot.max) {
+                  setSlotFilterContext(null);
+                  setCategory(null);
+                  setAvailableOnly(false);
+                  addToast(`${slotFilterContext.slotName} slot filled`, 'info');
+                }
+              }
+            }
           });
         },
         onError: (err: Error & { response?: { data?: { detail?: string } } }) => {
@@ -181,7 +219,7 @@ export default function UnitBrowser() {
         },
       },
     );
-  }, [rosterId, quickAddMutation, getAvailability, addEntry, addToast, setNewEntryId, setLastAddedInfo, syncFromResponse]);
+  }, [rosterId, quickAddMutation, getAvailability, addEntry, addToast, setNewEntryId, setLastAddedInfo, syncFromResponse, totalPoints, pointsLimit, slotFilterContext, setSlotFilterContext]);
 
   // Keyboard navigation
   const listRef = useRef<HTMLDivElement>(null);
@@ -213,7 +251,7 @@ export default function UnitBrowser() {
         expanded={expandedId === unit.id}
         onClick={() => setExpandedId(expandedId === unit.id ? null : unit.id)}
         availability={availability?.status}
-        onQuickAdd={hasDetachments && availability?.status === 'addable' && !unit.has_required_upgrades ? handleQuickAdd : undefined}
+        onQuickAdd={hasDetachments && availability?.status === 'addable' && (!unit.has_required_upgrades || unit.default_upgrades) ? handleQuickAdd : undefined}
         searchTerm={search}
       >
         <UnitDetail unit={unit} />
@@ -273,7 +311,7 @@ export default function UnitBrowser() {
         )}
 
         {/* Category filter */}
-        <CategoryFilter selected={category} onChange={(cat) => { setCategory(cat); if (!cat) setSlotFilterContext(null); }} counts={unitCounts} />
+        <CategoryFilter selected={category} onChange={(cat) => { setCategory(cat); if (!cat) setSlotFilterContext(null); }} counts={unitCounts} slotCounts={slotCounts} />
 
         {/* Search + sort + available */}
         <div className="flex items-center gap-2">

@@ -12,20 +12,30 @@ class PointsCalculator:
     """Calculate points costs for units with upgrades and rosters."""
 
     @staticmethod
-    def calculate_unit_cost(unit: Unit, selected_upgrades: List[Dict[str, Any]]) -> int:
+    def calculate_unit_cost(unit: Unit, selected_upgrades: List[Dict[str, Any]], quantity: int = 0) -> int:
         """
-        Calculate total cost for a unit with selected upgrades.
+        Calculate total cost for a unit with selected upgrades at a given quantity.
+
+        Formula: base_cost + cost_per_model × max(0, quantity - model_min) + upgrade_costs
+
+        base_cost already includes the minimum squad cost (unit + mandatory models at min).
+        Additional models beyond model_min cost cost_per_model each.
 
         Args:
             unit: Unit model instance
             selected_upgrades: List of dicts with format:
                 [{"upgrade_id": str, "quantity": int}, ...]
                 or [{"bs_id": str, "quantity": int}, ...]
+            quantity: Number of models in the unit (0 = use model_min)
 
         Returns:
-            Total points cost (base + upgrades)
+            Total points cost (base + extra models + upgrades)
         """
-        total = unit.base_cost
+        model_min = unit.model_min or 1
+        if quantity <= 0:
+            quantity = model_min
+        extra_models = max(0, quantity - model_min)
+        total = unit.base_cost + (unit.cost_per_model or 0) * extra_models
 
         for selected in selected_upgrades:
             try:
@@ -89,8 +99,7 @@ class PointsCalculator:
                     # Recalculate if not cached
                     if entry.unit:
                         upgrades = json.loads(entry.upgrades) if entry.upgrades else []
-                        entry_cost = PointsCalculator.calculate_unit_cost(entry.unit, upgrades)
-                        entry_cost *= entry.quantity
+                        entry_cost = PointsCalculator.calculate_unit_cost(entry.unit, upgrades, entry.quantity)
                         total += entry_cost
 
         return total
@@ -104,7 +113,7 @@ class PointsCalculator:
             roster_entry: RosterEntry model instance
 
         Returns:
-            Total points cost (base + upgrades) * quantity
+            Total points cost (base + extra models + upgrades)
         """
         if not roster_entry.unit:
             logger.warning(f"Roster entry has no unit: {roster_entry.unit_name}")
@@ -118,11 +127,8 @@ class PointsCalculator:
             except json.JSONDecodeError:
                 logger.error(f"Failed to parse upgrades for {roster_entry.unit_name}")
 
-        # Calculate unit cost
-        unit_cost = PointsCalculator.calculate_unit_cost(roster_entry.unit, upgrades)
-
-        # Multiply by quantity
-        total_cost = unit_cost * roster_entry.quantity
+        # Calculate unit cost (already includes extra-model scaling)
+        total_cost = PointsCalculator.calculate_unit_cost(roster_entry.unit, upgrades, roster_entry.quantity)
 
         # Cache the result
         roster_entry.total_cost = total_cost
@@ -162,26 +168,34 @@ class PointsCalculator:
         return upgrade.cost if upgrade else 0
 
     @staticmethod
-    def breakdown_unit_cost(unit: Unit, selected_upgrades: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def breakdown_unit_cost(unit: Unit, selected_upgrades: List[Dict[str, Any]], quantity: int = 0) -> Dict[str, Any]:
         """
         Get detailed cost breakdown for a unit.
 
         Args:
             unit: Unit model instance
             selected_upgrades: List of selected upgrade dicts
+            quantity: Number of models (0 = use model_min)
 
         Returns:
             Dict with format:
             {
                 'base_cost': int,
+                'extra_models_cost': int,
                 'upgrades': [{'name': str, 'cost': int, 'quantity': int}, ...],
                 'total': int
             }
         """
+        model_min = unit.model_min or 1
+        if quantity <= 0:
+            quantity = model_min
+        extra_models = max(0, quantity - model_min)
+        extra_models_cost = (unit.cost_per_model or 0) * extra_models
         breakdown = {
             'base_cost': unit.base_cost,
+            'extra_models_cost': extra_models_cost,
             'upgrades': [],
-            'total': unit.base_cost,
+            'total': unit.base_cost + extra_models_cost,
         }
 
         for selected in selected_upgrades:
