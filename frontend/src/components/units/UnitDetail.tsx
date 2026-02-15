@@ -122,6 +122,7 @@ export default function UnitDetail({ unit }: Props) {
             name: unit.name,
             category: unit.unit_type,
             baseCost: unit.base_cost,
+            costPerModel: unit.cost_per_model,
             upgrades: upgradesList,
             upgradeNames,
             upgradeCost,

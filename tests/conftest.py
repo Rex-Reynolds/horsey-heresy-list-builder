@@ -70,13 +70,13 @@ def client():
 def seed_units():
     """Seed a handful of representative units."""
     units = []
-    for i, (name, unit_type, cost) in enumerate([
-        ("Tactical Auxiliaries", "Line", 100),
-        ("Veletaris Storm Section", "Line", 135),
-        ("Auxilia Leman Russ Strike Squadron", "Armour", 200),
-        ("Auxilia Malcador Heavy Tank", "Armour", 300),
-        ("Legate Commander", "Command", 85),
-        ("Aethon Heavy Sentinel", "War-engine", 175),
+    for i, (name, unit_type, cost, cpm) in enumerate([
+        ("Tactical Auxiliaries", "Line", 100, 100),
+        ("Veletaris Storm Section", "Line", 135, 135),
+        ("Auxilia Leman Russ Strike Squadron", "Armour", 200, 200),
+        ("Auxilia Malcador Heavy Tank", "Armour", 300, 0),
+        ("Legate Commander", "Command", 85, 0),
+        ("Aethon Heavy Sentinel", "War-engine", 175, 175),
     ]):
         profiles = json.dumps([{
             "type": "Profile",
@@ -87,6 +87,7 @@ def seed_units():
             name=name,
             unit_type=unit_type,
             base_cost=cost,
+            cost_per_model=cpm,
             profiles=profiles,
             model_min=1,
             model_max=20 if unit_type == "Line" else 3,

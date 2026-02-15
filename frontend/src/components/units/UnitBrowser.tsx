@@ -180,6 +180,7 @@ export default function UnitBrowser() {
             name: unit.name,
             category: unit.unit_type,
             baseCost: unit.base_cost,
+            costPerModel: unit.cost_per_model,
             upgrades,
             upgradeNames: [], // Will be resolved on next sync
             upgradeCost: 0,

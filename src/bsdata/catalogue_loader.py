@@ -10,7 +10,7 @@ from src.bsdata.category_mapping import SKIP_CATEGORIES
 from src.bsdata.catalogue_cache import CatalogueCache
 from src.bsdata.upgrade_extractor import UpgradeExtractor
 from src.bsdata.detachment_loader import DetachmentLoader, BUDGET_CATEGORIES, TERCIO_UNLOCK_IDS
-from src.models import Unit, Weapon, Upgrade, UnitUpgrade, Detachment, db
+from src.models import Unit, Weapon, Upgrade, UnitUpgrade, Detachment, RosterEntry, RosterDetachment, db
 from src.config import BSDATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -429,6 +429,8 @@ class SolarAuxiliaCatalogue:
         with db.atomic():
             # Clear existing catalogue data (in correct order for FK constraints)
             logger.info("Clearing existing catalogue data...")
+            RosterEntry.delete().execute()
+            RosterDetachment.delete().execute()
             UnitUpgrade.delete().execute()
             Upgrade.delete().execute()
             Weapon.delete().execute()

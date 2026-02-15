@@ -219,6 +219,7 @@ export default function RosterPanel() {
         name: entry.name,
         category: entry.category,
         baseCost: entry.baseCost,
+        costPerModel: entry.costPerModel,
         upgrades: entry.upgrades,
         upgradeNames: entry.upgradeNames,
         upgradeCost: entry.upgradeCost,
