@@ -43,6 +43,7 @@ export default function UnitBrowser() {
   const setSlotFilterContext = useUIStore((s) => s.setSlotFilterContext);
   const viewMode = useUIStoreView((s) => s.viewMode);
   const setViewMode = useUIStoreView((s) => s.setViewMode);
+  const mobileRosterOpen = useUIStore((s) => s.mobileRosterOpen);
 
   useEffect(() => {
     if (slotFilter) {
@@ -431,8 +432,8 @@ export default function UnitBrowser() {
           />
         )}
 
-        {/* Mobile category jump bar */}
-        {showGroupHeaders && groupedUnits && (
+        {/* Mobile category jump bar — hidden when roster drawer is open */}
+        {showGroupHeaders && groupedUnits && !mobileRosterOpen && (
           <div className="fixed right-1 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 lg:hidden">
             {groupedUnits.map(({ group, dotColor }) => (
               <button
