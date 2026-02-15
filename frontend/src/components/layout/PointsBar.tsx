@@ -86,11 +86,11 @@ export default function PointsBar({ current, limit, segments }: Props) {
       </div>
 
       {/* Track */}
-      <div className={`relative h-4 overflow-hidden rounded-sm border transition-all ${
+      <div className={`relative h-5 overflow-hidden rounded-sm border transition-all ${
         over
-          ? 'border-danger/40 shadow-[0_0_12px_rgba(196,64,64,0.15)]'
+          ? `border-danger/40 animate-overage-pulse`
           : nearLimit
-            ? 'border-caution/30 shadow-[0_0_10px_rgba(196,154,32,0.1)]'
+            ? `border-caution/30 animate-near-limit-pulse`
             : 'border-edge-600/35'
       } bg-plate-800`}>
         {/* Segmented fill */}
@@ -170,16 +170,30 @@ export default function PointsBar({ current, limit, segments }: Props) {
         />
       </div>
 
+      {/* Numeric breakdown */}
+      <div className="mt-1.5 flex items-baseline justify-between">
+        <span className={`font-data text-[11px] tabular-nums ${over ? 'text-danger' : 'text-text-dim'}`}>
+          {current} / {limit}
+        </span>
+        {remaining !== 0 && (
+          <span className={`font-data text-[11px] tabular-nums ${
+            over ? 'text-danger' : nearLimit ? 'text-caution/80' : 'text-text-dim/60'
+          }`}>
+            {over ? `${Math.abs(remaining)} over` : `${remaining} remaining`}
+          </span>
+        )}
+      </div>
+
       {/* Threshold labels */}
       <div className="relative mt-0.5 h-3">
-        <span className="absolute left-0 font-data text-[9px] tabular-nums text-text-dim/40">0</span>
+        <span className="absolute left-0 font-data text-[9px] tabular-nums text-text-dim/60">0</span>
         {ticks.map((t) => {
           const tickPct = (t / limit) * 100;
           return (
             <span
               key={t}
               className={`absolute font-data text-[9px] tabular-nums -translate-x-1/2 ${
-                pct >= tickPct ? 'text-text-dim' : 'text-text-dim/30'
+                pct >= tickPct ? 'text-text-dim' : 'text-text-dim/50'
               }`}
               style={{ left: `${tickPct}%` }}
             >

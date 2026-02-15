@@ -42,7 +42,7 @@ export default function OnboardingHint({ step, onAction }: Props) {
         </p>
       </div>
       <p className="text-[13px] leading-relaxed text-text-dim">
-        Click a slot name above to filter units, or browse the compendium to add units to your roster.
+        Click any <strong className="text-text-secondary">slot name</strong> in your detachment above to filter the unit browser to matching units. Required slots are highlighted.
       </p>
       {/* Mobile: show browse button that closes the drawer */}
       <button

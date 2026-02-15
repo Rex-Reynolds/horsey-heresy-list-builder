@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { Detachment, CompositionStatus } from '../../types/index.ts';
+import { SLOT_FILL_COLORS } from '../../types/index.ts';
 
 const TYPE_ORDER = ['Primary', 'Auxiliary', 'Apex', 'Lord of War', 'Allied', 'Other'];
 
@@ -210,8 +211,8 @@ export default function DetachmentPickerModal({
                           isDisabled
                             ? 'cursor-not-allowed opacity-40 bg-plate-900/30'
                             : isPrimarySection
-                              ? 'bg-gold-900/10 hover:bg-gold-900/20 hover:shadow-[0_0_16px_rgba(130,102,36,0.06)] border border-r-0 border-y-0 border-gold-600/10'
-                              : 'bg-plate-800/40 hover:bg-plate-700/50 hover:shadow-[0_0_12px_rgba(130,102,36,0.04)]'
+                              ? 'hover-lift ring-1 ring-gold-600/20 bg-gold-900/10 hover:bg-gold-900/20 hover:shadow-[0_0_16px_rgba(130,102,36,0.06)] border border-r-0 border-y-0 border-gold-600/10'
+                              : 'hover-lift bg-plate-800/40 hover:bg-plate-700/50 hover:shadow-[0_0_12px_rgba(130,102,36,0.04)]'
                         }`}
                       >
                         <div className="px-4 py-3">
@@ -243,7 +244,9 @@ export default function DetachmentPickerModal({
                           </div>
                           {visibleSlots.length > 0 && (
                             <div className="mt-2.5 flex flex-wrap gap-2">
-                              {visibleSlots.map(([slot, c]) => (
+                              {visibleSlots.map(([slot, c]) => {
+                                const dotColor = SLOT_FILL_COLORS[slot]?.replace('/70', '') ?? 'bg-edge-400';
+                                return (
                                 <span
                                   key={slot}
                                   className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[11px] ${
@@ -252,12 +255,14 @@ export default function DetachmentPickerModal({
                                       : 'border-edge-600/25 bg-plate-700/40 text-text-secondary'
                                   }`}
                                 >
+                                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isDisabled ? 'bg-edge-600/30' : dotColor}`} />
                                   <span className="font-label font-semibold tracking-wider uppercase">{slot}</span>
                                   <span className="font-data text-text-dim">
                                     {c.min > 0 ? `${c.min}\u2013` : ''}{c.max}
                                   </span>
                                 </span>
-                              ))}
+                                );
+                              })}
                               {remaining > 0 && (
                                 <span className="px-2 py-1 text-[11px] text-text-dim/40">
                                   +{remaining} more

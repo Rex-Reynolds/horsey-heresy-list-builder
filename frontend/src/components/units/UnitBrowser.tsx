@@ -7,6 +7,7 @@ import { useUnitAvailability } from '../../hooks/useUnitAvailability.ts';
 import client from '../../api/client.ts';
 import type { Unit } from '../../types/index.ts';
 import { NATIVE_TO_DISPLAY_GROUP, DISPLAY_GROUP_ORDER, FILTER_COLORS, SLOT_DISPLAY_GROUPS } from '../../types/index.ts';
+import { useUIStore as useUIStoreView } from '../../stores/uiStore.ts';
 import CategoryFilter from '../common/CategoryFilter.tsx';
 import SearchInput from '../common/SearchInput.tsx';
 import LoadingSpinner from '../common/LoadingSpinner.tsx';
@@ -40,6 +41,8 @@ export default function UnitBrowser() {
   const setSlotFilter = useUIStore((s) => s.setSlotFilter);
   const slotFilterContext = useUIStore((s) => s.slotFilterContext);
   const setSlotFilterContext = useUIStore((s) => s.setSlotFilterContext);
+  const viewMode = useUIStoreView((s) => s.viewMode);
+  const setViewMode = useUIStoreView((s) => s.setViewMode);
 
   useEffect(() => {
     if (slotFilter) {
@@ -254,6 +257,7 @@ export default function UnitBrowser() {
         availability={availability?.status}
         onQuickAdd={hasDetachments && availability?.status === 'addable' && (!unit.has_required_upgrades || unit.default_upgrades) ? handleQuickAdd : undefined}
         searchTerm={search}
+        compact={viewMode === 'list'}
       >
         <UnitDetail unit={unit} />
       </UnitCard>
@@ -280,6 +284,31 @@ export default function UnitBrowser() {
                 {displayUnits.length} unit{displayUnits.length !== 1 ? 's' : ''}
               </span>
             )}
+            {/* Grid/List toggle */}
+            <div className="flex rounded-sm border border-edge-600/30 overflow-hidden">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex h-[26px] w-[26px] items-center justify-center transition-colors ${
+                  viewMode === 'grid' ? 'bg-gold-600/15 text-gold-400' : 'text-text-dim hover:text-text-secondary'
+                }`}
+                title="Grid view"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex h-[26px] w-[26px] items-center justify-center border-l border-edge-600/30 transition-colors ${
+                  viewMode === 'list' ? 'bg-gold-600/15 text-gold-400' : 'text-text-dim hover:text-text-secondary'
+                }`}
+                title="List view"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -386,14 +415,14 @@ export default function UnitBrowser() {
                   </span>
                   <span className="font-data text-[10px] tabular-nums text-text-dim">{items.length}</span>
                 </div>
-                <div className="grid grid-cols-1 gap-1.5 xl:grid-cols-2">
+                <div className={viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-1.5 xl:grid-cols-2'}>
                   {items.map(renderUnitCard)}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="stagger-list grid grid-cols-1 gap-1.5 xl:grid-cols-2">
+          <div className={`stagger-list ${viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-1.5 xl:grid-cols-2'}`}>
             {displayUnits.map(renderUnitCard)}
           </div>
         )}

@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react';
 import type { SlotStatus } from '../../types/index.ts';
 import { SLOT_FILL_COLORS } from '../../types/index.ts';
 
@@ -7,6 +8,26 @@ interface Props {
 }
 
 export default function ForceOrgGrid({ slots, onSlotClick }: Props) {
+  // Track previous fill counts to detect increases
+  const prevFills = useRef<Record<string, number>>({});
+  const [recentlyFilled, setRecentlyFilled] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const newFilled = new Set<string>();
+    for (const [name, status] of slots) {
+      const prev = prevFills.current[name] ?? 0;
+      if (status.filled > prev && prev > 0) {
+        newFilled.add(name);
+      }
+      prevFills.current[name] = status.filled;
+    }
+    if (newFilled.size > 0) {
+      setRecentlyFilled(newFilled); // eslint-disable-line react-hooks/set-state-in-effect -- intentional flash animation
+      const timer = setTimeout(() => setRecentlyFilled(new Set()), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [slots]);
+
   if (slots.length === 0) return null;
 
   return (
@@ -45,7 +66,7 @@ export default function ForceOrgGrid({ slots, onSlotClick }: Props) {
             type="button"
             onClick={isClickable ? () => onSlotClick!(name, status.filled, status.max) : undefined}
             disabled={!isClickable}
-            className={`relative overflow-hidden rounded-sm border px-2.5 py-2 text-left transition-all ${borderColor} ${
+            className={`relative overflow-hidden rounded-sm border px-2.5 py-2 text-left transition-all ${borderColor} ${recentlyFilled.has(name) ? 'animate-slot-fill' : ''} ${
               isClickable
                 ? 'cursor-pointer hover:border-gold-600/25 hover:bg-plate-700/20'
                 : ''
@@ -65,7 +86,7 @@ export default function ForceOrgGrid({ slots, onSlotClick }: Props) {
 
             <div className="relative flex items-center justify-between gap-1.5">
               <span className={`font-label text-[11px] font-semibold tracking-wide uppercase truncate ${
-                isRequired ? 'text-caution/70' : isEmpty ? 'text-text-dim/60' : 'text-text-secondary'
+                isRequired ? 'text-caution/70' : isEmpty ? 'text-text-dim/80' : 'text-text-secondary'
               }`}>
                 {name}
               </span>

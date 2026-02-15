@@ -21,10 +21,10 @@ export default function CategoryFilter({ selected, onChange, counts, slotCounts 
           <button
             key={cat}
             onClick={() => onChange(value)}
-            className={`font-label relative flex shrink-0 items-center gap-1.5 rounded-sm border px-3 py-1.5 text-[12px] font-semibold tracking-wider uppercase transition-all ${
+            className={`font-label relative flex shrink-0 items-center gap-1.5 rounded-sm border px-3.5 py-2 text-[12px] font-semibold tracking-wider uppercase transition-all ${
               active
                 ? colors.active
-                : `border-edge-600/25 bg-plate-800/30 text-text-dim ${colors.inactive}`
+                : `border-transparent bg-transparent text-text-dim ${colors.inactive}`
             }`}
           >
             {/* Color dot indicator */}

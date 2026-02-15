@@ -235,32 +235,32 @@ export const FILTER_COLORS: Record<string, { active: string; inactive: string; d
     dot: 'bg-gold-500',
   },
   'HQ': {
-    active: 'border-purple-500/40 bg-purple-500/12 text-purple-300 shadow-[0_0_8px_rgba(147,51,234,0.08)]',
+    active: 'border-purple-500/40 bg-purple-500/18 text-purple-300 shadow-[0_0_8px_rgba(147,51,234,0.08)]',
     inactive: 'hover:border-purple-500/20 hover:text-purple-400/80',
     dot: 'bg-purple-500',
   },
   'Troops': {
-    active: 'border-emerald-500/40 bg-emerald-500/12 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.08)]',
+    active: 'border-emerald-500/40 bg-emerald-500/18 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.08)]',
     inactive: 'hover:border-emerald-500/20 hover:text-emerald-400/80',
     dot: 'bg-emerald-500',
   },
   'Elites': {
-    active: 'border-blue-500/40 bg-blue-500/12 text-blue-300 shadow-[0_0_8px_rgba(59,130,246,0.08)]',
+    active: 'border-blue-500/40 bg-blue-500/18 text-blue-300 shadow-[0_0_8px_rgba(59,130,246,0.08)]',
     inactive: 'hover:border-blue-500/20 hover:text-blue-400/80',
     dot: 'bg-blue-500',
   },
   'Fast Attack': {
-    active: 'border-orange-500/40 bg-orange-500/12 text-orange-300 shadow-[0_0_8px_rgba(249,115,22,0.08)]',
+    active: 'border-orange-500/40 bg-orange-500/18 text-orange-300 shadow-[0_0_8px_rgba(249,115,22,0.08)]',
     inactive: 'hover:border-orange-500/20 hover:text-orange-400/80',
     dot: 'bg-orange-500',
   },
   'Heavy Support': {
-    active: 'border-rose-500/40 bg-rose-500/12 text-rose-300 shadow-[0_0_8px_rgba(244,63,94,0.08)]',
+    active: 'border-rose-500/40 bg-rose-500/18 text-rose-300 shadow-[0_0_8px_rgba(244,63,94,0.08)]',
     inactive: 'hover:border-rose-500/20 hover:text-rose-400/80',
     dot: 'bg-rose-500',
   },
   'Dedicated Transport': {
-    active: 'border-teal-500/40 bg-teal-500/12 text-teal-300 shadow-[0_0_8px_rgba(20,184,166,0.08)]',
+    active: 'border-teal-500/40 bg-teal-500/18 text-teal-300 shadow-[0_0_8px_rgba(20,184,166,0.08)]',
     inactive: 'hover:border-teal-500/20 hover:text-teal-400/80',
     dot: 'bg-teal-500',
   },

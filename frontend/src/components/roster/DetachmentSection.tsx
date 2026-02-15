@@ -274,7 +274,7 @@ export default function DetachmentSection({
         </div>
 
         {/* Force Org Grid — visual summary */}
-        {!collapsed && relevantSlots.length > 2 && (
+        {!collapsed && relevantSlots.length > 0 && (
           <ForceOrgGrid
             slots={relevantSlots}
             onSlotClick={onSlotClick}
@@ -283,7 +283,7 @@ export default function DetachmentSection({
 
         {/* Body */}
         {!collapsed && (
-          <div className="border-t border-edge-700/15 px-3.5 py-2 space-y-0.5">
+          <div className="border-t border-edge-700/15 px-3.5 py-2 space-y-1">
             {slotsToRender.map(([slotName, status]) => (
               <div key={slotName}>
                 <SlotRow

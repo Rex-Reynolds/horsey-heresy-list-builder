@@ -50,7 +50,7 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
 
   return (
     <div ref={cardRef} className={`group rounded-sm border-l-2 ${stripe} bg-plate-800/20 transition-all ${expanded ? 'glow-border-active bg-plate-800/40' : 'hover:bg-plate-800/40'} ${isNew ? 'animate-entry-flash' : ''}`}>
-      <div className="flex items-center gap-2.5 px-3 py-2">
+      <div className="flex items-center gap-2.5 px-3 py-2.5">
         {/* Info — clickable to expand */}
         <div
           className={`min-w-0 flex-1 ${onToggleExpand ? 'cursor-pointer' : ''}`}
@@ -72,7 +72,7 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
           {entry.upgradeNames && entry.upgradeNames.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
               {entry.upgradeNames.map((name, i) => (
-                <span key={i} className="rounded-sm border border-edge-700/20 bg-plate-700/30 px-1.5 py-px text-[10px] text-text-dim">
+                <span key={i} className="rounded-sm border border-edge-700/20 bg-plate-700/30 px-1.5 py-px text-[10px] text-text-dim/80">
                   {name}
                 </span>
               ))}

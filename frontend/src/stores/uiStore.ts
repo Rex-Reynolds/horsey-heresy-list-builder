@@ -56,6 +56,10 @@ interface UIState {
   lastAddedInfo: { unitName: string; detachmentName: string } | null;
   setLastAddedInfo: (info: { unitName: string; detachmentName: string } | null) => void;
 
+  // Unit browser view mode
+  viewMode: 'grid' | 'list';
+  setViewMode: (mode: 'grid' | 'list') => void;
+
   // Resizable roster panel width (desktop only)
   panelWidth: number;
   setPanelWidth: (w: number) => void;
@@ -105,6 +109,9 @@ export const useUIStore = create<UIState>((set) => ({
       }, 3000);
     }
   },
+
+  viewMode: 'grid',
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   panelWidth: loadPanelWidth(),
   setPanelWidth: (w) => {

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
 import type { Unit } from '../../types/index.ts';
 import { SLOT_STRIPE_COLORS, SLOT_CARD_TINTS } from '../../types/index.ts';
 import type { UnitAvailability } from '../../hooks/useUnitAvailability.ts';
@@ -38,6 +38,7 @@ interface Props {
   availability?: UnitAvailability;
   onQuickAdd?: (unit: Unit, e: React.MouseEvent) => void;
   searchTerm?: string;
+  compact?: boolean;
   children?: React.ReactNode;
 }
 
@@ -54,8 +55,9 @@ function HighlightedName({ name, term }: { name: string; term?: string }) {
   );
 }
 
-export default function UnitCard({ unit, expanded, onClick, availability, onQuickAdd, searchTerm, children }: Props) {
+export default function UnitCard({ unit, expanded, onClick, availability, onQuickAdd, searchTerm, compact, children }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [rippling, setRippling] = useState(false);
   const dotStyle = availability ? DOT_STYLES[availability] : undefined;
   const dimmed = availability === 'no_slot' || availability === 'roster_limit';
 
@@ -78,6 +80,63 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
   const isExpensive = totalCost >= 200;
 
   const weaponSummary = useMemo(() => extractWeaponSummary(unit.profiles), [unit.profiles]);
+
+  function handleQuickAddClick(e: React.MouseEvent) {
+    if (!onQuickAdd) return;
+    setRippling(true);
+    setTimeout(() => setRippling(false), 500);
+    onQuickAdd(unit, e);
+  }
+
+  // Compact list variant — single row
+  if (compact && !expanded) {
+    return (
+      <div
+        ref={cardRef}
+        className={`group flex items-center gap-2.5 rounded-sm border-l-3 px-3 py-2 transition-all duration-200 ${stripe} ${
+          `glow-border unit-card-hover bg-plate-900/80 hover:bg-plate-800/70 ${tint}`
+        } ${dimmed ? 'opacity-35' : ''}`}
+      >
+        {/* Status dot */}
+        {dotStyle && (
+          dotStyle.shape === 'diamond' ? (
+            <span className={`h-2 w-2 shrink-0 rotate-45 ${dotStyle.color}`} />
+          ) : dotStyle.shape === 'dash' ? (
+            <span className={`h-0.5 w-2.5 shrink-0 rounded-full ${dotStyle.color}`} />
+          ) : (
+            <span className={`h-2 w-2 shrink-0 rounded-full ${dotStyle.color}`} />
+          )
+        )}
+        {/* Name */}
+        <button onClick={onClick} className="min-w-0 flex-1 truncate text-left font-unit-name text-[14px] font-medium text-text-primary">
+          <HighlightedName name={unit.name} term={searchTerm} />
+        </button>
+        <Badge label={unit.unit_type} />
+        {/* Cost */}
+        <span className={`shrink-0 font-data text-[13px] font-semibold tabular-nums ${isExpensive ? 'text-gold-300' : 'text-gold-400'}`}>
+          {totalCost}<span className="text-[10px] font-normal text-gold-500/50">pts</span>
+        </span>
+        {/* Quick add */}
+        {onQuickAdd && (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={handleQuickAddClick}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAddClick(e as unknown as React.MouseEvent); }}
+            className={`quick-add-btn quick-add-ripple flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-valid/20 bg-valid/5 text-valid/60 transition-all hover:border-valid/40 hover:bg-valid/15 hover:text-valid ${rippling ? 'rippling' : ''}`}
+          >
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+            </svg>
+          </span>
+        )}
+        {/* Chevron */}
+        <svg className="h-3 w-3 shrink-0 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -106,7 +165,7 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
         {/* Name + badge — allow wrapping */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <span className="font-unit-name text-[15px] leading-snug text-text-primary"><HighlightedName name={unit.name} term={searchTerm} /></span>
+            <span className="font-unit-name text-[16px] font-medium leading-normal text-text-primary"><HighlightedName name={unit.name} term={searchTerm} /></span>
             <Badge label={unit.unit_type} />
             {unit.is_legacy && (
               <span className="shrink-0 rounded-sm border border-gold-700/30 bg-gold-900/40 px-1.5 py-px font-label text-[10px] font-semibold tracking-wider text-gold-500/70 uppercase">
@@ -116,7 +175,7 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
           </div>
           {/* Weapon summary + model range — collapsed only */}
           {!expanded && (weaponSummary || (hasModelRange && unit.model_min !== unit.model_max)) && (
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-text-dim/70 truncate">
+            <div className="mt-1 flex items-center gap-2 text-[11px] text-text-secondary/80 truncate">
               {weaponSummary && (
                 <>
                   <svg className="h-3 w-3 shrink-0 text-text-dim/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -144,10 +203,10 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
               }
             </span>
           )}
-          <span className={`inline-flex items-baseline gap-0.5 rounded-sm border px-2 py-0.5 font-data text-sm font-semibold tabular-nums ${
+          <span className={`inline-flex items-baseline gap-0.5 rounded-sm border px-2 py-0.5 font-data font-semibold tabular-nums ${
             isExpensive
-              ? 'border-gold-500/35 bg-gold-900/50 text-gold-300 shadow-[0_0_8px_rgba(184,147,64,0.08)]'
-              : 'border-gold-600/25 bg-gold-900/40 text-gold-400'
+              ? 'border-gold-500/35 bg-gold-900/50 text-[15px] text-gold-300 shadow-[0_0_8px_rgba(184,147,64,0.08)]'
+              : 'border-gold-600/25 bg-gold-900/40 text-sm text-gold-400'
           }`}>
             {totalCost}
             <span className="text-[10px] font-normal text-gold-500/50">pts</span>
@@ -164,9 +223,9 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
           <span
             role="button"
             tabIndex={0}
-            onClick={(e) => onQuickAdd(unit, e)}
-            onKeyDown={(e) => { if (e.key === 'Enter') onQuickAdd(unit, e as unknown as React.MouseEvent); }}
-            className="quick-add-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-valid/20 bg-valid/5 text-valid/60 transition-all hover:border-valid/40 hover:bg-valid/15 hover:text-valid"
+            onClick={handleQuickAddClick}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAddClick(e as unknown as React.MouseEvent); }}
+            className={`quick-add-btn quick-add-ripple flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-valid/20 bg-valid/5 text-valid/60 transition-all hover:border-valid/40 hover:bg-valid/15 hover:text-valid ${rippling ? 'rippling' : ''}`}
             title={unit.has_required_upgrades ? 'Quick add (with defaults)' : 'Quick add (no upgrades)'}
           >
             {unit.has_required_upgrades ? (

@@ -18,7 +18,7 @@ function AnimatedAquila() {
   return (
     <svg
       viewBox="0 0 64 28"
-      className="aquila-draw aquila-fill mx-auto mb-4 w-20 text-gold-500/50"
+      className="aquila-draw aquila-fill mx-auto mb-4 w-28 text-gold-500/50"
       fill="currentColor"
       stroke="currentColor"
       strokeWidth="0.5"
@@ -60,8 +60,9 @@ export default function RosterSetup() {
 
   return (
     <div className="relative flex h-full flex-col items-center justify-center p-8 overflow-hidden">
-      {/* Atmospheric background — radial glow + chevron pattern */}
+      {/* Atmospheric background — radial glow + chevron pattern + scanlines */}
       <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 setup-scanlines" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(130,102,36,0.08)_0%,transparent_70%)]" />
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: `repeating-linear-gradient(
@@ -93,7 +94,7 @@ export default function RosterSetup() {
           <div className="text-center">
             <AnimatedAquila />
             <h2 className="text-imperial text-lg tracking-[0.14em]">New Roster</h2>
-            <p className="mt-1.5 text-xs text-text-dim">Configure your force allocation</p>
+            <p className="mt-1.5 text-xs text-text-dim animate-text-reveal" style={{ animationDelay: '2.0s' }}>Configure your force allocation</p>
           </div>
 
           <div className="divider-imperial" />

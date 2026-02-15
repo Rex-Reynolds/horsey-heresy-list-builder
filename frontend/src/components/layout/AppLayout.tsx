@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useCallback } from 'react';
+import { type ReactNode, useRef, useCallback, useState } from 'react';
 import { useUIStore, PANEL_DEFAULT } from '../../stores/uiStore.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 
@@ -53,7 +53,7 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
 
       <button
         onClick={onOpen}
-        className="mobile-bottom-bar flex w-full flex-col px-5 py-3.5"
+        className="mobile-bottom-bar flex w-full flex-col px-5 py-4"
       >
         {/* Slot fill progress bar */}
         {slotMax > 0 && (
@@ -99,9 +99,14 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-label text-xs font-semibold tracking-wider text-gold-400 uppercase">
+          <span className="font-label text-sm font-semibold tracking-wider text-gold-400 uppercase">
             View Roster
           </span>
+          {totalEntries > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-600/20 px-1.5 font-data text-[10px] font-bold tabular-nums text-gold-400">
+              {totalEntries}
+            </span>
+          )}
           <svg className="h-4 w-4 text-gold-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
           </svg>
@@ -119,6 +124,27 @@ export default function AppLayout({ left, right }: Props) {
   const setPanelWidth = useUIStore((s) => s.setPanelWidth);
   const detachments = useRosterStore((s) => s.detachments);
   const hasNoDetachments = detachments.length === 0;
+
+  // Swipe-to-close for mobile sheet
+  const touchStartY = useRef(0);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    setSwipeOffset(0);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0) setSwipeOffset(delta);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (swipeOffset > 80) {
+      setMobileRosterOpen(false);
+    }
+    setSwipeOffset(0);
+  }, [swipeOffset, setMobileRosterOpen]);
 
   const isDragging = useRef(false);
   const startX = useRef(0);
@@ -227,11 +253,22 @@ export default function AppLayout({ left, right }: Props) {
       />
 
       {/* Mobile roster sheet */}
-      <div className={`fixed inset-x-0 bottom-0 top-[57px] z-50 flex flex-col overflow-hidden bg-plate-950 transition-transform duration-300 ease-out lg:hidden ${
-        mobileRosterOpen ? 'translate-y-0' : 'translate-y-full'
-      }`}>
-        {/* Sheet handle */}
-        <div className="flex items-center justify-between border-b border-edge-700/40 px-4 py-2.5">
+      <div
+        className={`fixed inset-x-0 bottom-0 top-[57px] z-50 flex flex-col overflow-hidden bg-plate-950 transition-transform duration-300 ease-out lg:hidden ${
+          mobileRosterOpen ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        style={swipeOffset > 0 ? { transform: `translateY(${swipeOffset}px)`, transition: 'none' } : undefined}
+      >
+        {/* Sheet handle — swipe down to close */}
+        <div
+          className="flex flex-col items-center border-b border-edge-700/40 px-4 py-2.5"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Swipe indicator pill */}
+          <div className="mb-2 h-1 w-8 rounded-full bg-edge-500/40" />
+          <div className="flex w-full items-center justify-between">
           <span className="font-label text-[11px] font-bold tracking-[0.15em] text-text-secondary uppercase">
             Roster
           </span>
@@ -244,6 +281,7 @@ export default function AppLayout({ left, right }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto pb-8">
           {right}

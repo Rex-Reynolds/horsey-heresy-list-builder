@@ -372,17 +372,19 @@ export default function RosterPanel() {
 
         {detachments.length > 0 && (
           <div className="stagger-list space-y-2">
-            {detachments.map((det) => (
-              <DetachmentSection
-                key={det.id}
-                detachment={det}
-                onRemoveEntry={handleRemoveEntry}
-                onUpdateQty={handleUpdateQty}
-                onRemoveDetachment={handleRemoveDetachment}
-                onDuplicateEntry={handleDuplicateEntry}
-                onSlotClick={(slotName, filled, max) => handleSlotClick(slotName, det.name, filled, max)}
-                newEntryId={newEntryId}
-              />
+            {detachments.map((det, i) => (
+              <div key={det.id}>
+                {i > 0 && <div className="divider-glow my-2" />}
+                <DetachmentSection
+                  detachment={det}
+                  onRemoveEntry={handleRemoveEntry}
+                  onUpdateQty={handleUpdateQty}
+                  onRemoveDetachment={handleRemoveDetachment}
+                  onDuplicateEntry={handleDuplicateEntry}
+                  onSlotClick={(slotName, filled, max) => handleSlotClick(slotName, det.name, filled, max)}
+                  newEntryId={newEntryId}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -454,6 +456,22 @@ function BudgetChip({ label, current, max, status }: {
   max: number;
   status: 'valid' | 'full' | 'over' | 'empty';
 }) {
+  const prevCurrent = useRef(current);
+  const [bumped, setBumped] = useState(false);
+  const [shaking, setShaking] = useState(false);
+
+  useEffect(() => {
+    if (prevCurrent.current !== current) {
+      setBumped(true); // eslint-disable-line react-hooks/set-state-in-effect -- intentional animation trigger
+      if (status === 'over') setShaking(true);
+      const t1 = setTimeout(() => setBumped(false), 350);
+      const t2 = setTimeout(() => setShaking(false), 400);
+      prevCurrent.current = current;
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+    prevCurrent.current = current;
+  }, [current, status]);
+
   const barColor = {
     valid: 'bg-valid',
     full: 'bg-caution',
@@ -476,13 +494,13 @@ function BudgetChip({ label, current, max, status }: {
   }[status];
 
   return (
-    <div className={`flex items-center gap-0 rounded-sm border border-edge-600/25 bg-plate-800/50 transition-all ${glowClass}`}>
+    <div className={`flex items-center gap-0 rounded-sm border border-edge-600/25 bg-plate-800/50 transition-all ${glowClass} ${shaking ? 'animate-budget-shake' : ''}`}>
       <span className={`w-[3px] self-stretch rounded-l-sm transition-colors ${barColor}`} />
       <div className="flex items-center gap-2 px-2.5 py-1">
         <span className="font-label text-[11px] font-semibold tracking-wider text-text-secondary uppercase">
           {label}
         </span>
-        <span className={`font-data text-xs font-medium tabular-nums transition-colors ${textColor}`}>
+        <span className={`font-data text-xs font-medium tabular-nums transition-colors ${textColor} ${bumped ? 'animate-number-bump' : ''}`}>
           {current}/{max}
         </span>
       </div>

@@ -710,7 +710,7 @@ body::before {
 /* ── Setup screen background ── */
 .setup-bg {
   background:
-    radial-gradient(ellipse at 50% 40%, rgba(200, 160, 72, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 40%, rgba(200, 160, 72, 0.07) 0%, transparent 60%),
     radial-gradient(ellipse at 50% 50%, rgba(18, 24, 32, 0.5) 0%, var(--color-void) 100%);
 }
 
@@ -876,7 +876,7 @@ body::before {
 /* Frame bracket animation for setup */
 @keyframes bracketSlide {
   from { opacity: 0; transform: scale(0.7); }
-  to { opacity: 0.7; transform: scale(1); }
+  to { opacity: 0.85; transform: scale(1); }
 }
 
 .imperial-frame-animated::before,
@@ -970,4 +970,92 @@ body::before {
 /* ── Force org grid ── */
 .force-org-grid {
   background: rgba(18, 24, 32, 0.35);
+}
+
+/* ── Slot fill pulse — green glow when a slot gains a unit ── */
+@keyframes slotFillPulse {
+  0% { box-shadow: 0 0 0 0 rgba(66, 192, 112, 0.3); }
+  50% { box-shadow: 0 0 10px 2px rgba(66, 192, 112, 0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(66, 192, 112, 0); }
+}
+.animate-slot-fill {
+  animation: slotFillPulse 0.6s ease-out;
+}
+
+/* ── Quick-add ripple ── */
+@keyframes quickAddRipple {
+  0% { transform: scale(0); opacity: 0.4; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.quick-add-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.quick-add-ripple.rippling::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(66, 192, 112, 0.3) 0%, transparent 70%);
+  animation: quickAddRipple 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+/* ── Budget shake — red shake on overflow ── */
+@keyframes budgetShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+.animate-budget-shake {
+  animation: budgetShake 0.4s ease-out;
+}
+
+/* ── Overage pulse — red glow on points bar when over limit ── */
+@keyframes overagePulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(196, 64, 64, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(196, 64, 64, 0.3); }
+}
+.animate-overage-pulse {
+  animation: overagePulse 1.5s ease-in-out infinite;
+}
+
+/* ── Near-limit pulse — amber glow at 90%+ capacity ── */
+@keyframes nearLimitPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(196, 154, 32, 0.1); }
+  50% { box-shadow: 0 0 16px rgba(196, 154, 32, 0.2); }
+}
+.animate-near-limit-pulse {
+  animation: nearLimitPulse 2s ease-in-out infinite;
+}
+
+/* ── Text reveal — clip-path reveal for setup subtitle ── */
+@keyframes textReveal {
+  from { clip-path: inset(0 100% 0 0); opacity: 0; }
+  to { clip-path: inset(0 0% 0 0); opacity: 1; }
+}
+.animate-text-reveal {
+  animation: textReveal 0.8s ease-out both;
+}
+
+/* ── Setup scan-lines overlay ── */
+.setup-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(200, 160, 72, 0.012) 3px,
+    rgba(200, 160, 72, 0.012) 4px
+  );
+  pointer-events: none;
+}
+
+/* ── Category filter scroll snap ── */
+.category-filter-scroll {
+  scroll-snap-type: x proximity;
+}
+.category-filter-scroll > * {
+  scroll-snap-align: start;
 }
