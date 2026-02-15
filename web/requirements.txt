@@ -1,4 +1,0 @@
-streamlit>=1.30.0
-peewee>=3.17.0
-lxml>=4.9.0
-rich>=13.7.0
