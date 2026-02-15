@@ -44,7 +44,8 @@ function RosterSkeleton() {
 function App() {
   const rosterId = useRosterStore((s) => s.rosterId)
   const syncFromResponse = useRosterStore((s) => s.syncFromResponse)
-  const [restoring, setRestoring] = useState(true)
+  // Start restoring only if there's actually a saved roster to fetch
+  const [restoring, setRestoring] = useState(() => !!localStorage.getItem('sa_roster_id'))
 
   // Restore roster from localStorage on mount
   useEffect(() => {
@@ -54,8 +55,6 @@ function App() {
         .then(({ data }) => { syncFromResponse(data); })
         .catch(() => { localStorage.removeItem('sa_roster_id'); })
         .finally(() => setRestoring(false));
-    } else {
-      setRestoring(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

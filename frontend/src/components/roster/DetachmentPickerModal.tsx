@@ -88,7 +88,7 @@ export default function DetachmentPickerModal({
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (open) setSearch('');
+    if (open) setSearch(''); // eslint-disable-line react-hooks/set-state-in-effect -- reset on open
   }, [open]);
 
   useEffect(() => {

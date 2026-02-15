@@ -43,7 +43,7 @@ export default function UnitBrowser() {
 
   useEffect(() => {
     if (slotFilter) {
-      setCategory(slotFilter);
+      setCategory(slotFilter); // eslint-disable-line react-hooks/set-state-in-effect -- consuming cross-store signal
       setAvailableOnly(true);
       setSlotFilter(null); // Consume the filter
     }
@@ -176,7 +176,7 @@ export default function UnitBrowser() {
             syncFromResponse(resp);
           });
         },
-        onError: (err: any) => {
+        onError: (err: Error & { response?: { data?: { detail?: string } } }) => {
           addToast(err?.response?.data?.detail ?? 'Failed to add', 'error');
         },
       },

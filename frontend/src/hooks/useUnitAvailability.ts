@@ -23,6 +23,28 @@ export function useUnitAvailability() {
     [detachments],
   );
 
+  const canAffordDetachment = useCallback((det: Detachment): boolean => {
+    const auxCost = det.costs?.auxiliary ?? 0;
+    const apexCost = det.costs?.apex ?? 0;
+
+    if (auxCost > 0 && auxCost > composition.auxiliary_budget - composition.auxiliary_used) {
+      return false;
+    }
+    if (apexCost > 0 && apexCost > composition.apex_budget - composition.apex_used) {
+      return false;
+    }
+
+    // Primary max check
+    if (det.type === 'Primary' && !det.name.includes('Warlord') && composition.primary_count >= composition.primary_max) {
+      return false;
+    }
+    if (det.name.includes('Warlord') && (!composition.warlord_available || composition.warlord_count >= 1)) {
+      return false;
+    }
+
+    return true;
+  }, [composition]);
+
   const getAvailability = useCallback(
     (unitType: string, unitName?: string, unitId?: number, constraints?: UnitConstraint[] | null): AvailabilityInfo => {
       const empty: AvailabilityInfo = {
@@ -93,30 +115,8 @@ export function useUnitAvailability() {
       }
       return { status: 'no_slot', openDetachments: [], fullDetachments: [], unlockableDetachments: unlockable };
     },
-    [rosterId, detachments, allDetachments, addedDetachmentIds, composition],
+    [rosterId, detachments, allDetachments, addedDetachmentIds, canAffordDetachment],
   );
-
-  function canAffordDetachment(det: Detachment): boolean {
-    const auxCost = det.costs?.auxiliary ?? 0;
-    const apexCost = det.costs?.apex ?? 0;
-
-    if (auxCost > 0 && auxCost > composition.auxiliary_budget - composition.auxiliary_used) {
-      return false;
-    }
-    if (apexCost > 0 && apexCost > composition.apex_budget - composition.apex_used) {
-      return false;
-    }
-
-    // Primary max check
-    if (det.type === 'Primary' && !det.name.includes('Warlord') && composition.primary_count >= composition.primary_max) {
-      return false;
-    }
-    if (det.name.includes('Warlord') && (!composition.warlord_available || composition.warlord_count >= 1)) {
-      return false;
-    }
-
-    return true;
-  }
 
   return getAvailability;
 }

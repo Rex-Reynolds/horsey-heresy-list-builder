@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import client from './client.ts';
-import type { RosterResponse, ValidationResponse, SelectedUpgrade } from '../types/index.ts';
+import type { RosterResponse, RosterDetachmentResponse, ValidationResponse, SelectedUpgrade } from '../types/index.ts';
 
 export function useCreateRoster() {
   return useMutation<RosterResponse, Error, { name: string; points_limit: number }>({
@@ -23,7 +23,7 @@ export function useRoster(rosterId: number | null) {
 }
 
 export function useAddDetachment(rosterId: number | null) {
-  return useMutation<any, Error, { detachment_id: number; detachment_type: string }>({
+  return useMutation<RosterDetachmentResponse, Error, { detachment_id: number; detachment_type: string }>({
     mutationFn: async (body) => {
       const { data } = await client.post(`/api/rosters/${rosterId}/detachments`, body);
       return data;

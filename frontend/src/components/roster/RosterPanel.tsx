@@ -125,7 +125,7 @@ export default function RosterPanel() {
             });
           }
         },
-        onError: (err: any) => {
+        onError: (err: Error & { response?: { data?: { detail?: string } } }) => {
           const detail = err?.response?.data?.detail;
           setAddError(detail || 'Failed to add detachment');
           setShowDetPicker(true);

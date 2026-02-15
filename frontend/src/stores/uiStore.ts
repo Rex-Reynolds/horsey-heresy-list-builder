@@ -26,7 +26,7 @@ function loadPanelWidth(): number {
       const n = Number(v);
       if (n >= PANEL_MIN && n <= PANEL_MAX) return n;
     }
-  } catch {}
+  } catch { /* storage unavailable */ }
   return PANEL_DEFAULT;
 }
 
@@ -110,6 +110,6 @@ export const useUIStore = create<UIState>((set) => ({
   setPanelWidth: (w) => {
     const clamped = Math.round(Math.max(PANEL_MIN, Math.min(PANEL_MAX, w)));
     set({ panelWidth: clamped });
-    try { localStorage.setItem('sa_panel_width', String(clamped)); } catch {}
+    try { localStorage.setItem('sa_panel_width', String(clamped)); } catch { /* storage unavailable */ }
   },
 }));

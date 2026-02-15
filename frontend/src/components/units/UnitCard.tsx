@@ -165,7 +165,7 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
             role="button"
             tabIndex={0}
             onClick={(e) => onQuickAdd(unit, e)}
-            onKeyDown={(e) => { if (e.key === 'Enter') onQuickAdd(unit, e as any); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') onQuickAdd(unit, e as unknown as React.MouseEvent); }}
             className="quick-add-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-valid/20 bg-valid/5 text-valid/60 transition-all hover:border-valid/40 hover:bg-valid/15 hover:text-valid"
             title="Quick add (no upgrades)"
           >

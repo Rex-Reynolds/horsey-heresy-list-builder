@@ -37,7 +37,7 @@ export default function PointsBar({ current, limit, segments }: Props) {
   const prevCurrent = useRef(current);
   useEffect(() => {
     if (prevCurrent.current !== current && prevCurrent.current !== 0) {
-      setFlash(true);
+      setFlash(true); // eslint-disable-line react-hooks/set-state-in-effect -- intentional flash animation
       const timer = setTimeout(() => setFlash(false), 500);
       prevCurrent.current = current;
       return () => clearTimeout(timer);

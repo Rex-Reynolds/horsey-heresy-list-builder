@@ -138,7 +138,7 @@ export default function UnitDetail({ unit }: Props) {
             });
           }
         },
-        onError: (err: any) => {
+        onError: (err: Error & { response?: { data?: { detail?: string } } }) => {
           const detail = err?.response?.data?.detail;
           setAddError(detail ?? 'Failed to add unit');
           addToast(detail ?? 'Failed to add unit', 'error');
