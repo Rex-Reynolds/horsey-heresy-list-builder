@@ -213,7 +213,7 @@ export default function UnitBrowser() {
         expanded={expandedId === unit.id}
         onClick={() => setExpandedId(expandedId === unit.id ? null : unit.id)}
         availability={availability?.status}
-        onQuickAdd={hasDetachments && availability?.status === 'addable' ? handleQuickAdd : undefined}
+        onQuickAdd={hasDetachments && availability?.status === 'addable' && !unit.has_required_upgrades ? handleQuickAdd : undefined}
         searchTerm={search}
       >
         <UnitDetail unit={unit} />

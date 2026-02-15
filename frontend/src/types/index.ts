@@ -17,6 +17,7 @@ export interface Unit {
   model_min: number;
   model_max: number | null;
   is_legacy: boolean;
+  has_required_upgrades: boolean;
 }
 
 export interface Upgrade {

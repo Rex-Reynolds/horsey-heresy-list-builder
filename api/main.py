@@ -115,6 +115,7 @@ class UnitResponse(BaseModel):
     model_min: int = 1
     model_max: Optional[int] = None
     is_legacy: bool = False
+    has_required_upgrades: bool = False
 
 class WeaponResponse(BaseModel):
     id: int
@@ -243,6 +244,14 @@ async def get_units(
 
     query = query.limit(limit).offset(offset)
 
+    # Pre-compute which units have required upgrade groups (min_quantity > 0)
+    required_upgrade_unit_ids = set(
+        uu.unit_id for uu in
+        UnitUpgrade.select(UnitUpgrade.unit)
+        .where(UnitUpgrade.min_quantity > 0, UnitUpgrade.group_name.is_null(False))
+        .distinct()
+    )
+
     units = []
     for unit in query:
         unit_constraints = None
@@ -264,6 +273,7 @@ async def get_units(
             model_min=unit.model_min or 1,
             model_max=unit.model_max,
             is_legacy=bool(unit.is_legacy),
+            has_required_upgrades=unit.id in required_upgrade_unit_ids,
         ))
 
     return units
@@ -279,6 +289,11 @@ async def get_unit(unit_id: int):
                 unit_constraints = json.loads(unit.constraints)
             except (json.JSONDecodeError, TypeError):
                 pass
+        has_required = (
+            UnitUpgrade.select()
+            .where(UnitUpgrade.unit == unit_id, UnitUpgrade.min_quantity > 0, UnitUpgrade.group_name.is_null(False))
+            .exists()
+        )
         return UnitResponse(
             id=unit.id,
             bs_id=unit.bs_id,
@@ -292,6 +307,7 @@ async def get_unit(unit_id: int):
             model_min=unit.model_min or 1,
             model_max=unit.model_max,
             is_legacy=bool(unit.is_legacy),
+            has_required_upgrades=has_required,
         )
     except Unit.DoesNotExist:
         raise HTTPException(status_code=404, detail="Unit not found")
@@ -805,9 +821,8 @@ async def add_entry_to_detachment(request: Request, roster_id: int, det_id: int,
 
     # --- Validate upgrade selection against group constraints ---
     upgrades = entry.upgrades or []
-    if upgrades:
-        selected_bs_ids = [u['upgrade_id'] for u in upgrades if 'upgrade_id' in u]
-        validate_upgrade_selection(unit.id, selected_bs_ids)
+    selected_bs_ids = [u['upgrade_id'] for u in upgrades if 'upgrade_id' in u]
+    validate_upgrade_selection(unit.id, selected_bs_ids)
 
     # Calculate cost
     total_cost = PointsCalculator.calculate_unit_cost(unit, upgrades) * entry.quantity
