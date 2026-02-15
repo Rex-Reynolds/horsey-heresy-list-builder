@@ -12,9 +12,11 @@ interface Props {
   expanded?: boolean;
   onToggleExpand?: () => void;
   isNew?: boolean;
+  entryIndex?: number;
+  isDuplicateName?: boolean;
 }
 
-export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, expanded, onToggleExpand, isNew }: Props) {
+export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, expanded, onToggleExpand, isNew, entryIndex, isDuplicateName }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const prevQtyRef = useRef(entry.quantity);
   const [costBumped, setCostBumped] = useState(false);
@@ -49,14 +51,20 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
   const stripe = SLOT_STRIPE_COLORS[entry.category] ?? 'border-l-edge-500';
 
   return (
-    <div ref={cardRef} className={`group rounded-sm border-l-2 ${stripe} bg-plate-800/20 transition-all ${expanded ? 'glow-border-active bg-plate-800/40' : 'hover:bg-plate-800/40'} ${isNew ? 'animate-entry-flash' : ''}`}>
+    <div ref={cardRef} className={`group rounded-sm border-l-2 ${stripe} transition-all ${expanded ? 'glow-border-active bg-plate-800/40' : 'hover:bg-plate-800/40'} ${isNew ? 'animate-entry-flash' : ''} ${entryIndex !== undefined && entryIndex % 2 === 1 ? 'bg-plate-800/30' : 'bg-plate-800/20'}`}>
       <div className="flex items-center gap-2.5 px-3 py-2.5">
+        {/* Entry number badge */}
+        {entryIndex !== undefined && (
+          <span className="font-data text-[10px] text-text-dim/40 w-4 text-center shrink-0">
+            #{entryIndex + 1}
+          </span>
+        )}
         {/* Info — clickable to expand */}
         <div
           className={`min-w-0 flex-1 ${onToggleExpand ? 'cursor-pointer' : ''}`}
           onClick={onToggleExpand}
         >
-          <p className="truncate text-[13px] font-medium text-text-primary">{entry.name}</p>
+          <p className={`truncate text-[13px] font-medium ${isDuplicateName ? 'text-text-primary/60' : 'text-text-primary'}`}>{entry.name}</p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className={`font-data text-xs font-medium tabular-nums text-gold-500/80 ${costBumped ? 'animate-points-flash' : ''}`}>{entry.totalCost} pts</span>
             {entry.upgradeCost > 0 && (

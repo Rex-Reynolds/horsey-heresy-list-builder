@@ -22,6 +22,24 @@ import CompositionSummary from './CompositionSummary.tsx';
 import OnboardingHint from './OnboardingHint.tsx';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
 
+function getNextActionHint(
+  composition: { primary_count: number; auxiliary_budget: number; auxiliary_used: number },
+  detachmentCount: number,
+  entryCount: number,
+): { text: string; type: 'add-detachment' | 'browse' } | null {
+  if (composition.primary_count === 0 && detachmentCount === 0) {
+    return { text: 'Add a Primary Detachment to begin', type: 'add-detachment' };
+  }
+  if (detachmentCount > 0 && entryCount === 0) {
+    return { text: 'Browse units to fill your detachment slots', type: 'browse' };
+  }
+  const auxRemaining = composition.auxiliary_budget - composition.auxiliary_used;
+  if (detachmentCount > 0 && entryCount > 0 && auxRemaining > 0) {
+    return { text: `You have ${auxRemaining} Auxiliary slot${auxRemaining !== 1 ? 's' : ''} \u2014 add a detachment?`, type: 'add-detachment' };
+  }
+  return null;
+}
+
 export default function RosterPanel() {
   const {
     rosterId,
@@ -342,6 +360,23 @@ export default function RosterPanel() {
             />
           )}
         </div>
+
+        {/* Next-action suggestion */}
+        {(() => {
+          const hint = getNextActionHint(composition, detachments.length, totalEntries);
+          if (!hint || detachments.length > 2) return null;
+          return (
+            <button
+              onClick={hint.type === 'add-detachment' ? () => { setShowDetPicker(true); setAddError(null); } : hint.type === 'browse' ? () => { if (window.innerWidth < 1024) setMobileRosterOpen(false); } : undefined}
+              className="mt-2 flex items-center gap-2 rounded-sm border border-gold-600/15 bg-gold-900/6 px-3 py-2 text-left transition-all hover:border-gold-500/20 hover:bg-gold-900/10 w-full"
+            >
+              <svg className="h-3.5 w-3.5 shrink-0 text-gold-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-label text-[11px] text-gold-400/80">{hint.text}</span>
+            </button>
+          );
+        })()}
 
         {/* Composition Summary */}
         {detachments.length > 0 && totalEntries > 0 && (

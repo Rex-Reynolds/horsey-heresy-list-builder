@@ -21,28 +21,43 @@ const ICONS: Record<string, ReactNode> = {
 export default function EmptyState({
   message,
   icon = 'default',
+  suggestion,
   actionLabel,
   onAction,
 }: {
   message: string;
   icon?: string;
+  suggestion?: string;
   actionLabel?: string;
   onAction?: () => void;
 }) {
   const svgIcon = ICONS[icon] ?? ICONS.default;
 
   return (
-    <div className="flex flex-col items-center justify-center py-14 text-text-dim">
-      <div className="mb-3 opacity-25">{svgIcon}</div>
-      <p className="font-label text-[11px] font-medium tracking-wider uppercase">{message}</p>
-      {actionLabel && onAction && (
-        <button
-          onClick={onAction}
-          className="mt-3 font-label rounded-sm border border-gold-600/25 bg-gold-900/10 px-4 py-2 text-[11px] font-semibold tracking-wider text-gold-400 uppercase transition-all hover:border-gold-500/30 hover:bg-gold-900/20"
-        >
-          {actionLabel}
-        </button>
-      )}
+    <div className="relative flex flex-col items-center justify-center py-14 text-text-dim overflow-hidden">
+      {/* Aquila watermark */}
+      <svg viewBox="0 0 64 28" fill="currentColor" className="absolute w-24 opacity-[0.04] pointer-events-none">
+        <path d="M28 14 L6 5 L12 11 L3 9 L14 14 L3 19 L12 17 L6 23 Z" />
+        <path d="M36 14 L58 5 L52 11 L61 9 L50 14 L61 19 L52 17 L58 23 Z" />
+        <path d="M32 4 L34 12 L40 8 L35 14 L42 14 L35 16 L40 20 L34 16 L32 24 L30 16 L24 20 L29 16 L22 14 L29 14 L24 8 L30 12 Z" />
+        <circle cx="32" cy="14" r="3.5" />
+      </svg>
+
+      <div className="relative z-[1] flex flex-col items-center">
+        <div className="mb-3 opacity-25">{svgIcon}</div>
+        <p className="font-label text-[11px] font-medium tracking-wider uppercase">{message}</p>
+        {suggestion && (
+          <p className="mt-1.5 text-[11px] text-text-dim/50 text-center max-w-[280px]">{suggestion}</p>
+        )}
+        {actionLabel && onAction && (
+          <button
+            onClick={onAction}
+            className="mt-3 font-label rounded-sm border border-gold-600/25 bg-gold-900/10 px-4 py-2 text-[11px] font-semibold tracking-wider text-gold-400 uppercase transition-all hover:border-gold-500/30 hover:bg-gold-900/20"
+          >
+            {actionLabel}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

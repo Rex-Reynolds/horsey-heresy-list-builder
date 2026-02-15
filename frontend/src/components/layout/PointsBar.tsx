@@ -184,6 +184,19 @@ export default function PointsBar({ current, limit, segments }: Props) {
         )}
       </div>
 
+      {/* Segment legend */}
+      {hasSegments && (
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+          {segments!.map((seg) => (
+            <div key={seg.label} className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 shrink-0 rounded-sm ${SEGMENT_COLORS[seg.type] ?? 'bg-edge-400'}`} />
+              <span className="font-label text-[10px] text-text-dim truncate max-w-[120px]">{seg.label}</span>
+              <span className="font-data text-[10px] tabular-nums text-text-dim/60">{seg.points}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Threshold labels */}
       <div className="relative mt-0.5 h-3">
         <span className="absolute left-0 font-data text-[9px] tabular-nums text-text-dim/60">0</span>

@@ -291,7 +291,7 @@ export default function DetachmentSection({
                   status={status}
                   onClick={onSlotClick ? () => onSlotClick(slotName, status.filled, status.max) : undefined}
                 />
-                {(entriesBySlot[slotName] || []).map((entry) => (
+                {(entriesBySlot[slotName] || []).map((entry, idx, arr) => (
                   <div key={entry.id} className="ml-2">
                     <RosterEntryCard
                       entry={entry}
@@ -302,6 +302,8 @@ export default function DetachmentSection({
                       expanded={expandedEntryId === entry.id}
                       onToggleExpand={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
                       isNew={entry.id === newEntryId}
+                      entryIndex={idx}
+                      isDuplicateName={idx > 0 && arr[idx - 1].unitId === entry.unitId}
                     />
                   </div>
                 ))}

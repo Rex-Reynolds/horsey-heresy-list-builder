@@ -97,6 +97,25 @@ export default function UnitBrowser() {
     return counts;
   }, [hasDetachments, detachments]);
 
+  // Compute which display groups have required-but-empty slots
+  const requiredSlots = useMemo(() => {
+    if (!hasDetachments) return undefined;
+    const required = new Set<string>();
+    for (const det of detachments) {
+      for (const [slotKey, status] of Object.entries(det.slots)) {
+        if (status.min > 0 && status.filled < status.min) {
+          const baseName = slotKey.includes(' - ') ? slotKey.split(' - ', 1)[0].trim() : slotKey;
+          for (const [group, nativeSlots] of Object.entries(SLOT_DISPLAY_GROUPS)) {
+            if ((nativeSlots as readonly string[]).includes(baseName)) {
+              required.add(group);
+            }
+          }
+        }
+      }
+    }
+    return required.size > 0 ? required : undefined;
+  }, [hasDetachments, detachments]);
+
   const displayUnits = useMemo(() => {
     const items = !hasDetachments
       ? units.map((u) => ({ unit: u, availability: undefined as ReturnType<typeof getAvailability> | undefined }))
@@ -341,7 +360,7 @@ export default function UnitBrowser() {
         )}
 
         {/* Category filter */}
-        <CategoryFilter selected={category} onChange={(cat) => { setCategory(cat); if (!cat) setSlotFilterContext(null); }} counts={unitCounts} slotCounts={slotCounts} />
+        <CategoryFilter selected={category} onChange={(cat) => { setCategory(cat); if (!cat) setSlotFilterContext(null); }} counts={unitCounts} slotCounts={slotCounts} requiredSlots={requiredSlots} />
 
         {/* Search + sort + available */}
         <div className="flex items-center gap-2">
@@ -398,9 +417,36 @@ export default function UnitBrowser() {
           <EmptyState
             message={availableOnly ? 'No available units in this category' : 'No units found'}
             icon="search"
+            suggestion={
+              availableOnly
+                ? "Try disabling the 'Available' filter or switching categories"
+                : slotFilterContext
+                  ? 'Try clearing the slot filter to see all units'
+                  : category
+                    ? 'Try a different category or clear the filter'
+                    : undefined
+            }
             actionLabel={availableOnly ? 'Show all units' : category ? 'Clear filter' : undefined}
             onAction={availableOnly ? () => setAvailableOnly(false) : category ? () => { setCategory(null); setSlotFilterContext(null); } : undefined}
           />
+        )}
+
+        {/* Mobile category jump bar */}
+        {showGroupHeaders && groupedUnits && (
+          <div className="fixed right-1 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 lg:hidden">
+            {groupedUnits.map(({ group, dotColor }) => (
+              <button
+                key={group}
+                onClick={() => {
+                  document.getElementById(`group-${group}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className="flex h-5 w-5 items-center justify-center"
+                title={group}
+              >
+                <span className={`h-2.5 w-2.5 rounded-full ${dotColor} opacity-60 hover:opacity-100 transition-opacity`} />
+              </button>
+            ))}
+          </div>
         )}
 
         {/* Grouped view with category headers */}
@@ -408,7 +454,7 @@ export default function UnitBrowser() {
           <div className="space-y-1">
             {groupedUnits.map(({ group, dotColor, items }) => (
               <div key={group}>
-                <div className="category-group-header mb-1.5 mt-3 first:mt-0">
+                <div id={`group-${group}`} className="category-group-header mb-1.5 mt-3 first:mt-0">
                   <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
                   <span className="font-label text-[11px] font-bold tracking-[0.12em] text-text-secondary uppercase">
                     {group}

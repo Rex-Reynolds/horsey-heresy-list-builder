@@ -57,37 +57,40 @@ export default function StatBlock({ stats }: Props) {
 
       {/* Datasheet label */}
       <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-        <span className="font-label text-[9px] font-bold tracking-[0.2em] text-gold-500/50 uppercase">Unit Profile</span>
+        <span className="font-label text-[9px] font-bold tracking-[0.2em] text-gold-500/70 uppercase">Unit Profile</span>
         <span className="h-px flex-1 bg-gold-600/15" />
       </div>
 
-      <div className="stat-scroll-container relative overflow-x-auto">
-        <table className="data-readout w-full">
-          <thead>
-            <tr>
-              <th className="text-left">Unit</th>
-              {COLUMNS.map((col) => (
-                <th key={col} className="text-center">{col}</th>
-              ))}
-              {showInv && <th className="text-center stat-inv-header">INV</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {stats.map((s, i) => (
-              <tr key={i}>
-                <td>{s.name}</td>
-                {COLUMNS.map((col) => {
-                  const val = s[col];
-                  const cls = col === 'SAV' ? getSaveClass(val) : getStatClass(col, val);
-                  return <td key={col} className={cls}>{val}</td>;
-                })}
-                {showInv && (
-                  <td className="stat-special">{s.INV ?? '-'}</td>
-                )}
+      {/* Raised inner panel for stat table */}
+      <div className="stat-inner-panel">
+        <div className="stat-scroll-container relative overflow-x-auto">
+          <table className="data-readout w-full">
+            <thead>
+              <tr>
+                <th className="text-left">Unit</th>
+                {COLUMNS.map((col) => (
+                  <th key={col} className="text-center">{col}</th>
+                ))}
+                {showInv && <th className="text-center stat-inv-header">INV</th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {stats.map((s, i) => (
+                <tr key={i}>
+                  <td>{s.name}</td>
+                  {COLUMNS.map((col) => {
+                    const val = s[col];
+                    const cls = col === 'SAV' ? getSaveClass(val) : getStatClass(col, val);
+                    return <td key={col} className={cls}>{val}</td>;
+                  })}
+                  {showInv && (
+                    <td className="stat-special">{s.INV ?? '-'}</td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Bottom accent */}

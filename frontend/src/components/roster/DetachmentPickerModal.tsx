@@ -235,15 +235,19 @@ export default function DetachmentPickerModal({
                                   {d.costs.apex} Apex
                                 </span>
                               )}
-                              {disabledReason && (
-                                <span className="rounded-sm border border-edge-600/20 bg-plate-700/40 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-text-dim/70 uppercase">
-                                  {disabledReason}
-                                </span>
-                              )}
                             </div>
                           </div>
+                          {/* Disabled reason bar */}
+                          {disabledReason && (
+                            <div className="mt-1.5 flex items-center gap-2 rounded-sm bg-plate-700/20 px-2.5 py-1.5">
+                              <svg className="h-3 w-3 shrink-0 text-text-dim/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                              </svg>
+                              <span className="text-[11px] text-text-dim/70">{disabledReason}</span>
+                            </div>
+                          )}
                           {visibleSlots.length > 0 && (
-                            <div className="mt-2.5 flex flex-wrap gap-2">
+                            <div className="mt-2.5 grid grid-cols-4 gap-1.5">
                               {visibleSlots.map(([slot, c]) => {
                                 const dotColor = SLOT_FILL_COLORS[slot]?.replace('/70', '') ?? 'bg-edge-400';
                                 return (

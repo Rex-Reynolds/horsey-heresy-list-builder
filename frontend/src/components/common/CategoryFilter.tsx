@@ -5,9 +5,10 @@ interface Props {
   onChange: (cat: string | null) => void;
   counts?: Record<string, number>;
   slotCounts?: Record<string, { open: number; total: number }>;
+  requiredSlots?: Set<string>;
 }
 
-export default function CategoryFilter({ selected, onChange, counts, slotCounts }: Props) {
+export default function CategoryFilter({ selected, onChange, counts, slotCounts, requiredSlots }: Props) {
   const categories = ['All', ...DISPLAY_GROUP_ORDER];
   return (
     <div className="category-filter-scroll scrollbar-hide -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
@@ -17,6 +18,7 @@ export default function CategoryFilter({ selected, onChange, counts, slotCounts 
         const colors = FILTER_COLORS[cat] ?? FILTER_COLORS['All'];
         const count = counts?.[cat];
         const slotInfo = cat !== 'All' ? slotCounts?.[cat] : undefined;
+        const isRequired = !!(requiredSlots && cat !== 'All' && requiredSlots.has(cat));
         return (
           <button
             key={cat}
@@ -27,20 +29,26 @@ export default function CategoryFilter({ selected, onChange, counts, slotCounts 
                 : `border-transparent bg-transparent text-text-dim ${colors.inactive}`
             }`}
           >
-            {/* Color dot indicator */}
+            {/* Color dot indicator with optional pulse overlay */}
             {cat !== 'All' && (
-              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${colors.dot} ${active ? 'opacity-90' : 'opacity-30'}`} />
+              <span className="relative">
+                <span className={`block h-1.5 w-1.5 shrink-0 rounded-full ${colors.dot} ${active ? 'opacity-90' : 'opacity-30'}`} />
+                {isRequired && (
+                  <span className={`absolute inset-0 h-1.5 w-1.5 rounded-full ${colors.dot} animate-ping opacity-40`} />
+                )}
+              </span>
             )}
             {cat}
-            {/* Slot open count badge */}
+            {/* Slot open count badge (primary) */}
             {slotInfo && slotInfo.open > 0 && (
               <span className="ml-0.5 rounded-sm bg-valid/15 px-1 py-px font-data text-[10px] font-medium tabular-nums leading-none text-valid/80">
                 {slotInfo.open}
               </span>
             )}
-            {/* Unit count badge (shown when no slot count) */}
-            {count !== undefined && count > 0 && !slotInfo && (
+            {/* Unit count badge (always shown) */}
+            {count !== undefined && count > 0 && (
               <span className={`ml-0.5 rounded-sm px-1 py-px font-data text-[10px] font-medium tabular-nums leading-none ${
+                slotInfo ? 'bg-plate-700/30 text-text-dim/40' :
                 active ? 'bg-white/10 text-current' : 'bg-plate-700/50 text-text-dim'
               }`}>
                 {count}
