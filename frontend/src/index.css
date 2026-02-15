@@ -7,63 +7,65 @@
    ═══════════════════════════════════════════ */
 
 @theme {
-  /* Service Grey — Exertus field base */
-  --color-void: #0c0f14;
-  --color-plate-950: #10131a;
-  --color-plate-900: #151a21;
-  --color-plate-800: #1c2229;
-  --color-plate-700: #252c35;
-  --color-plate-600: #313a44;
-  --color-plate-500: #3d4752;
+  /* Service Grey — widened luminance spread for surface separation
+     Each step jumps 12-18 brightness points (was 5-9) */
+  --color-void: #0a0d12;
+  --color-plate-950: #121820;
+  --color-plate-900: #1a222e;
+  --color-plate-800: #232d3a;
+  --color-plate-700: #2f3c4d;
+  --color-plate-600: #3e4d60;
+  --color-plate-500: #4d5e72;
 
-  /* Ferrosteel — machined edges (warmer) */
-  --color-edge-700: #232930;
-  --color-edge-600: #2e363f;
-  --color-edge-500: #3c4650;
-  --color-edge-400: #4e5e68;
-  --color-edge-300: #627680;
+  /* Ferrosteel — lifted edges for visible structure */
+  --color-edge-700: #2a3240;
+  --color-edge-600: #364050;
+  --color-edge-500: #465868;
+  --color-edge-400: #5a6e80;
+  --color-edge-300: #6e8494;
 
-  /* Burnished Bronze — Castellax Bronze / Runelord Brass */
-  --color-gold-50: #faf2de;
-  --color-gold-100: #eedcb4;
-  --color-gold-200: #dac07e;
-  --color-gold-300: #caa85e;
-  --color-gold-400: #b89340;
-  --color-gold-500: #9e7c34;
-  --color-gold-600: #826624;
-  --color-gold-700: #604a1a;
-  --color-gold-800: #423412;
-  --color-gold-900: #28200c;
+  /* Burnished Bronze — bolder gold for commanding presence */
+  --color-gold-50: #faf4e0;
+  --color-gold-100: #f0e0b8;
+  --color-gold-200: #e0ca88;
+  --color-gold-300: #d4b468;
+  --color-gold-400: #c8a048;
+  --color-gold-500: #ad8838;
+  --color-gold-600: #8e7028;
+  --color-gold-700: #68521e;
+  --color-gold-800: #483a14;
+  --color-gold-900: #2c220c;
 
-  /* Ivory — for display text */
-  --color-ivory: #ebe3d2;
+  /* Ivory — parchment for display headings */
+  --color-ivory: #f0e8d8;
 
   /* Crimson — SA regimental accent */
   --color-crimson: #c43838;
 
-  /* Amber readout */
-  --color-amber-glow: #d4a840;
+  /* Amber readout — brighter for visibility */
+  --color-amber-glow: #dab448;
 
-  /* Status */
-  --color-valid: #38b260;
-  --color-valid-dim: #286e3c;
-  --color-danger: #c44040;
-  --color-danger-dim: #8a2e2e;
-  --color-caution: #c49a20;
-  --color-caution-dim: #8a6415;
+  /* Status — lifted for readability on dark surfaces */
+  --color-valid: #42c070;
+  --color-valid-dim: #2e7a44;
+  --color-danger: #d04848;
+  --color-danger-dim: #963434;
+  --color-caution: #d0a828;
+  --color-caution-dim: #96701c;
 
   /* Steel accent */
-  --color-steel: #5b7aa8;
-  --color-steel-dim: #3d5678;
+  --color-steel: #6888b4;
+  --color-steel-dim: #486488;
 
   /* Purple accent (for Apex/Lord of War) */
-  --color-royal: #8b6cc4;
-  --color-royal-dim: #5e4890;
+  --color-royal: #9878d0;
+  --color-royal-dim: #6a52a0;
 
-  /* Text hierarchy — warm cream-grey */
-  --color-text-primary: #d6d1c6;
-  --color-text-secondary: #8c8680;
-  --color-text-dim: #5a544c;
+  /* Text hierarchy — WCAG AA compliant on plate-800
+     Primary ~9.5:1 · Secondary ~5.3:1 · Dim ~3.3:1 */
+  --color-text-primary: #ddd8cc;
+  --color-text-secondary: #9a948e;
+  --color-text-dim: #78726c;
 }
 
 /* ── Base ── */
@@ -79,7 +81,7 @@ body {
 
 /* ── Atmospheric layers ── */
 
-/* Layer 1: Warm vignette gradient — deeper, more dramatic */
+/* Layer 1: Warm vignette gradient — subtle atmospheric depth */
 body::after {
   content: '';
   position: fixed;
@@ -90,17 +92,17 @@ body::after {
   background:
     radial-gradient(
       ellipse at 50% 0%,
-      rgba(130, 102, 36, 0.03) 0%,
+      rgba(200, 160, 72, 0.03) 0%,
       transparent 50%
     ),
     radial-gradient(
       ellipse at 50% 30%,
-      transparent 30%,
-      rgba(12, 15, 20, 0.5) 100%
+      transparent 40%,
+      rgba(10, 13, 18, 0.25) 100%
     );
 }
 
-/* Layer 2: Noise grain (slightly more visible, finer grain) */
+/* Layer 2: Noise grain — barely perceptible texture */
 body::before {
   content: '';
   position: fixed;
@@ -108,22 +110,22 @@ body::before {
   z-index: 9999;
   pointer-events: none;
   will-change: transform;
-  opacity: 0.06;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 256px 256px;
 }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: rgba(16, 19, 26, 0.5); }
+::-webkit-scrollbar-track { background: rgba(18, 24, 32, 0.5); }
 ::-webkit-scrollbar-thumb {
   background: var(--color-edge-600);
   border-radius: 1px;
-  border: 1px solid rgba(130, 102, 36, 0.06);
+  border: 1px solid rgba(142, 112, 40, 0.08);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-edge-400);
-  border-color: rgba(130, 102, 36, 0.15);
+  border-color: rgba(142, 112, 40, 0.18);
 }
 
 /* ── Typography ── */
@@ -149,14 +151,14 @@ body::before {
 /* ── Glow borders (bronze-toned) ── */
 .glow-border {
   box-shadow:
-    inset 0 1px 0 0 rgba(180, 143, 60, 0.06),
-    inset 0 0 0 1px rgba(36, 42, 48, 0.9);
+    inset 0 1px 0 0 rgba(200, 160, 72, 0.10),
+    inset 0 0 0 1px rgba(54, 64, 80, 0.8);
 }
 
 .glow-border-active {
   box-shadow:
-    inset 0 1px 0 0 rgba(180, 143, 60, 0.12),
-    inset 0 0 0 1px rgba(180, 143, 60, 0.15),
+    inset 0 1px 0 0 rgba(200, 160, 72, 0.18),
+    inset 0 0 0 1px rgba(200, 160, 72, 0.22),
     0 2px 8px rgba(0, 0, 0, 0.3),
     0 8px 24px rgba(0, 0, 0, 0.2);
 }
@@ -164,7 +166,7 @@ body::before {
 /* ── Imperial Frame — decorative corner brackets ── */
 .imperial-frame {
   position: relative;
-  border: 1px solid rgba(94, 72, 24, 0.15);
+  border: 1px solid rgba(142, 112, 40, 0.25);
 }
 
 .imperial-frame::before {
@@ -178,7 +180,7 @@ body::before {
   border-left: 2px solid var(--color-gold-500);
   pointer-events: none;
   z-index: 1;
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
 .imperial-frame::after {
@@ -192,7 +194,7 @@ body::before {
   border-right: 2px solid var(--color-gold-500);
   pointer-events: none;
   z-index: 1;
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
 /* Full 4-corner frame (pair with .imperial-frame on parent, apply this to a child wrapper) */
@@ -207,7 +209,7 @@ body::before {
   border-right: 2px solid var(--color-gold-500);
   pointer-events: none;
   z-index: 1;
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
 .imperial-frame-inner::after {
@@ -221,7 +223,7 @@ body::before {
   border-left: 2px solid var(--color-gold-500);
   pointer-events: none;
   z-index: 1;
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
 /* ── Imperial heading underline ── */
@@ -252,22 +254,22 @@ body::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(180, 143, 60, 0.12) 0%, transparent 60%);
+  background: linear-gradient(180deg, rgba(200, 160, 72, 0.15) 0%, transparent 60%);
   pointer-events: none;
 }
 
 .btn-imperial:hover {
   border-color: var(--color-gold-400);
   box-shadow:
-    0 0 12px rgba(180, 143, 60, 0.15),
-    0 0 30px rgba(180, 143, 60, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 0 14px rgba(200, 160, 72, 0.22),
+    0 0 36px rgba(200, 160, 72, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .btn-imperial:active {
   transform: translateY(1px);
   box-shadow:
-    0 0 6px rgba(180, 143, 60, 0.1),
+    0 0 8px rgba(200, 160, 72, 0.15),
     inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -288,8 +290,8 @@ body::before {
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 6px rgba(180, 143, 60, 0.06); }
-  50% { box-shadow: 0 0 14px rgba(180, 143, 60, 0.12); }
+  0%, 100% { box-shadow: 0 0 6px rgba(200, 160, 72, 0.10); }
+  50% { box-shadow: 0 0 14px rgba(200, 160, 72, 0.18); }
 }
 
 @keyframes terminalBlink {
@@ -323,7 +325,7 @@ body::before {
 }
 
 @keyframes entryFlash {
-  0% { background: rgba(180, 143, 60, 0.15); }
+  0% { background: rgba(200, 160, 72, 0.18); }
   100% { background: transparent; }
 }
 
@@ -379,7 +381,7 @@ body::before {
 
 /* ── Selection ── */
 ::selection {
-  background: rgba(180, 143, 60, 0.25);
+  background: rgba(200, 160, 72, 0.30);
   color: var(--color-gold-100);
 }
 
@@ -396,7 +398,7 @@ body::before {
     90deg,
     transparent 5%,
     var(--color-edge-600) 25%,
-    var(--color-gold-700) 50%,
+    var(--color-gold-600) 50%,
     var(--color-edge-600) 75%,
     transparent 95%
   );
@@ -408,9 +410,9 @@ body::before {
   background: linear-gradient(
     90deg,
     transparent 5%,
-    var(--color-gold-700) 35%,
-    var(--color-gold-500) 50%,
-    var(--color-gold-700) 65%,
+    var(--color-gold-600) 35%,
+    var(--color-gold-400) 50%,
+    var(--color-gold-600) 65%,
     transparent 95%
   );
   position: relative;
@@ -424,7 +426,7 @@ body::before {
   transform: translate(-50%, -50%) rotate(45deg);
   width: 5px;
   height: 5px;
-  background: var(--color-gold-600);
+  background: var(--color-gold-500);
 }
 
 /* ── Data readout table ── */
@@ -439,15 +441,15 @@ body::before {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.7rem;
-  color: var(--color-gold-500);
+  color: var(--color-gold-400);
   padding: 7px 10px;
-  border-bottom: 2px solid var(--color-gold-700);
+  border-bottom: 2px solid var(--color-gold-600);
   white-space: nowrap;
-  background: rgba(180, 143, 60, 0.04);
+  background: rgba(200, 160, 72, 0.05);
 }
 
 .data-readout th:nth-child(even) {
-  background: rgba(180, 143, 60, 0.06);
+  background: rgba(200, 160, 72, 0.07);
 }
 
 .data-readout td {
@@ -457,7 +459,7 @@ body::before {
   color: var(--color-text-primary);
   padding: 8px 10px;
   text-align: center;
-  border-bottom: 1px solid rgba(36, 42, 48, 0.5);
+  border-bottom: 1px solid rgba(54, 64, 80, 0.4);
   position: relative;
 }
 
@@ -466,7 +468,7 @@ body::before {
 }
 
 .data-readout td:nth-child(even) {
-  background: rgba(180, 143, 60, 0.02);
+  background: rgba(200, 160, 72, 0.03);
 }
 
 .data-readout td:first-child {
@@ -484,7 +486,7 @@ body::before {
 }
 
 .data-readout tr:hover td {
-  background: rgba(180, 143, 60, 0.03);
+  background: rgba(200, 160, 72, 0.05);
 }
 
 .data-readout tr:hover td:first-child {
@@ -512,7 +514,7 @@ body::before {
 
 /* Stat block imperial frame */
 .stat-block-frame {
-  background: linear-gradient(135deg, rgba(180, 143, 60, 0.03) 0%, transparent 30%, transparent 70%, rgba(180, 143, 60, 0.02) 100%);
+  background: linear-gradient(135deg, rgba(200, 160, 72, 0.05) 0%, transparent 30%, transparent 70%, rgba(200, 160, 72, 0.03) 100%);
 }
 
 /* Mobile scroll fade hint — right edge gradient on overflow */
@@ -529,12 +531,13 @@ body::before {
 
 /* ── Panel styles ── */
 .terminal-panel {
-  background: linear-gradient(180deg, rgba(21, 26, 33, 0.96) 0%, rgba(16, 19, 26, 0.98) 100%);
-  border: 1px solid var(--color-edge-700);
+  background: linear-gradient(180deg, rgba(26, 34, 46, 0.97) 0%, rgba(18, 24, 32, 0.98) 100%);
+  border: 1px solid var(--color-edge-600);
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.4),
-    0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(180, 143, 60, 0.04);
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(200, 160, 72, 0.06),
+    inset 0 1px 0 rgba(200, 160, 72, 0.08);
 }
 
 /* ── Utility transitions ── */
@@ -552,9 +555,9 @@ body::before {
 }
 .unit-card-hover:hover {
   box-shadow:
-    inset 0 1px 0 0 rgba(180, 143, 60, 0.08),
-    inset 0 0 0 1px rgba(46, 54, 63, 0.9),
-    0 2px 12px rgba(0, 0, 0, 0.2);
+    inset 0 1px 0 0 rgba(200, 160, 72, 0.12),
+    inset 0 0 0 1px rgba(54, 64, 80, 0.8),
+    0 2px 12px rgba(0, 0, 0, 0.25);
 }
 
 /* ── Scan line overlay for expanded detail areas ── */
@@ -570,8 +573,8 @@ body::before {
     0deg,
     transparent,
     transparent 3px,
-    rgba(180, 143, 60, 0.012) 3px,
-    rgba(180, 143, 60, 0.012) 4px
+    rgba(200, 160, 72, 0.018) 3px,
+    rgba(200, 160, 72, 0.018) 4px
   );
   mask-image: linear-gradient(180deg, black 0%, transparent 40px);
   -webkit-mask-image: linear-gradient(180deg, black 0%, transparent 40px);
@@ -580,14 +583,14 @@ body::before {
 
 /* ── Input styling ── */
 .input-imperial {
-  border: 1px solid rgba(46, 54, 63, 0.6);
-  background: rgba(28, 34, 41, 0.8);
+  border: 1px solid rgba(54, 64, 80, 0.6);
+  background: rgba(35, 45, 58, 0.7);
   transition: all 0.2s ease;
 }
 .input-imperial:focus {
-  border-color: rgba(130, 102, 36, 0.5);
+  border-color: rgba(142, 112, 40, 0.5);
   box-shadow:
-    0 0 0 1px rgba(130, 102, 36, 0.08),
+    0 0 0 1px rgba(142, 112, 40, 0.12),
     inset 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
@@ -612,8 +615,8 @@ body::before {
 
 /* ── Badge enhanced ── */
 .badge-slot {
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Scrollbar hide (for horizontal scroll strips) ── */
@@ -660,21 +663,21 @@ body::before {
 }
 
 /* ── Card category tint gradients ── */
-.card-tint-purple { background-image: linear-gradient(90deg, rgba(147, 51, 234, 0.05) 0%, transparent 35%); }
-.card-tint-emerald { background-image: linear-gradient(90deg, rgba(5, 150, 105, 0.05) 0%, transparent 35%); }
-.card-tint-blue { background-image: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 35%); }
-.card-tint-orange { background-image: linear-gradient(90deg, rgba(249, 115, 22, 0.05) 0%, transparent 35%); }
-.card-tint-rose { background-image: linear-gradient(90deg, rgba(244, 63, 94, 0.05) 0%, transparent 35%); }
-.card-tint-amber { background-image: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, transparent 35%); }
-.card-tint-red { background-image: linear-gradient(90deg, rgba(220, 38, 38, 0.05) 0%, transparent 35%); }
-.card-tint-teal { background-image: linear-gradient(90deg, rgba(20, 184, 166, 0.05) 0%, transparent 35%); }
-.card-tint-gold { background-image: linear-gradient(90deg, rgba(184, 147, 64, 0.06) 0%, transparent 35%); }
+.card-tint-purple { background-image: linear-gradient(90deg, rgba(147, 51, 234, 0.08) 0%, transparent 35%); }
+.card-tint-emerald { background-image: linear-gradient(90deg, rgba(5, 150, 105, 0.08) 0%, transparent 35%); }
+.card-tint-blue { background-image: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, transparent 35%); }
+.card-tint-orange { background-image: linear-gradient(90deg, rgba(249, 115, 22, 0.08) 0%, transparent 35%); }
+.card-tint-rose { background-image: linear-gradient(90deg, rgba(244, 63, 94, 0.08) 0%, transparent 35%); }
+.card-tint-amber { background-image: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, transparent 35%); }
+.card-tint-red { background-image: linear-gradient(90deg, rgba(220, 38, 38, 0.08) 0%, transparent 35%); }
+.card-tint-teal { background-image: linear-gradient(90deg, rgba(20, 184, 166, 0.08) 0%, transparent 35%); }
+.card-tint-gold { background-image: linear-gradient(90deg, rgba(200, 160, 72, 0.10) 0%, transparent 35%); }
 
 /* ── Slot fill bar ── */
 .slot-fill-bar {
   height: 4px;
   border-radius: 2px;
-  background: rgba(37, 44, 53, 0.6);
+  background: rgba(47, 60, 77, 0.5);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -686,19 +689,19 @@ body::before {
 
 /* ── Slot row interactive empty state ── */
 .slot-row-empty {
-  border: 1px dashed rgba(90, 84, 76, 0.25);
+  border: 1px dashed rgba(120, 114, 108, 0.30);
   border-radius: 2px;
   transition: all 0.15s ease;
 }
 .slot-row-empty:hover {
-  border-color: rgba(158, 124, 52, 0.3);
-  background: rgba(158, 124, 52, 0.03);
+  border-color: rgba(173, 136, 56, 0.4);
+  background: rgba(173, 136, 56, 0.05);
 }
 
 /* ── Mobile bottom bar ── */
 .mobile-bottom-bar {
-  background: linear-gradient(180deg, rgba(16, 19, 26, 0.95) 0%, rgba(12, 15, 20, 0.98) 100%);
-  border-top: 1px solid rgba(180, 143, 60, 0.12);
+  background: linear-gradient(180deg, rgba(18, 24, 32, 0.96) 0%, rgba(10, 13, 18, 0.98) 100%);
+  border-top: 1px solid rgba(200, 160, 72, 0.20);
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -707,8 +710,8 @@ body::before {
 /* ── Setup screen background ── */
 .setup-bg {
   background:
-    radial-gradient(ellipse at 50% 40%, rgba(130, 102, 36, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse at 50% 50%, rgba(16, 19, 26, 0.6) 0%, var(--color-void) 100%);
+    radial-gradient(ellipse at 50% 40%, rgba(200, 160, 72, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 50%, rgba(18, 24, 32, 0.5) 0%, var(--color-void) 100%);
 }
 
 /* ── Sticky toolbar glass effect ── */
@@ -716,7 +719,7 @@ body::before {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: linear-gradient(180deg, var(--color-void) 60%, rgba(12, 15, 20, 0.92) 100%);
+  background: linear-gradient(180deg, var(--color-void) 60%, rgba(10, 13, 18, 0.92) 100%);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   padding-bottom: 12px;
@@ -739,23 +742,23 @@ body::before {
   position: sticky;
   top: 0;
   z-index: 15;
-  background: linear-gradient(180deg, var(--color-plate-950) 70%, rgba(16, 19, 26, 0.95) 100%);
+  background: linear-gradient(180deg, var(--color-plate-950) 70%, rgba(18, 24, 32, 0.95) 100%);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
 /* ── Confirm dialog overlay ── */
 .confirm-overlay {
-  background: rgba(12, 15, 20, 0.85);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(10, 13, 18, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 /* ── Modal overlay ── */
 .modal-overlay {
-  background: rgba(12, 15, 20, 0.80);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(10, 13, 18, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 @keyframes modalIn {
@@ -769,8 +772,8 @@ body::before {
 
 /* ── Sort toggle ── */
 .sort-btn-active {
-  border-color: rgba(180, 143, 60, 0.25);
-  background: rgba(180, 143, 60, 0.06);
+  border-color: rgba(200, 160, 72, 0.30);
+  background: rgba(200, 160, 72, 0.08);
   color: var(--color-gold-400);
 }
 
@@ -794,8 +797,8 @@ body::before {
 .floating-add-footer {
   position: sticky;
   bottom: 0;
-  background: linear-gradient(0deg, var(--color-plate-800) 60%, rgba(28, 34, 41, 0.95) 100%);
-  border-top: 1px solid rgba(36, 42, 48, 0.5);
+  background: linear-gradient(0deg, var(--color-plate-800) 60%, rgba(35, 45, 58, 0.95) 100%);
+  border-top: 1px solid rgba(54, 64, 80, 0.5);
   margin: 0 -16px -14px;
   padding: 12px 16px;
   z-index: 5;
@@ -804,14 +807,14 @@ body::before {
 /* ── Inline slot validation ── */
 .slot-warning {
   border-left: 2px solid var(--color-caution);
-  background: rgba(196, 154, 32, 0.03);
+  background: rgba(208, 168, 40, 0.05);
   padding-left: 6px;
   margin-left: -8px;
 }
 
 .slot-error {
   border-left: 2px solid var(--color-danger);
-  background: rgba(196, 64, 64, 0.03);
+  background: rgba(208, 72, 72, 0.05);
   padding-left: 6px;
   margin-left: -8px;
 }
@@ -896,26 +899,26 @@ body::before {
 
 /* ── Modal search input ── */
 .modal-search {
-  border: 1px solid rgba(46, 54, 63, 0.6);
-  background: rgba(28, 34, 41, 0.9);
+  border: 1px solid rgba(54, 64, 80, 0.6);
+  background: rgba(35, 45, 58, 0.8);
   transition: all 0.2s ease;
 }
 .modal-search:focus {
-  border-color: rgba(130, 102, 36, 0.4);
-  box-shadow: 0 0 0 1px rgba(130, 102, 36, 0.06);
+  border-color: rgba(142, 112, 40, 0.45);
+  box-shadow: 0 0 0 1px rgba(142, 112, 40, 0.10);
 }
 
 /* ── Aquila pulse loading animation ── */
 @keyframes aquilaPulse {
   0%, 100% {
     transform: scale(1);
-    opacity: 0.4;
-    filter: drop-shadow(0 0 4px rgba(180, 143, 60, 0.1));
+    opacity: 0.5;
+    filter: drop-shadow(0 0 4px rgba(200, 160, 72, 0.15));
   }
   50% {
     transform: scale(1.08);
-    opacity: 0.7;
-    filter: drop-shadow(0 0 12px rgba(180, 143, 60, 0.25));
+    opacity: 0.8;
+    filter: drop-shadow(0 0 12px rgba(200, 160, 72, 0.30));
   }
 }
 
@@ -931,8 +934,8 @@ body::before {
 /* ── Detachment card hover depth ── */
 .glow-border:hover {
   box-shadow:
-    inset 0 1px 0 0 rgba(180, 143, 60, 0.08),
-    inset 0 0 0 1px rgba(36, 42, 48, 0.9),
+    inset 0 1px 0 0 rgba(200, 160, 72, 0.14),
+    inset 0 0 0 1px rgba(54, 64, 80, 0.8),
     0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
@@ -948,7 +951,7 @@ body::before {
 }
 .resize-divider:active > div:first-child {
   width: 3px !important;
-  box-shadow: 0 0 12px rgba(130, 102, 36, 0.25);
+  box-shadow: 0 0 14px rgba(142, 112, 40, 0.30);
 }
 
 /* ── Category filter scroll fade ── */
@@ -966,5 +969,5 @@ body::before {
 
 /* ── Force org grid ── */
 .force-org-grid {
-  background: rgba(16, 19, 26, 0.3);
+  background: rgba(18, 24, 32, 0.35);
 }
