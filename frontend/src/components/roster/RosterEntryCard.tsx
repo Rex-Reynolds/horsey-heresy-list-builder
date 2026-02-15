@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import type { RosterEntry } from '../../stores/rosterStore.ts';
 import { SLOT_STRIPE_COLORS } from '../../types/index.ts';
 
@@ -9,6 +10,18 @@ interface Props {
 }
 
 export default function RosterEntryCard({ entry, onRemove, onUpdateQty, isNew }: Props) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll newly added entries into view
+  useEffect(() => {
+    if (isNew && cardRef.current) {
+      const timer = setTimeout(() => {
+        cardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isNew]);
+
   const modelMin = entry.modelMin ?? 1;
   const modelMax = entry.modelMax ?? null;
   const atMin = entry.quantity <= modelMin;
@@ -19,7 +32,7 @@ export default function RosterEntryCard({ entry, onRemove, onUpdateQty, isNew }:
   const stripe = SLOT_STRIPE_COLORS[entry.category] ?? 'border-l-edge-500';
 
   return (
-    <div className={`group flex items-center gap-2.5 rounded-sm border-l-2 ${stripe} bg-plate-800/20 px-3 py-2 transition-all hover:bg-plate-800/40 ${isNew ? 'animate-entry-flash' : ''}`}>
+    <div ref={cardRef} className={`group flex items-center gap-2.5 rounded-sm border-l-2 ${stripe} bg-plate-800/20 px-3 py-2 transition-all hover:bg-plate-800/40 ${isNew ? 'animate-entry-flash' : ''}`}>
       {/* Info */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-medium text-text-primary">{entry.name}</p>

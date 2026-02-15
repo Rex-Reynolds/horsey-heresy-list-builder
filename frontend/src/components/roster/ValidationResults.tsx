@@ -1,9 +1,10 @@
 interface Props {
   isValid: boolean | null;
   errors: string[];
+  onErrorClick?: (error: string) => void;
 }
 
-export default function ValidationResults({ isValid, errors }: Props) {
+export default function ValidationResults({ isValid, errors, onErrorClick }: Props) {
   if (isValid === null) return null;
 
   if (isValid) {
@@ -37,9 +38,18 @@ export default function ValidationResults({ isValid, errors }: Props) {
       {/* Error list */}
       <ul className="px-3 py-2 space-y-1.5">
         {errors.map((err, i) => (
-          <li key={i} className="flex items-start gap-2 text-[12px] leading-relaxed text-danger/80">
+          <li
+            key={i}
+            className={`flex items-start gap-2 text-[12px] leading-relaxed text-danger/80 ${onErrorClick ? 'cursor-pointer rounded-sm px-1 -mx-1 transition-colors hover:bg-danger/8 hover:text-danger' : ''}`}
+            onClick={onErrorClick ? () => onErrorClick(err) : undefined}
+          >
             <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-danger/50" />
             {err}
+            {onErrorClick && (
+              <svg className="mt-0.5 h-3 w-3 shrink-0 text-danger/40 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            )}
           </li>
         ))}
       </ul>

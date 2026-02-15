@@ -385,7 +385,22 @@ export default function RosterPanel() {
 
       {/* Footer */}
       <div className="space-y-2 border-t border-edge-700/40 p-4">
-        <ValidationResults isValid={isValid} errors={validationErrors} />
+        <ValidationResults
+          isValid={isValid}
+          errors={validationErrors}
+          onErrorClick={(err) => {
+            // Parse "[DetachmentName] SlotName: ..." format
+            const match = err.match(/^\[(.+?)\]\s+(.+?):/);
+            if (match) {
+              const [, detName, slotName] = match;
+              const det = detachments.find((d) => d.name === detName);
+              if (det) {
+                const slot = det.slots[slotName];
+                handleSlotClick(slotName, detName, slot?.filled ?? 0, slot?.max ?? 0);
+              }
+            }
+          }}
+        />
         <button
           onClick={handleValidate}
           disabled={totalEntries === 0 || validateMutation.isPending}

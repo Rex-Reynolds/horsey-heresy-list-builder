@@ -222,11 +222,24 @@ export default function DetachmentPickerModal({
                                 <span className="ml-1.5 text-[11px] text-text-dim">[{d.faction}]</span>
                               )}
                             </span>
-                            {disabledReason && (
-                              <span className="shrink-0 rounded-sm border border-edge-600/20 bg-plate-700/40 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-text-dim/70 uppercase">
-                                {disabledReason}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {/* Budget cost preview */}
+                              {!disabledReason && (d.costs?.auxiliary ?? 0) > 0 && (
+                                <span className="rounded-sm border border-steel-dim/20 bg-steel/6 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-steel/70 uppercase">
+                                  {d.costs.auxiliary} Aux
+                                </span>
+                              )}
+                              {!disabledReason && (d.costs?.apex ?? 0) > 0 && (
+                                <span className="rounded-sm border border-royal-dim/20 bg-royal/6 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-royal/70 uppercase">
+                                  {d.costs.apex} Apex
+                                </span>
+                              )}
+                              {disabledReason && (
+                                <span className="rounded-sm border border-edge-600/20 bg-plate-700/40 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-text-dim/70 uppercase">
+                                  {disabledReason}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           {visibleSlots.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1.5">

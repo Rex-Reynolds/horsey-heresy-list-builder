@@ -214,6 +214,7 @@ export default function UnitBrowser() {
         onClick={() => setExpandedId(expandedId === unit.id ? null : unit.id)}
         availability={availability?.status}
         onQuickAdd={hasDetachments && availability?.status === 'addable' ? handleQuickAdd : undefined}
+        searchTerm={search}
       >
         <UnitDetail unit={unit} />
       </UnitCard>
@@ -335,7 +336,12 @@ export default function UnitBrowser() {
         )}
 
         {!isLoading && !error && displayUnits.length === 0 && (
-          <EmptyState message={availableOnly ? 'No available units in this category' : 'No units found'} icon="search" />
+          <EmptyState
+            message={availableOnly ? 'No available units in this category' : 'No units found'}
+            icon="search"
+            actionLabel={availableOnly ? 'Show all units' : category ? 'Clear filter' : undefined}
+            onAction={availableOnly ? () => setAvailableOnly(false) : category ? () => { setCategory(null); setSlotFilterContext(null); } : undefined}
+          />
         )}
 
         {/* Grouped view with category headers */}

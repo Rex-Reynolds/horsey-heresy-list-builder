@@ -18,13 +18,31 @@ const ICONS: Record<string, ReactNode> = {
   ),
 };
 
-export default function EmptyState({ message, icon = 'default' }: { message: string; icon?: string }) {
+export default function EmptyState({
+  message,
+  icon = 'default',
+  actionLabel,
+  onAction,
+}: {
+  message: string;
+  icon?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
   const svgIcon = ICONS[icon] ?? ICONS.default;
 
   return (
     <div className="flex flex-col items-center justify-center py-14 text-text-dim">
       <div className="mb-3 opacity-25">{svgIcon}</div>
       <p className="font-label text-[11px] font-medium tracking-wider uppercase">{message}</p>
+      {actionLabel && onAction && (
+        <button
+          onClick={onAction}
+          className="mt-3 font-label rounded-sm border border-gold-600/25 bg-gold-900/10 px-4 py-2 text-[11px] font-semibold tracking-wider text-gold-400 uppercase transition-all hover:border-gold-500/30 hover:bg-gold-900/20"
+        >
+          {actionLabel}
+        </button>
+      )}
     </div>
   );
 }

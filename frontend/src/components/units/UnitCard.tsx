@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import type { Unit } from '../../types/index.ts';
 import { SLOT_STRIPE_COLORS, SLOT_CARD_TINTS } from '../../types/index.ts';
 import type { UnitAvailability } from '../../hooks/useUnitAvailability.ts';
@@ -37,12 +37,37 @@ interface Props {
   onClick: () => void;
   availability?: UnitAvailability;
   onQuickAdd?: (unit: Unit, e: React.MouseEvent) => void;
+  searchTerm?: string;
   children?: React.ReactNode;
 }
 
-export default function UnitCard({ unit, expanded, onClick, availability, onQuickAdd, children }: Props) {
+function HighlightedName({ name, term }: { name: string; term?: string }) {
+  if (!term || term.length < 2) return <>{name}</>;
+  const idx = name.toLowerCase().indexOf(term.toLowerCase());
+  if (idx === -1) return <>{name}</>;
+  return (
+    <>
+      {name.slice(0, idx)}
+      <mark className="rounded-sm bg-gold-500/25 text-inherit">{name.slice(idx, idx + term.length)}</mark>
+      {name.slice(idx + term.length)}
+    </>
+  );
+}
+
+export default function UnitCard({ unit, expanded, onClick, availability, onQuickAdd, searchTerm, children }: Props) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const dotStyle = availability ? DOT_STYLES[availability] : undefined;
   const dimmed = availability === 'no_slot' || availability === 'roster_limit';
+
+  // Scroll expanded card into view
+  useEffect(() => {
+    if (expanded && cardRef.current) {
+      const timer = setTimeout(() => {
+        cardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 320);
+      return () => clearTimeout(timer);
+    }
+  }, [expanded]);
   const stripe = SLOT_STRIPE_COLORS[unit.unit_type] ?? 'border-l-edge-500';
   const tint = SLOT_CARD_TINTS[unit.unit_type] ?? '';
 
@@ -56,6 +81,7 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
 
   return (
     <div
+      ref={cardRef}
       className={`group rounded-sm border-l-3 transition-all duration-200 ${stripe} ${
         expanded
           ? 'glow-border-active bg-plate-800'
@@ -80,7 +106,7 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
         {/* Name + badge — allow wrapping */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <span className="font-unit-name text-[15px] leading-snug text-text-primary">{unit.name}</span>
+            <span className="font-unit-name text-[15px] leading-snug text-text-primary"><HighlightedName name={unit.name} term={searchTerm} /></span>
             <Badge label={unit.unit_type} />
             {unit.is_legacy && (
               <span className="shrink-0 rounded-sm border border-gold-700/30 bg-gold-900/40 px-1.5 py-px font-label text-[10px] font-semibold tracking-wider text-gold-500/70 uppercase">

@@ -2,6 +2,8 @@
 
 A full-stack army list builder for Horus Heresy 3.0 Solar Auxilia forces, powered by official BSData catalogues with multi-detachment roster management, composition enforcement, and a "Regimental Dataslate" UI.
 
+**Live at [heresy.build](https://heresy.build)**
+
 ## Features
 
 - **52 units** seeded from BSData XML catalogues with full stat profiles, upgrades, and points
@@ -42,7 +44,7 @@ A full-stack army list builder for Horus Heresy 3.0 Solar Auxilia forces, powere
 
 ```bash
 # Clone
-git clone https://github.com/yourusername/horsey-heresy-list-builder
+git clone https://github.com/Rex-Reynolds/horsey-heresy-list-builder
 cd horsey-heresy-list-builder
 
 # Backend setup

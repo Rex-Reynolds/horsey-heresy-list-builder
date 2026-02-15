@@ -36,6 +36,8 @@ if ! id -u auxilia > /dev/null 2>&1; then
 else
     echo "User 'auxilia' already exists"
 fi
+# Nginx (www-data) needs to traverse home dir to serve frontend/dist
+chmod 755 /home/auxilia
 
 # Step 4: Clone/update repository
 echo ""
@@ -100,6 +102,7 @@ Type=simple
 User=auxilia
 WorkingDirectory=$APP_DIR
 Environment="PATH=$APP_DIR/venv/bin"
+Environment="ENVIRONMENT=production"
 ExecStart=$APP_DIR/venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000 --workers 2
 
 Restart=always

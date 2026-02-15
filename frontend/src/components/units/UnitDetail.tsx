@@ -231,6 +231,7 @@ export default function UnitDetail({ unit }: Props) {
         selected={selectedUpgrades}
         onToggle={toggleUpgrade}
         loading={upgradesLoading}
+        modelCount={modelCount}
       />
 
       {/* Detachment picker */}

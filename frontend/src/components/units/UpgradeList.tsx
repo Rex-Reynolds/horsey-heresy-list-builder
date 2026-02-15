@@ -7,9 +7,10 @@ interface Props {
   selected: Set<number>;
   onToggle: (upgradeId: number, groupName?: string) => void;
   loading?: boolean;
+  modelCount?: number;
 }
 
-export default function UpgradeList({ groups, ungrouped, selected, onToggle, loading }: Props) {
+export default function UpgradeList({ groups, ungrouped, selected, onToggle, loading, modelCount = 1 }: Props) {
   if (loading) {
     return <p className="py-2 text-xs text-text-dim">Loading upgrades...</p>;
   }
@@ -40,6 +41,7 @@ export default function UpgradeList({ groups, ungrouped, selected, onToggle, loa
           group={group}
           selected={selected}
           onToggle={onToggle}
+          modelCount={modelCount}
         />
       ))}
 
@@ -50,6 +52,7 @@ export default function UpgradeList({ groups, ungrouped, selected, onToggle, loa
           selected={selected}
           onToggle={onToggle}
           showLabel={groups.length > 0}
+          modelCount={modelCount}
         />
       )}
     </div>
@@ -60,10 +63,12 @@ function UpgradeGroupSection({
   group,
   selected,
   onToggle,
+  modelCount = 1,
 }: {
   group: UpgradeGroup;
   selected: Set<number>;
   onToggle: (id: number, groupName?: string) => void;
+  modelCount?: number;
 }) {
   const isRadio = group.max_quantity === 1;
   const selectedInGroup = group.upgrades.filter((u) => selected.has(u.id)).length;
@@ -144,6 +149,7 @@ function UpgradeGroupSection({
                 disabled={disabled}
                 isRadio={isRadio}
                 onClick={() => !disabled && onToggle(u.id, group.group_name)}
+                modelCount={modelCount}
               />
             );
           })}
@@ -158,11 +164,13 @@ function UngroupedSection({
   selected,
   onToggle,
   showLabel,
+  modelCount = 1,
 }: {
   upgrades: Upgrade[];
   selected: Set<number>;
   onToggle: (id: number) => void;
   showLabel: boolean;
+  modelCount?: number;
 }) {
   const hasSelection = upgrades.some((u) => selected.has(u.id));
   const [open, setOpen] = useState(true);
@@ -203,6 +211,7 @@ function UngroupedSection({
                 disabled={false}
                 isRadio={false}
                 onClick={() => onToggle(u.id)}
+                modelCount={modelCount}
               />
             );
           })}
@@ -219,12 +228,14 @@ function UpgradeCard({
   disabled,
   isRadio,
   onClick,
+  modelCount = 1,
 }: {
   upgrade: Upgrade;
   isSelected: boolean;
   disabled: boolean;
   isRadio: boolean;
   onClick: () => void;
+  modelCount?: number;
 }) {
   return (
     <button
@@ -257,11 +268,20 @@ function UpgradeCard({
         )}
       </div>
       {upgrade.cost > 0 && (
-        <span className={`font-data text-sm font-semibold tabular-nums shrink-0 ${
-          isSelected ? 'text-gold-400' : 'text-text-dim'
-        }`}>
-          +{upgrade.cost}
-        </span>
+        <div className="flex flex-col items-end shrink-0">
+          <span className={`font-data text-sm font-semibold tabular-nums ${
+            isSelected ? 'text-gold-400' : 'text-text-dim'
+          }`}>
+            +{upgrade.cost}
+          </span>
+          {modelCount > 1 && (
+            <span className={`font-data text-[10px] tabular-nums ${
+              isSelected ? 'text-gold-500/60' : 'text-text-dim/40'
+            }`}>
+              {upgrade.cost * modelCount} total
+            </span>
+          )}
+        </div>
       )}
       {upgrade.cost === 0 && (
         <span className="font-data text-[11px] tabular-nums text-text-dim/40 shrink-0">

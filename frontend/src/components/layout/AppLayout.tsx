@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { useUIStore } from '../../stores/uiStore.ts';
+import { type ReactNode, useRef, useCallback } from 'react';
+import { useUIStore, PANEL_DEFAULT } from '../../stores/uiStore.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 
 interface Props {
@@ -11,6 +11,8 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
   const totalPoints = useRosterStore((s) => s.totalPoints);
   const pointsLimit = useRosterStore((s) => s.pointsLimit);
   const detachments = useRosterStore((s) => s.detachments);
+  const isValid = useRosterStore((s) => s.isValid);
+  const validationErrors = useRosterStore((s) => s.validationErrors);
   const totalEntries = detachments.reduce((s, d) => s + d.entries.length, 0);
   const over = totalPoints > pointsLimit;
 
@@ -54,6 +56,24 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
               {totalEntries} unit{totalEntries !== 1 ? 's' : ''}
             </span>
           )}
+          {detachments.length > 0 && (
+            <span className="font-data text-[10px] tabular-nums text-text-dim">
+              {detachments.length} det
+            </span>
+          )}
+          {isValid !== null && (
+            <span className={`flex h-4 w-4 items-center justify-center rounded-full ${
+              isValid ? 'bg-valid/20' : 'bg-danger/20'
+            }`}>
+              {isValid ? (
+                <svg className="h-2.5 w-2.5 text-valid" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <span className="font-data text-[9px] font-bold text-danger">{validationErrors.length}</span>
+              )}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <span className="font-label text-xs font-semibold tracking-wider text-gold-400 uppercase">
@@ -71,8 +91,45 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
 export default function AppLayout({ left, right }: Props) {
   const mobileRosterOpen = useUIStore((s) => s.mobileRosterOpen);
   const setMobileRosterOpen = useUIStore((s) => s.setMobileRosterOpen);
+  const panelWidth = useUIStore((s) => s.panelWidth);
+  const setPanelWidth = useUIStore((s) => s.setPanelWidth);
   const detachments = useRosterStore((s) => s.detachments);
   const hasNoDetachments = detachments.length === 0;
+
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    startX.current = e.clientX;
+    startWidth.current = panelWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMove = (ev: PointerEvent) => {
+      if (!isDragging.current) return;
+      // Dragging left = increasing panel width (panel is on the right)
+      const delta = startX.current - ev.clientX;
+      setPanelWidth(startWidth.current + delta);
+    };
+
+    const handleUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [panelWidth, setPanelWidth]);
+
+  const handleDoubleClick = useCallback(() => {
+    setPanelWidth(PANEL_DEFAULT);
+  }, [setPanelWidth]);
 
   return (
     <>
@@ -102,18 +159,37 @@ export default function AppLayout({ left, right }: Props) {
           {left}
         </main>
 
-        {/* Desktop divider — ornate vertical line with gold accent */}
-        <div className="relative hidden w-[2px] lg:block">
-          <div className="absolute inset-0" style={{
+        {/* Desktop resize handle — interactive divider rail */}
+        <div
+          className="resize-divider group relative hidden w-[10px] cursor-col-resize lg:block"
+          onPointerDown={handlePointerDown}
+          onDoubleClick={handleDoubleClick}
+          title="Drag to resize — double-click to reset"
+        >
+          {/* Visible rail line */}
+          <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 transition-all group-hover:w-[3px] group-hover:shadow-[0_0_8px_rgba(130,102,36,0.15)]" style={{
             background: 'linear-gradient(180deg, transparent 0%, var(--color-edge-600) 10%, var(--color-gold-600) 50%, var(--color-edge-600) 90%, transparent 100%)',
           }} />
-          <div
-            className="absolute left-1/2 top-1/2 h-[6px] w-[6px] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gold-600"
-          />
+          {/* Center diamond ornament */}
+          <div className="absolute left-1/2 top-1/2 h-[6px] w-[6px] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gold-600 transition-all group-hover:scale-150 group-hover:bg-gold-500" />
+          {/* Grip dots — visible on hover */}
+          <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col gap-[6px] opacity-0 transition-opacity group-hover:opacity-60" style={{ marginTop: '-30px' }}>
+            {[0,1,2].map(i => (
+              <div key={i} className="h-[3px] w-[3px] rounded-full bg-gold-500" />
+            ))}
+          </div>
+          <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col gap-[6px] opacity-0 transition-opacity group-hover:opacity-60" style={{ marginTop: '18px' }}>
+            {[0,1,2].map(i => (
+              <div key={i} className="h-[3px] w-[3px] rounded-full bg-gold-500" />
+            ))}
+          </div>
         </div>
 
-        {/* Desktop roster panel */}
-        <aside className="hidden overflow-y-auto bg-plate-950 lg:block lg:w-[500px] xl:w-[550px]">
+        {/* Desktop roster panel — resizable width */}
+        <aside
+          className="hidden overflow-y-auto bg-plate-950 lg:block"
+          style={{ width: panelWidth }}
+        >
           {right}
         </aside>
       </div>

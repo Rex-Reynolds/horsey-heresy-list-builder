@@ -27,6 +27,7 @@ export default function CompositionSummary({ detachments, totalPoints }: Props) 
     type: d.type,
     points: d.entries.reduce((s, e) => s + e.totalCost, 0),
     units: d.entries.length,
+    unitNames: d.entries.map((e) => e.name),
   }));
 
   return (
@@ -76,6 +77,11 @@ export default function CompositionSummary({ detachments, totalPoints }: Props) 
                     style={{ width: `${barPct}%` }}
                   />
                 </div>
+                {d.unitNames.length > 0 && (
+                  <p className="text-[10px] leading-relaxed text-text-dim/60 truncate">
+                    {d.unitNames.join(', ')}
+                  </p>
+                )}
               </div>
             );
           })}

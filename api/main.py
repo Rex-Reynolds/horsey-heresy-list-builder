@@ -3,11 +3,16 @@ Solar Auxilia List Builder - FastAPI Backend
 REST API for army list building with validation and meta analysis.
 """
 import logging
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import sys
@@ -29,6 +34,12 @@ import json
 
 # Singleton composition validator
 composition_validator = CompositionValidator()
+
+# Rate limiter — keyed by client IP
+limiter = Limiter(key_func=get_remote_address)
+
+# Production mode: disable docs, lock CORS
+IS_PRODUCTION = os.environ.get("ENVIRONMENT", "production") == "production"
 
 # Module-level caches for static data (only changes on DB re-seed)
 _detachments_cache: list | None = None
@@ -56,18 +67,35 @@ app = FastAPI(
     title="Solar Auxilia List Builder API",
     description="REST API for Warhammer: The Horus Heresy Solar Auxilia army list building",
     version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
     lifespan=lifespan,
 )
 
-# CORS middleware
+# Rate limiting
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Try again later."},
+    )
+
+# CORS middleware — locked to production domain
+ALLOWED_ORIGINS = (
+    ["https://heresy.build", "https://www.heresy.build"]
+    if IS_PRODUCTION
+    else ["*"]
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # GZip compression for all responses (min 500 bytes)
@@ -158,7 +186,8 @@ class ValidationResponse(BaseModel):
 
 # Root endpoint
 @app.get("/")
-async def root():
+@limiter.limit("60/minute")
+async def root(request: Request):
     """API root endpoint."""
     return {
         "name": "Solar Auxilia List Builder API",
@@ -426,7 +455,8 @@ def _build_roster_response(roster: Roster) -> dict:
 
 
 @app.post("/api/rosters")
-async def create_roster(roster: RosterCreate):
+@limiter.limit("10/minute")
+async def create_roster(request: Request, roster: RosterCreate):
     """Create a new roster."""
     if not roster.name.strip():
         raise HTTPException(status_code=422, detail="Roster name cannot be empty")
@@ -480,7 +510,8 @@ async def update_roster(roster_id: int, body: RosterUpdate):
 
 
 @app.delete("/api/rosters/{roster_id}")
-async def delete_roster(roster_id: int):
+@limiter.limit("10/minute")
+async def delete_roster(request: Request, roster_id: int):
     """Delete a roster."""
     try:
         roster = Roster.get_by_id(roster_id)
@@ -494,7 +525,8 @@ async def delete_roster(roster_id: int):
 # ===== ROSTER DETACHMENTS =====
 
 @app.post("/api/rosters/{roster_id}/detachments")
-async def add_detachment_to_roster(roster_id: int, body: DetachmentAdd):
+@limiter.limit("30/minute")
+async def add_detachment_to_roster(request: Request, roster_id: int, body: DetachmentAdd):
     """Add a detachment to a roster."""
     try:
         roster = Roster.get_by_id(roster_id)
@@ -536,7 +568,8 @@ async def add_detachment_to_roster(roster_id: int, body: DetachmentAdd):
 
 
 @app.delete("/api/rosters/{roster_id}/detachments/{det_id}")
-async def remove_detachment_from_roster(roster_id: int, det_id: int):
+@limiter.limit("30/minute")
+async def remove_detachment_from_roster(request: Request, roster_id: int, det_id: int):
     """Remove a detachment from a roster (cascades entries)."""
     try:
         roster = Roster.get_by_id(roster_id)
@@ -690,7 +723,8 @@ def _find_matching_slot(unit_type: str, unit_name: str, slots: Dict[str, Any]) -
 # ===== ROSTER ENTRIES (per-detachment) =====
 
 @app.post("/api/rosters/{roster_id}/detachments/{det_id}/entries")
-async def add_entry_to_detachment(roster_id: int, det_id: int, entry: RosterEntryCreate):
+@limiter.limit("60/minute")
+async def add_entry_to_detachment(request: Request, roster_id: int, det_id: int, entry: RosterEntryCreate):
     """Add a unit to a specific detachment."""
     try:
         roster = Roster.get_by_id(roster_id)
@@ -796,7 +830,8 @@ async def add_entry_to_detachment(roster_id: int, det_id: int, entry: RosterEntr
 
 
 @app.delete("/api/rosters/{roster_id}/detachments/{det_id}/entries/{entry_id}")
-async def delete_entry_from_detachment(roster_id: int, det_id: int, entry_id: int):
+@limiter.limit("60/minute")
+async def delete_entry_from_detachment(request: Request, roster_id: int, det_id: int, entry_id: int):
     """Remove a unit from a detachment."""
     try:
         roster = Roster.get_by_id(roster_id)
@@ -883,7 +918,8 @@ async def update_entry_in_detachment(
 # ===== VALIDATION =====
 
 @app.post("/api/rosters/{roster_id}/validate", response_model=ValidationResponse)
-async def validate_roster(roster_id: int):
+@limiter.limit("20/minute")
+async def validate_roster(request: Request, roster_id: int):
     """Validate all detachments in a roster."""
     try:
         roster = Roster.get_by_id(roster_id)

@@ -930,6 +930,21 @@ body::before {
     0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
+/* ── Resize divider ── */
+.resize-divider {
+  touch-action: none;
+}
+.resize-divider::before {
+  content: '';
+  position: absolute;
+  inset: 0 -4px;
+  z-index: 1;
+}
+.resize-divider:active > div:first-child {
+  width: 3px !important;
+  box-shadow: 0 0 12px rgba(130, 102, 36, 0.25);
+}
+
 /* ── Category filter scroll fade ── */
 .category-filter-scroll {
   -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
