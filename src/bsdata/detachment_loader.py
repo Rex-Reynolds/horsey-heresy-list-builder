@@ -61,6 +61,26 @@ BUDGET_DECREMENTS = {
     "9501-add0-621d-f40f": {"name": "Crux Magisterium", "target": "auxiliary", "value": -1},
 }
 
+# Tercio Unlock category IDs
+TERCIO_UNLOCK_IDS = {
+    "67d3-556b-b619-28e2": "Veletaris Tercio Unlock",
+    "390f-d9dc-10d8-56aa": "Armour Tercio Unlock",
+    "2a0c-b2b2-0f48-2e90": "Artillery Tercio Unlock",
+    "847c-d351-32a7-cc2a": "Infantry Tercio Unlock",
+    "3bba-e8bb-7463-b0b2": "Scout Tercio Unlock",
+    "deba-d402-8204-1d13": "Iron Tercio Unlock",
+}
+
+# Cohort Doctrine category IDs
+COHORT_DOCTRINES = {
+    "f2be-abfe-311c-afe2": "Solar Pattern Cohort",
+    "1241-4ccd-80b8-8ff2": "Ultima Pattern Cohort",
+    "7f98-e8eb-f86e-180d": "Reconnaissance Pattern Cohort",
+    "1d7a-eb2d-5d0f-0fa4": "Mechanised Pattern Cohort",
+    "c9ef-b204-e951-6b7e": "Siege Pattern Cohort",
+    "28ba-8660-5266-8674": "Iron Pattern Cohort",
+}
+
 
 class DetachmentLoader:
     """Load Force Organization Chart detachment rules from game system file."""
@@ -136,7 +156,15 @@ class DetachmentLoader:
         return None
 
     def _is_sa_relevant(self, force_element, force_name: str) -> bool:
-        """Check if a detachment is relevant to Solar Auxilia."""
+        """
+        Check if a detachment is relevant to Solar Auxilia.
+
+        Uses multiple signals:
+        1. Primary detachments are always included
+        2. SA-specific keywords in the name
+        3. SA catalogue ID in condition checks (unhide modifiers)
+        4. SA comments in XML
+        """
         # Always include the Primary Detachment
         if 'Primary' in force_name:
             return True
@@ -146,16 +174,26 @@ class DetachmentLoader:
             if kw in force_name:
                 return True
 
-        # Check for generic keywords
-        for kw in GENERIC_DETACHMENT_KEYWORDS:
-            if kw in force_name:
+        # Check if this detachment has an SA unhide modifier
+        # (modifier type="set" field="hidden" with SA catalogue condition)
+        conditions = self.parser._xpath(force_element, './/condition')
+        for cond in conditions:
+            if cond.get('childId') == SA_CATALOGUE_ID:
                 return True
 
-        # Check for SA condition in modifiers (comment="Solar Auxilia")
+        # Check for SA comments
         comments = self.parser._xpath(force_element, './/comment')
         for comment in comments:
             if comment.text and 'Solar Auxilia' in comment.text:
                 return True
+
+        # Check generic keywords — but only if the detachment has an unhide
+        # modifier (hidden="true" detachments with no SA condition are excluded)
+        is_hidden = force_element.get('hidden') == 'true'
+        if not is_hidden:
+            for kw in GENERIC_DETACHMENT_KEYWORDS:
+                if kw in force_name:
+                    return True
 
         return False
 
@@ -193,6 +231,8 @@ class DetachmentLoader:
         faction = self._detect_faction(force_element, name)
         constraints, unit_restrictions = self._parse_category_slots(force_element)
         costs = self._parse_costs(force_element)
+        modifiers = self._parse_modifiers(force_element)
+        constraint_id_map = self._parse_constraint_id_map(force_element)
 
         return {
             'bs_id': force_id,
@@ -203,6 +243,10 @@ class DetachmentLoader:
             'unit_restrictions': json.dumps(unit_restrictions) if unit_restrictions else None,
             'faction': faction,
             'costs': json.dumps(costs) if costs else None,
+            'modifiers': json.dumps({
+                'rules': modifiers,
+                'constraint_id_map': constraint_id_map,
+            }) if modifiers else None,
         }
 
     def _parse_standalone_detachments(self) -> List[Dict[str, Any]]:
@@ -226,6 +270,8 @@ class DetachmentLoader:
             force_id = fe.get('id')
             constraints, unit_restrictions = self._parse_category_slots(fe)
             costs = self._parse_costs(fe)
+            modifiers = self._parse_modifiers(fe)
+            constraint_id_map = self._parse_constraint_id_map(fe)
 
             detachments.append({
                 'bs_id': force_id,
@@ -236,6 +282,10 @@ class DetachmentLoader:
                 'unit_restrictions': json.dumps(unit_restrictions) if unit_restrictions else None,
                 'faction': None,
                 'costs': json.dumps(costs) if costs else None,
+                'modifiers': json.dumps({
+                    'rules': modifiers,
+                    'constraint_id_map': constraint_id_map,
+                }) if modifiers else None,
             })
 
         return detachments
@@ -292,8 +342,12 @@ class DetachmentLoader:
 
         Returns:
             (constraints_dict, unit_restrictions_dict)
-            constraints: {slot_name: {min, max}}
-            unit_restrictions: {slot_name: "restriction text"} or empty dict
+            constraints: {slot_key: {min, max}}
+            unit_restrictions: {slot_key: "restriction text"} or empty dict
+
+        Slot keys:
+            - Unrestricted slots use base name: "Command"
+            - Restricted variants use full raw name: "Command - Centurions Only"
         """
         constraints = {}
         unit_restrictions = {}
@@ -330,13 +384,161 @@ class DetachmentLoader:
                     elif c_type == 'min':
                         min_val = value
 
-            # Store with the cleaned slot name
-            constraints[slot_name] = {'min': min_val, 'max': max_val}
+            # Use the full raw name as key for restricted variants to avoid
+            # collisions (e.g., "Command" max=3 vs "Command - Centurions Only" max=7)
+            slot_key = raw_name.strip() if restriction else slot_name
+            # Normalize "War Engine" in the full key too
+            if slot_name == 'War-engine' and restriction:
+                slot_key = f"War-engine - {restriction}"
+
+            constraints[slot_key] = {'min': min_val, 'max': max_val}
 
             if restriction:
-                unit_restrictions[slot_name] = restriction
+                unit_restrictions[slot_key] = restriction
 
         return constraints, unit_restrictions
+
+    def _parse_constraint_id_map(self, force_element) -> Dict[str, str]:
+        """
+        Build a mapping of constraint IDs to slot keys.
+
+        Modifiers reference constraint IDs (e.g., "0cdf-ec44-4886-b292") to modify
+        slot max values. We need this map to know which slot a modifier targets.
+
+        Also includes the forceEntry's own direct constraints (which have max=0
+        base values that get incremented by modifiers).
+        """
+        id_map = {}
+
+        # Map categoryLink constraint IDs to their slot keys
+        category_links = self.parser._xpath(force_element, './categoryLinks/categoryLink')
+        for cat_link in category_links:
+            raw_name = cat_link.get('name', '')
+            if any(raw_name.startswith(prefix) for prefix in SKIP_CATEGORY_PREFIXES):
+                continue
+            if cat_link.get('hidden') == 'true':
+                continue
+
+            slot_name, restriction = self._parse_slot_name(raw_name)
+            slot_key = raw_name.strip() if restriction else slot_name
+            if slot_name == 'War-engine' and restriction:
+                slot_key = f"War-engine - {restriction}"
+
+            link_constraints = self.parser._xpath(cat_link, './constraints/constraint')
+            for c in link_constraints:
+                c_id = c.get('id')
+                if c_id:
+                    id_map[c_id] = slot_key
+
+        # Map forceEntry-level constraint IDs (these are the "max instances" constraints
+        # for the detachment itself — used for Tercio slot scaling)
+        force_constraints = self.parser._xpath(force_element, './constraints/constraint')
+        for c in force_constraints:
+            c_id = c.get('id')
+            c_field = c.get('field', '')
+            if c_id and c_field == 'forces':
+                id_map[c_id] = '__detachment_instances__'
+
+        return id_map
+
+    def _parse_modifiers(self, force_element) -> List[Dict[str, Any]]:
+        """
+        Parse <modifier> elements from a forceEntry.
+
+        Extracts modifier rules that adjust slot constraints and costs
+        based on Tercio Unlock counts and Doctrine selections.
+
+        Returns:
+            List of modifier dicts, each with:
+                - type: "increment" | "set"
+                - field: target field ID (constraint ID or cost type ID)
+                - value: numeric value
+                - conditions: list of condition dicts
+                - repeats: list of repeat dicts (for scaling)
+        """
+        modifiers = []
+        modifier_elements = self.parser._xpath(force_element, './modifiers/modifier')
+
+        for mod in modifier_elements:
+            mod_type = mod.get('type')
+            mod_field = mod.get('field', '')
+            mod_value_str = mod.get('value', '0')
+
+            # Skip hidden-toggling modifiers (type="set", field="hidden")
+            if mod_field == 'hidden':
+                continue
+
+            try:
+                mod_value = float(mod_value_str)
+            except ValueError:
+                continue
+
+            # Parse conditions
+            conditions = []
+            cond_elements = self.parser._xpath(mod, './conditions/condition')
+            for cond in cond_elements:
+                conditions.append({
+                    'type': cond.get('type'),
+                    'value': float(cond.get('value', 0)),
+                    'field': cond.get('field', ''),
+                    'scope': cond.get('scope', ''),
+                    'childId': cond.get('childId', ''),
+                })
+
+            # Parse condition groups
+            cond_group_elements = self.parser._xpath(mod, './conditionGroups/conditionGroup')
+            for cg in cond_group_elements:
+                group_conds = []
+                for cond in self.parser._xpath(cg, './conditions/condition'):
+                    group_conds.append({
+                        'type': cond.get('type'),
+                        'value': float(cond.get('value', 0)),
+                        'field': cond.get('field', ''),
+                        'scope': cond.get('scope', ''),
+                        'childId': cond.get('childId', ''),
+                    })
+                if group_conds:
+                    conditions.extend(group_conds)
+
+            # Parse repeats
+            repeats = []
+            repeat_elements = self.parser._xpath(mod, './repeats/repeat')
+            for rep in repeat_elements:
+                repeats.append({
+                    'value': float(rep.get('value', 1)),
+                    'repeats': float(rep.get('repeats', 1)),
+                    'field': rep.get('field', ''),
+                    'scope': rep.get('scope', ''),
+                    'childId': rep.get('childId', ''),
+                })
+
+            # Only keep modifiers we can actually evaluate:
+            # - Conditions reference known tercio/doctrine IDs
+            # - Or repeats reference known tercio IDs
+            relevant = False
+            all_ids = set(TERCIO_UNLOCK_IDS.keys()) | set(COHORT_DOCTRINES.keys())
+            for c in conditions:
+                if c['childId'] in all_ids:
+                    relevant = True
+                    break
+            for r in repeats:
+                if r['childId'] in all_ids:
+                    relevant = True
+                    break
+            # Also include cost modifiers (field is a cost type ID)
+            if mod_field in (COST_TYPE_AUXILIARY, COST_TYPE_APEX):
+                relevant = True
+
+            if relevant:
+                modifiers.append({
+                    'type': mod_type,
+                    'field': mod_field,
+                    'value': mod_value,
+                    'conditions': conditions,
+                    'repeats': repeats,
+                })
+
+        return modifiers
 
     def _parse_slot_name(self, raw_name: str) -> tuple:
         """

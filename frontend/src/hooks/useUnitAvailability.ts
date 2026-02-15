@@ -56,7 +56,7 @@ export function useUnitAvailability() {
       if (detachments.length === 0) {
         // Roster exists but no detachments — find which templates have this slot
         const unlockable = allDetachments.filter(
-          (d) => d.constraints[unitType] != null && canAffordDetachment(d),
+          (d) => hasSlotForUnit(unitType, unitName, d.constraints, d.unit_restrictions) && canAffordDetachment(d),
         );
         return { ...empty, status: 'no_detachment', unlockableDetachments: unlockable };
       }
@@ -65,18 +65,14 @@ export function useUnitAvailability() {
       const full: RosterDetachment[] = [];
 
       for (const det of detachments) {
-        const slot = det.slots[unitType];
-        if (!slot) continue;
+        // Find matching slot(s): check restricted variants first, then base
+        const matchedKey = findMatchingSlotKey(unitType, unitName, det.slots);
+        if (!matchedKey) continue;
 
-        // Check unit restriction match
-        if (unitName && slot.restriction && !matchesRestriction(unitName, slot.restriction)) {
-          continue; // This slot doesn't allow this unit
-        }
-
-        // Sum quantities instead of counting entries
+        const slot = det.slots[matchedKey];
+        // Count entries (units) in the matched slot, not model quantities
         const filledCount = det.entries
-          .filter((e) => e.category === unitType)
-          .reduce((sum, e) => sum + e.quantity, 0);
+          .filter((e) => e.category === matchedKey).length;
         if (filledCount < slot.max) {
           open.push(det);
         } else {
@@ -86,7 +82,7 @@ export function useUnitAvailability() {
 
       // Detachments not yet in roster that have this slot and are within budget
       const unlockable = allDetachments.filter(
-        (d) => d.constraints[unitType] != null && !addedDetachmentIds.has(d.id) && canAffordDetachment(d),
+        (d) => hasSlotForUnit(unitType, unitName, d.constraints, d.unit_restrictions) && !addedDetachmentIds.has(d.id) && canAffordDetachment(d),
       );
 
       if (open.length > 0) {
@@ -132,4 +128,57 @@ function matchesRestriction(unitName: string, restriction: string): boolean {
   const parts = clean.replace(/ or /g, ', ').split(', ').map((p) => p.trim()).filter(Boolean);
   const lower = unitName.toLowerCase();
   return parts.some((part) => lower.includes(part) || part.includes(lower));
+}
+
+/**
+ * Find the matching slot key for a unit in a slots map.
+ * Slot keys may be base names ("Command") or restricted variants
+ * ("Command - Centurions Only"). Restricted matches are preferred.
+ */
+export function findMatchingSlotKey(
+  unitType: string,
+  unitName: string | undefined,
+  slots: Record<string, { min: number; max: number; filled: number; restriction?: string | null }>,
+): string | null {
+  let baseMatch: string | null = null;
+  let restrictedMatch: string | null = null;
+
+  for (const [key, status] of Object.entries(slots)) {
+    const baseCat = key.includes(' - ') ? key.split(' - ', 1)[0].trim() : key;
+    if (baseCat !== unitType) continue;
+
+    if (status.restriction) {
+      if (unitName && matchesRestriction(unitName, status.restriction)) {
+        restrictedMatch = key;
+      }
+    } else {
+      baseMatch = key;
+    }
+  }
+
+  return restrictedMatch ?? baseMatch;
+}
+
+/**
+ * Check if a detachment template has a slot for this unit type
+ * (considering restricted variant keys).
+ */
+function hasSlotForUnit(
+  unitType: string,
+  unitName: string | undefined,
+  constraints: Record<string, { min: number; max: number }>,
+  unitRestrictions?: Record<string, string>,
+): boolean {
+  for (const key of Object.keys(constraints)) {
+    const baseCat = key.includes(' - ') ? key.split(' - ', 1)[0].trim() : key;
+    if (baseCat !== unitType) continue;
+
+    const restriction = unitRestrictions?.[key];
+    if (restriction) {
+      if (unitName && matchesRestriction(unitName, restriction)) return true;
+    } else {
+      return true;
+    }
+  }
+  return false;
 }

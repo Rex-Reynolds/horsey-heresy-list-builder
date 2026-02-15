@@ -38,10 +38,10 @@ class FOCValidator:
         """
         errors = []
 
-        # Count entries by native slot name
+        # Count entries by native slot name (each entry = 1 unit)
         slot_counts = Counter()
         for entry in entries:
-            slot_counts[entry.category] += entry.quantity
+            slot_counts[entry.category] += 1
 
         # Validate each slot against constraints
         for slot_name, limits in self.constraints.items():
@@ -109,7 +109,7 @@ class FOCValidator:
         """Get detailed slot status for each constraint."""
         slot_counts = Counter()
         for entry in entries:
-            slot_counts[entry.category] += entry.quantity
+            slot_counts[entry.category] += 1
 
         status = {}
         for slot_name, limits in self.constraints.items():

@@ -17,6 +17,7 @@ class Roster(BaseModel):
     total_points = IntegerField(default=0)
     is_valid = IntegerField(default=0)  # Boolean: FOC validation status
     validation_errors = TextField(null=True)  # JSON: list of validation errors
+    doctrine = CharField(null=True)  # Selected Cohort Doctrine category ID
 
     def calculate_total_points(self):
         """Calculate and update total_points from all detachments' entries."""
@@ -82,26 +83,34 @@ class RosterDetachment(BaseModel):
     detachment_type = CharField()  # "Primary", "Auxiliary", "Apex"
     sort_order = IntegerField(default=0)
 
-    def get_slot_status(self) -> dict:
+    def get_slot_status(self, modifier_eval=None) -> dict:
         """
         Get slot fill status for this detachment.
+
+        Args:
+            modifier_eval: Optional ModifierEvaluator for dynamic slot adjustments
 
         Returns:
             Dict of {slot_name: {min, max, filled, restriction}}
         """
-        # Load detachment constraints
         det = self.detachment
         if not det:
             return {}
 
-        constraints = json.loads(det.constraints) if det.constraints else {}
+        # Use evaluator for adjusted constraints, or fall back to base
+        if modifier_eval and det.modifiers:
+            evaluated = modifier_eval.evaluate_detachment(det)
+            constraints = evaluated['constraints']
+        else:
+            constraints = json.loads(det.constraints) if det.constraints else {}
+
         unit_restrictions = json.loads(det.unit_restrictions) if det.unit_restrictions else {}
 
-        # Count entries per slot
+        # Count entries per slot (each roster entry = 1 unit, regardless of model quantity)
         slot_counts = {}
         for entry in self.entries:
             slot = entry.category
-            slot_counts[slot] = slot_counts.get(slot, 0) + entry.quantity
+            slot_counts[slot] = slot_counts.get(slot, 0) + 1
 
         # Build status
         slots = {}

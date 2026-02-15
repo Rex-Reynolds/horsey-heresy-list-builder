@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import type { Unit, Upgrade } from '../../types/index.ts';
 import { useUnitUpgrades } from '../../api/units.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
+import { useUIStore } from '../../stores/uiStore.ts';
 import { useAddEntry, useAddDetachment } from '../../api/rosters.ts';
-import { useUnitAvailability } from '../../hooks/useUnitAvailability.ts';
+import { useUnitAvailability, findMatchingSlotKey } from '../../hooks/useUnitAvailability.ts';
 import { parseProfiles, parseRules } from '../../utils/profileParser.ts';
 import client from '../../api/client.ts';
 import StatBlock from './StatBlock.tsx';
@@ -23,6 +24,9 @@ export default function UnitDetail({ unit }: Props) {
   const [targetDetId, setTargetDetId] = useState<number | null>(null);
 
   const [addError, setAddError] = useState<string | null>(null);
+  const addToast = useUIStore((s) => s.addToast);
+  const setNewEntryId = useUIStore((s) => s.setNewEntryId);
+  const footerRef = useRef<HTMLDivElement>(null);
 
   const getAvailability = useUnitAvailability();
   const availability = getAvailability(unit.unit_type, unit.name, unit.id, unit.constraints);
@@ -33,6 +37,14 @@ export default function UnitDetail({ unit }: Props) {
 
   const addEntryMutation = useAddEntry(rosterId, effectiveDetId);
   const addDetMutation = useAddDetachment(rosterId);
+
+  // Scroll the add button into view after expansion animation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      footerRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 350); // After slide-down animation
+    return () => clearTimeout(timer);
+  }, []);
 
   const { statBlocks, traits } = parseProfiles(unit.profiles);
   const rules = parseRules(unit.rules);
@@ -76,7 +88,9 @@ export default function UnitDetail({ unit }: Props) {
   const upgradeCost = allUpgrades
     .filter((u: Upgrade) => selectedUpgrades.has(u.id))
     .reduce((sum: number, u: Upgrade) => sum + u.cost, 0);
-  const totalCost = unit.base_cost + upgradeCost;
+  const perModelCost = unit.base_cost + upgradeCost;
+  const modelCount = Math.max(unit.model_min, 1);
+  const totalCost = perModelCost * modelCount;
 
   function handleAdd() {
     if (!rosterId || !effectiveDetId) return;
@@ -91,9 +105,9 @@ export default function UnitDetail({ unit }: Props) {
       }
     }
 
-    const upgradesList = allUpgrades
-      .filter((u: Upgrade) => selectedUpgrades.has(u.id))
-      .map((u: Upgrade) => ({ upgrade_id: u.bs_id, quantity: 1 }));
+    const selectedUpgradeObjects = allUpgrades.filter((u: Upgrade) => selectedUpgrades.has(u.id));
+    const upgradesList = selectedUpgradeObjects.map((u: Upgrade) => ({ upgrade_id: u.bs_id, quantity: 1 }));
+    const upgradeNames = selectedUpgradeObjects.map((u: Upgrade) => u.name);
 
     setAddError(null);
     addEntryMutation.mutate(
@@ -107,6 +121,7 @@ export default function UnitDetail({ unit }: Props) {
             category: unit.unit_type,
             baseCost: unit.base_cost,
             upgrades: upgradesList,
+            upgradeNames,
             upgradeCost,
             quantity: unit.model_min,
             totalCost: data.total_cost,
@@ -115,6 +130,8 @@ export default function UnitDetail({ unit }: Props) {
           });
           setSelectedUpgrades(new Set());
           setTargetDetId(null);
+          addToast(`${unit.name} added to roster`);
+          setNewEntryId(data.id);
           if (rosterId) {
             client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
               syncFromResponse(resp);
@@ -124,6 +141,7 @@ export default function UnitDetail({ unit }: Props) {
         onError: (err: any) => {
           const detail = err?.response?.data?.detail;
           setAddError(detail ?? 'Failed to add unit');
+          addToast(detail ?? 'Failed to add unit', 'error');
         },
       },
     );
@@ -167,7 +185,7 @@ export default function UnitDetail({ unit }: Props) {
     !rosterId || (status !== 'addable') || !effectiveDetId || addEntryMutation.isPending;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3.5">
       {/* Stats */}
       <StatBlock stats={statBlocks} />
 
@@ -175,9 +193,9 @@ export default function UnitDetail({ unit }: Props) {
       {traits.length > 0 && (
         <div>
           <SectionLabel>Special Rules</SectionLabel>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {traits.map((t, i) => (
-              <span key={i} className="rounded-sm border border-edge-600/30 bg-plate-700/30 px-1.5 py-0.5 text-[10px] text-text-secondary">
+              <span key={i} className="rounded-sm border border-edge-600/30 bg-plate-700/30 px-2 py-0.5 text-xs text-text-secondary">
                 {t}
               </span>
             ))}
@@ -189,14 +207,14 @@ export default function UnitDetail({ unit }: Props) {
       {rules.length > 0 && (
         <div>
           <SectionLabel>Rules</SectionLabel>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {rules.map((r, i) => (
               <details key={i} className="group rounded-sm border border-edge-700/30 bg-plate-800/30">
-                <summary className="cursor-pointer px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors group-open:text-gold-400">
+                <summary className="cursor-pointer px-3 py-2 text-[13px] font-medium text-text-secondary transition-colors group-open:text-gold-400">
                   {r.name}
                 </summary>
                 {r.description && (
-                  <p className="border-t border-edge-700/20 px-2.5 py-2 text-[11px] leading-relaxed text-text-dim">
+                  <p className="border-t border-edge-700/20 px-3 py-2.5 text-[13px] leading-relaxed text-text-dim">
                     {r.description}
                   </p>
                 )}
@@ -222,12 +240,15 @@ export default function UnitDetail({ unit }: Props) {
           <select
             value={targetDetId ?? ''}
             onChange={(e) => setTargetDetId(e.target.value ? Number(e.target.value) : null)}
-            className="w-full rounded-sm border border-edge-600/50 bg-plate-800 px-2 py-1.5 text-[11px] text-text-primary outline-none transition-colors focus:border-gold-600/40"
+            className="input-imperial w-full rounded-sm px-2.5 py-2 text-[13px] text-text-primary outline-none"
           >
             <option value="">Select...</option>
             {openDetachments.map((d) => {
-              const slot = d.slots[unit.unit_type];
-              const filled = d.entries.filter((e) => e.category === unit.unit_type).reduce((s, e) => s + e.quantity, 0);
+              const slotKey = findMatchingSlotKey(unit.unit_type, unit.name, d.slots);
+              const slot = slotKey ? d.slots[slotKey] : undefined;
+              const filled = slotKey
+                ? d.entries.filter((e) => e.category === slotKey).length
+                : 0;
               const restriction = slot?.restriction;
               return (
                 <option key={d.id} value={d.id}>
@@ -243,13 +264,13 @@ export default function UnitDetail({ unit }: Props) {
       {/* Status messages */}
       {rosterId && status === 'roster_limit' && rosterLimitMessage && (
         <InfoPanel variant="caution">
-          <p className="text-[11px] text-caution">{rosterLimitMessage}</p>
+          <p className="text-[13px] text-caution">{rosterLimitMessage}</p>
         </InfoPanel>
       )}
 
       {rosterId && status === 'no_slot' && (
         <InfoPanel variant="neutral">
-          <p className="text-[11px] text-text-secondary">
+          <p className="text-[13px] text-text-secondary">
             No detachment has a <span className="font-medium text-text-primary">{unit.unit_type}</span> slot.
           </p>
           {unlockableDetachments.length > 0 && (
@@ -265,16 +286,19 @@ export default function UnitDetail({ unit }: Props) {
 
       {rosterId && status === 'slot_full' && (
         <InfoPanel variant="caution">
-          <p className="text-[11px] text-caution">
+          <p className="text-[13px] text-caution">
             All {unit.unit_type} slots are full.
           </p>
           <div className="space-y-0.5">
             {fullDetachments.map((d) => {
-              const slot = d.slots[unit.unit_type];
-              const filled = d.entries.filter((e) => e.category === unit.unit_type).reduce((s, e) => s + e.quantity, 0);
+              const slotKey = findMatchingSlotKey(unit.unit_type, unit.name, d.slots);
+              const slot = slotKey ? d.slots[slotKey] : undefined;
+              const filled = slotKey
+                ? d.entries.filter((e) => e.category === slotKey).length
+                : 0;
               return (
-                <p key={d.id} className="font-data text-[9px] text-text-dim">
-                  {d.name}: {unit.unit_type} {filled}/{slot?.max ?? '?'}
+                <p key={d.id} className="font-data text-[11px] text-text-dim">
+                  {d.name}: {slotKey ?? unit.unit_type} {filled}/{slot?.max ?? '?'}
                 </p>
               );
             })}
@@ -292,7 +316,7 @@ export default function UnitDetail({ unit }: Props) {
 
       {rosterId && status === 'no_detachment' && (
         <InfoPanel variant="neutral">
-          <p className="text-[11px] text-text-secondary">Add a detachment to start building your roster.</p>
+          <p className="text-[13px] text-text-secondary">Add a detachment to start building your roster.</p>
           {unlockableDetachments.length > 0 && (
             <DetachmentSuggestions
               label={`Detachments with ${unit.unit_type}`}
@@ -306,26 +330,26 @@ export default function UnitDetail({ unit }: Props) {
 
       {/* Error */}
       {addError && (
-        <p className="text-[11px] text-danger">{addError}</p>
+        <p className="text-[13px] text-danger">{addError}</p>
       )}
 
       {/* Add footer */}
-      <div className="flex items-center justify-between border-t border-edge-700/30 pt-2.5">
+      <div ref={footerRef} className="flex items-center justify-between border-t border-edge-700/30 pt-3">
         <div>
-          <span className="font-data text-sm font-medium tabular-nums text-gold-300">
+          <span className="font-data text-base font-medium tabular-nums text-gold-300">
             {totalCost}
           </span>
-          <span className="ml-1 text-[10px] text-text-dim">pts</span>
-          {unit.model_min > 1 && (
-            <span className="ml-2 font-data text-[9px] text-text-dim">
-              ({unit.model_min}{unit.model_max && unit.model_max !== unit.model_min ? `-${unit.model_max}` : ''} models)
+          <span className="ml-1 text-xs text-text-dim">pts</span>
+          {modelCount > 1 && (
+            <span className="ml-2 font-data text-[11px] text-text-dim">
+              ({perModelCost}/model &times; {modelCount})
             </span>
           )}
         </div>
         <button
           onClick={handleAdd}
           disabled={buttonDisabled}
-          className={`font-label rounded-sm px-4 py-1.5 text-[10px] font-semibold tracking-wider uppercase transition-all disabled:cursor-not-allowed disabled:opacity-25 ${
+          className={`font-label rounded-sm px-5 py-2 text-xs font-semibold tracking-wider uppercase transition-all disabled:cursor-not-allowed disabled:opacity-25 ${
             status === 'addable'
               ? 'bg-gold-600 text-white hover:bg-gold-500'
               : status === 'slot_full'
@@ -337,7 +361,7 @@ export default function UnitDetail({ unit }: Props) {
         </button>
       </div>
       {!rosterId && (
-        <p className="text-[10px] text-text-dim">Create a roster first to add units.</p>
+        <p className="text-xs text-text-dim">Create a roster first to add units.</p>
       )}
     </div>
   );
@@ -347,7 +371,7 @@ export default function UnitDetail({ unit }: Props) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <h4 className="font-label mb-1 text-[9px] font-semibold tracking-wider text-text-dim uppercase">
+    <h4 className="font-label mb-1.5 text-[11px] font-semibold tracking-wider text-text-dim uppercase">
       {children}
     </h4>
   );
@@ -355,7 +379,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function InfoPanel({ children, variant }: { children: React.ReactNode; variant: 'neutral' | 'caution' }) {
   return (
-    <div className={`space-y-2 rounded-sm border p-2.5 ${
+    <div className={`space-y-2 rounded-sm border p-3 ${
       variant === 'caution'
         ? 'border-caution/15 bg-caution/4'
         : 'border-edge-600/30 bg-plate-700/20'
@@ -378,20 +402,20 @@ function DetachmentSuggestions({
 }) {
   return (
     <div>
-      <p className="font-label mb-1 text-[9px] font-semibold tracking-wider text-text-dim uppercase">
+      <p className="font-label mb-1.5 text-[11px] font-semibold tracking-wider text-text-dim uppercase">
         {label}
       </p>
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         {detachments.map((d) => (
-          <div key={d.id} className="flex items-center justify-between border border-edge-700/20 bg-plate-800/40 px-2 py-1">
-            <span className="text-[11px] text-text-secondary">
+          <div key={d.id} className="flex items-center justify-between border border-edge-700/20 bg-plate-800/40 px-2.5 py-1.5">
+            <span className="text-[13px] text-text-secondary">
               {d.name}
               <span className="ml-1 text-text-dim">({d.type})</span>
             </span>
             <button
               onClick={() => onAdd(d.id, d.type)}
               disabled={loading}
-              className="font-label shrink-0 rounded-sm bg-gold-600/70 px-2 py-0.5 text-[9px] font-semibold tracking-wider text-white uppercase transition-all hover:bg-gold-500 disabled:opacity-30"
+              className="font-label shrink-0 rounded-sm bg-gold-600/70 px-2.5 py-1 text-[11px] font-semibold tracking-wider text-white uppercase transition-all hover:bg-gold-500 disabled:opacity-30"
             >
               + Add
             </button>

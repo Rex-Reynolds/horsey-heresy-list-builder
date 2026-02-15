@@ -23,7 +23,7 @@ export default function SearchInput({ value, onChange, placeholder = 'Search uni
   return (
     <div className="relative">
       <svg
-        className="pointer-events-none absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-text-dim"
+        className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-dim"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -36,14 +36,14 @@ export default function SearchInput({ value, onChange, placeholder = 'Search uni
         value={local}
         onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-sm border border-edge-600/50 bg-plate-800/60 py-1.5 pl-8 pr-3 text-xs text-text-primary placeholder-text-dim outline-none transition-all focus:border-gold-600/40 focus:bg-plate-800"
+        className="input-imperial w-full rounded-sm py-2 pl-9 pr-3.5 text-sm text-text-primary placeholder-text-dim outline-none"
       />
       {local && (
         <button
           onClick={() => handleChange('')}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim transition-colors hover:text-text-secondary"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim transition-colors hover:text-text-secondary"
         >
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>

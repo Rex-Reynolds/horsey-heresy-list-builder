@@ -9,7 +9,7 @@ from src.bsdata.repository import get_catalogue_path
 from src.bsdata.category_mapping import SKIP_CATEGORIES
 from src.bsdata.catalogue_cache import CatalogueCache
 from src.bsdata.upgrade_extractor import UpgradeExtractor
-from src.bsdata.detachment_loader import DetachmentLoader, BUDGET_CATEGORIES
+from src.bsdata.detachment_loader import DetachmentLoader, BUDGET_CATEGORIES, TERCIO_UNLOCK_IDS
 from src.models import Unit, Weapon, Upgrade, UnitUpgrade, Detachment, db
 from src.config import BSDATA_DIR
 
@@ -72,6 +72,7 @@ class SolarAuxiliaCatalogue:
         logger.info("Loading shared catalogues...")
         self.cache.load_shared_catalogue("Weapons")
         self.cache.load_shared_catalogue("Wargear")
+        self.cache.load_shared_catalogue("Solar Auxilia")
 
         # Initialize upgrade extractor
         self.upgrade_extractor = UpgradeExtractor(self.parser, self.cache)
@@ -163,6 +164,60 @@ class SolarAuxiliaCatalogue:
         logger.debug(f"Built budget category map: {len(budget_map)} units with budget categories")
         return budget_map
 
+    def _build_tercio_category_map(self) -> dict[str, list[str]]:
+        """
+        Build mapping of unit ID -> tercio unlock category IDs.
+
+        Tercio Unlock categories are on the sharedSelectionEntries (the actual
+        unit definitions), not on the root entryLinks. We map entryLink targetId
+        -> shared entry's categoryLinks that match Tercio Unlock IDs.
+        """
+        tercio_map: dict[str, list[str]] = {}
+        tercio_ids = set(TERCIO_UNLOCK_IDS.keys())
+
+        # Build a map of shared entry ID -> tercio categories
+        shared_tercio: dict[str, list[str]] = {}
+        if self.parser.ns:
+            ns = self.parser.ns
+            shared_entries = self.parser.root.xpath(
+                './/bs:sharedSelectionEntries/bs:selectionEntry', namespaces=ns
+            )
+            for entry in shared_entries:
+                entry_id = entry.get('id')
+                cat_links = entry.xpath(
+                    './bs:categoryLinks/bs:categoryLink', namespaces=ns
+                )
+                cats = [cl.get('targetId') for cl in cat_links if cl.get('targetId') in tercio_ids]
+                if cats:
+                    shared_tercio[entry_id] = cats
+        else:
+            shared_entries = self.parser.root.xpath(
+                './/sharedSelectionEntries/selectionEntry'
+            )
+            for entry in shared_entries:
+                entry_id = entry.get('id')
+                cat_links = entry.xpath('./categoryLinks/categoryLink')
+                cats = [cl.get('targetId') for cl in cat_links if cl.get('targetId') in tercio_ids]
+                if cats:
+                    shared_tercio[entry_id] = cats
+
+        # Map root entryLink targetIds to their shared entry tercio categories
+        if self.parser.ns:
+            ns = self.parser.ns
+            entry_links = self.parser.root.xpath(
+                './bs:entryLinks/bs:entryLink', namespaces=ns
+            )
+        else:
+            entry_links = self.parser.root.xpath('./entryLinks/entryLink')
+
+        for link in entry_links:
+            target_id = link.get('targetId')
+            if target_id in shared_tercio:
+                tercio_map[target_id] = shared_tercio[target_id]
+
+        logger.debug(f"Built tercio category map: {len(tercio_map)} units with tercio categories")
+        return tercio_map
+
     def _extract_model_bounds(self, unit_element) -> tuple[int, int | None]:
         """
         Extract model count bounds from child selectionEntry[@type="model"] elements.
@@ -208,6 +263,7 @@ class SolarAuxiliaCatalogue:
         logger.info("Loading all units from catalogue...")
 
         budget_map = self._build_budget_category_map()
+        tercio_map = self._build_tercio_category_map()
         units = []
         unit_entries = self.parser.get_all_selection_entries(entry_type='unit')
 
@@ -250,6 +306,7 @@ class SolarAuxiliaCatalogue:
                 'entry_links': unit_data['entry_links'],
                 'selection_entry_groups': unit_data['selection_entry_groups'],
                 'budget_categories': budget_map.get(unit_id),
+                'tercio_categories': tercio_map.get(unit_id),
                 'model_min': model_min,
                 'model_max': model_max,
                 '_element': entry_element,  # Raw XML for upgrade extraction
@@ -257,6 +314,57 @@ class SolarAuxiliaCatalogue:
 
         logger.info(f"Loaded {len(units)} units")
         return units
+
+    def _extract_sa_shared_upgrades(self) -> list[dict]:
+        """
+        Extract upgrades from Solar Auxilia.cat's sharedSelectionEntries.
+
+        These are SA-specific upgrades (Charonite Claws, hull weapons, etc.)
+        that are in the cache but not yet in the Upgrade table.
+        """
+        sa_cache = self.cache.loaded_catalogues.get('Solar Auxilia', {})
+        upgrades = []
+        # Track IDs already in Weapon or Upgrade tables (from Weapons.cat / Wargear.cat)
+        existing_weapon_ids = {w.bs_id for w in Weapon.select(Weapon.bs_id)}
+        existing_upgrade_ids = {u.bs_id for u in Upgrade.select(Upgrade.bs_id)}
+        skip_ids = existing_weapon_ids | existing_upgrade_ids
+
+        for entry_id, entry_data in sa_cache.items():
+            if entry_data.get('entry_type') == 'profile':
+                continue
+            if entry_data.get('hidden'):
+                continue
+            if entry_id in skip_ids:
+                continue
+
+            name = entry_data.get('name')
+            if not name:
+                continue
+
+            # Determine cost
+            costs = entry_data.get('costs', {})
+            cost = int(costs.get('Point(s)', 0) or costs.get('Points', 0))
+
+            # Determine type from profiles
+            profiles = entry_data.get('profiles', [])
+            upgrade_type = 'Wargear'
+            if profiles:
+                profile_type = profiles[0].get('type', '')
+                if 'Weapon' in profile_type:
+                    upgrade_type = 'Weapon'
+
+            upgrades.append({
+                'bs_id': entry_id,
+                'name': name,
+                'cost': cost,
+                'applicable_units': json.dumps([]),
+                'upgrade_type': upgrade_type,
+                'upgrade_group': None,
+                'constraints': None,
+            })
+
+        logger.info(f"Found {len(upgrades)} SA-specific shared upgrades")
+        return upgrades
 
     def _get_primary_category(self, category_links: list[dict]) -> str:
         """
@@ -311,6 +419,12 @@ class SolarAuxiliaCatalogue:
             else:
                 logger.warning("No upgrades extracted")
 
+            # Step 2b: Populate SA-inline shared upgrades from Solar Auxilia.cat cache
+            sa_upgrades = self._extract_sa_shared_upgrades()
+            if sa_upgrades:
+                Upgrade.insert_many(sa_upgrades).execute()
+                logger.info(f"Inserted {len(sa_upgrades)} SA-specific upgrades into database")
+
             # Step 3: Populate units and link to upgrades using XML-based extraction
             logger.info("Loading units from Solar Auxilia.cat...")
             units = self.load_all_units()
@@ -321,6 +435,7 @@ class SolarAuxiliaCatalogue:
             for unit_data in units:
                 # Create unit record
                 budget_cats = unit_data.get('budget_categories')
+                tercio_cats = unit_data.get('tercio_categories')
                 unit = Unit.create(
                     bs_id=unit_data['bs_id'],
                     name=unit_data['name'],
@@ -331,6 +446,7 @@ class SolarAuxiliaCatalogue:
                     rules=json.dumps(unit_data['rules']),
                     constraints=json.dumps(unit_data['constraints']),
                     budget_categories=json.dumps(budget_cats) if budget_cats else None,
+                    tercio_categories=json.dumps(tercio_cats) if tercio_cats else None,
                     model_min=unit_data.get('model_min', 1),
                     model_max=unit_data.get('model_max'),
                     is_legacy=unit_data['name'] in LEGACY_UNIT_NAMES,

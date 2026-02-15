@@ -45,33 +45,37 @@ export default function StatBlock({ stats }: Props) {
   const showInv = stats.some((s) => s.INV && s.INV !== '-' && s.INV !== '');
 
   return (
-    <div className="overflow-x-auto rounded-sm border border-edge-600/30">
-      <table className="data-readout w-full">
-        <thead>
-          <tr>
-            <th className="text-left">Unit</th>
-            {COLUMNS.map((col) => (
-              <th key={col} className="text-center">{col}</th>
-            ))}
-            {showInv && <th className="text-center">INV</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {stats.map((s, i) => (
-            <tr key={i}>
-              <td>{s.name}</td>
-              {COLUMNS.map((col) => {
-                const val = s[col];
-                const cls = col === 'SAV' ? getSaveClass(val) : getStatClass(col, val);
-                return <td key={col} className={cls}>{val}</td>;
-              })}
-              {showInv && (
-                <td className="stat-special">{s.INV ?? '-'}</td>
-              )}
+    <div className="overflow-hidden rounded-sm border border-edge-600/30">
+      {/* Gold accent bar */}
+      <div className="h-[2px] bg-gradient-to-r from-gold-700 via-gold-500 to-gold-700" />
+      <div className="overflow-x-auto">
+        <table className="data-readout w-full">
+          <thead>
+            <tr>
+              <th className="text-left">Unit</th>
+              {COLUMNS.map((col) => (
+                <th key={col} className="text-center">{col}</th>
+              ))}
+              {showInv && <th className="text-center">INV</th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {stats.map((s, i) => (
+              <tr key={i}>
+                <td>{s.name}</td>
+                {COLUMNS.map((col) => {
+                  const val = s[col];
+                  const cls = col === 'SAV' ? getSaveClass(val) : getStatClass(col, val);
+                  return <td key={col} className={cls}>{val}</td>;
+                })}
+                {showInv && (
+                  <td className="stat-special">{s.INV ?? '-'}</td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

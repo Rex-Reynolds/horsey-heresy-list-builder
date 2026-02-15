@@ -8,6 +8,7 @@ export interface RosterEntry {
   category: string; // Native HH3 slot name
   baseCost: number;
   upgrades: SelectedUpgrade[];
+  upgradeNames: string[];
   upgradeCost: number;
   quantity: number;
   totalCost: number;
@@ -43,6 +44,7 @@ interface RosterState {
   composition: CompositionStatus;
   validationErrors: string[];
   isValid: boolean | null;
+  doctrine: string | null; // Selected Cohort Doctrine category ID
 
   totalPoints: number;
 
@@ -54,12 +56,14 @@ interface RosterState {
   removeEntry: (detachmentId: number, entryId: number) => void;
   updateQuantity: (detachmentId: number, entryId: number, quantity: number) => void;
   setComposition: (composition: CompositionStatus) => void;
+  setDoctrine: (doctrine: string | null) => void;
   syncFromResponse: (resp: {
     id: number;
     name: string;
     points_limit: number;
     detachments: RosterDetachmentResponse[];
     composition?: CompositionStatus;
+    doctrine?: string | null;
   }) => void;
   setValidation: (isValid: boolean, errors: string[]) => void;
   clearRoster: () => void;
@@ -91,6 +95,7 @@ function mapResponseEntry(e: RosterEntryResponse): RosterEntry {
     category: e.category,
     baseCost: e.total_cost / Math.max(e.quantity, 1), // Approximate
     upgrades: e.upgrades,
+    upgradeNames: [],
     upgradeCost: 0,
     quantity: e.quantity,
     totalCost: e.total_cost,
@@ -107,6 +112,7 @@ export const useRosterStore = create<RosterState>((set) => ({
   composition: DEFAULT_COMPOSITION,
   validationErrors: [],
   isValid: null,
+  doctrine: null,
   totalPoints: 0,
 
   setRoster: (id, name, limit, detachments) =>
@@ -179,6 +185,9 @@ export const useRosterStore = create<RosterState>((set) => ({
   setComposition: (composition) =>
     set({ composition }),
 
+  setDoctrine: (doctrine) =>
+    set({ doctrine }),
+
   syncFromResponse: (resp) =>
     set(() => {
       const detachments = mapResponseDetachments(resp.detachments);
@@ -189,6 +198,7 @@ export const useRosterStore = create<RosterState>((set) => ({
         detachments,
         totalPoints: calcTotal(detachments),
         composition: resp.composition ?? DEFAULT_COMPOSITION,
+        doctrine: resp.doctrine ?? null,
         isValid: null,
         validationErrors: [],
       };
@@ -204,6 +214,7 @@ export const useRosterStore = create<RosterState>((set) => ({
       pointsLimit: 3000,
       detachments: [],
       composition: DEFAULT_COMPOSITION,
+      doctrine: null,
       totalPoints: 0,
       isValid: null,
       validationErrors: [],

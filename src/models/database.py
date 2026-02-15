@@ -64,6 +64,9 @@ def _migrate_add_columns(database):
         ("detachment", "faction", "VARCHAR(255)"),
         ("detachment", "costs", "TEXT"),
         ("unit", "is_legacy", "BOOLEAN DEFAULT 0"),
+        ("detachment", "modifiers", "TEXT"),
+        ("unit", "tercio_categories", "TEXT"),
+        ("roster", "doctrine", "VARCHAR(255)"),
     ]
 
     for table, column, col_type in migrations:

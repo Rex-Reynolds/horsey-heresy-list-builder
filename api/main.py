@@ -21,6 +21,7 @@ from src.bsdata.detachment_loader import DetachmentLoader
 from src.bsdata.composition_validator import CompositionValidator
 from src.bsdata.foc_validator import FOCValidator
 from src.bsdata.category_mapping import DISPLAY_GROUPS, get_native_categories_for_group
+from src.bsdata.modifier_evaluator import ModifierEvaluator, get_available_doctrines
 from src.analytics.unit_popularity import calculate_unit_popularity
 import json
 
@@ -98,6 +99,12 @@ class UpgradeResponse(BaseModel):
 class RosterCreate(BaseModel):
     name: str
     points_limit: int
+
+    @classmethod
+    def model_validate(cls, *args, **kwargs):
+        obj = super().model_validate(*args, **kwargs)
+        obj.name = obj.name.strip()
+        return obj
 
 class DetachmentAdd(BaseModel):
     detachment_id: int
@@ -328,11 +335,12 @@ async def get_weapons(
 
 def _build_roster_response(roster: Roster) -> dict:
     """Build full roster response with detachments and slot status."""
+    modifier_eval = ModifierEvaluator(roster)
     detachments = []
     for rd in RosterDetachment.select().where(
         RosterDetachment.roster == roster
     ).order_by(RosterDetachment.sort_order):
-        slots = rd.get_slot_status()
+        slots = rd.get_slot_status(modifier_eval=modifier_eval)
         entries = []
         for entry in RosterEntry.select().where(
             RosterEntry.roster_detachment == rd
@@ -387,14 +395,17 @@ def _build_roster_response(roster: Roster) -> dict:
         "validation_errors": errors,
         "detachments": detachments,
         "composition": composition,
+        "doctrine": roster.doctrine,
     }
 
 
 @app.post("/api/rosters")
 async def create_roster(roster: RosterCreate):
     """Create a new roster."""
+    if not roster.name.strip():
+        raise HTTPException(status_code=422, detail="Roster name cannot be empty")
     new_roster = Roster.create(
-        name=roster.name,
+        name=roster.name.strip(),
         points_limit=roster.points_limit
     )
 
@@ -464,12 +475,13 @@ async def add_detachment_to_roster(roster_id: int, body: DetachmentAdd):
         sort_order=existing_count,
     )
 
+    modifier_eval = ModifierEvaluator(roster)
     return {
         "id": rd.id,
         "name": rd.detachment_name,
         "type": rd.detachment_type,
         "detachment_id": detachment.id,
-        "slots": rd.get_slot_status(),
+        "slots": rd.get_slot_status(modifier_eval=modifier_eval),
         "entries": [],
     }
 
@@ -503,6 +515,7 @@ async def get_roster_detachments(roster_id: int):
     except Roster.DoesNotExist:
         raise HTTPException(status_code=404, detail="Roster not found")
 
+    modifier_eval = ModifierEvaluator(roster)
     result = []
     for rd in RosterDetachment.select().where(
         RosterDetachment.roster == roster
@@ -528,7 +541,7 @@ async def get_roster_detachments(roster_id: int):
             "name": rd.detachment_name,
             "type": rd.detachment_type,
             "detachment_id": rd.detachment_id,
-            "slots": rd.get_slot_status(),
+            "slots": rd.get_slot_status(modifier_eval=modifier_eval),
             "entries": entries,
         })
 
@@ -575,6 +588,44 @@ def validate_upgrade_selection(unit_id: int, selected_upgrade_bs_ids: List[str])
             )
 
 
+def _find_matching_slot(unit_type: str, unit_name: str, slots: Dict[str, Any]) -> Optional[str]:
+    """
+    Find the best matching slot key for a unit in a detachment's slot map.
+
+    Slot keys may be base names ("Command") or restricted variants
+    ("Command - Centurions Only"). Restricted slots whose restriction
+    matches the unit name are preferred over the base slot.
+
+    Returns the slot key string, or None if no match.
+    """
+    base_match = None
+    restricted_matches = []
+
+    for slot_key, status in slots.items():
+        # Extract base category from slot key
+        if ' - ' in slot_key:
+            base_cat = slot_key.split(' - ', 1)[0].strip()
+        else:
+            base_cat = slot_key
+
+        if base_cat != unit_type:
+            continue
+
+        restriction = status.get('restriction')
+        if restriction:
+            # Check if unit matches this restricted slot
+            if FOCValidator._matches_restriction(unit_name, restriction):
+                if status['filled'] < status['max']:
+                    restricted_matches.append(slot_key)
+        else:
+            base_match = slot_key
+
+    # Prefer restricted slot (more specific), fallback to base
+    if restricted_matches:
+        return restricted_matches[0]
+    return base_match
+
+
 # ===== ROSTER ENTRIES (per-detachment) =====
 
 @app.post("/api/rosters/{roster_id}/detachments/{det_id}/entries")
@@ -598,28 +649,24 @@ async def add_entry_to_detachment(roster_id: int, det_id: int, entry: RosterEntr
         raise HTTPException(status_code=404, detail="Unit not found")
 
     # --- Slot overflow & unit restriction enforcement ---
-    slots = rd.get_slot_status()
+    modifier_eval = ModifierEvaluator(roster)
+    slots = rd.get_slot_status(modifier_eval=modifier_eval)
     unit_type = unit.unit_type
 
-    if unit_type not in slots:
+    # Find matching slot: try restricted variants first, then base slot
+    matched_slot_key = _find_matching_slot(unit_type, unit.name, slots)
+    if not matched_slot_key:
         raise HTTPException(
             status_code=422,
-            detail=f"'{unit.name}' ({unit_type}) has no slot in {rd.detachment_name}",
+            detail=f"'{unit.name}' ({unit_type}) has no available slot in {rd.detachment_name}",
         )
 
-    slot = slots[unit_type]
+    slot = slots[matched_slot_key]
     if slot['filled'] >= slot['max']:
         raise HTTPException(
             status_code=422,
-            detail=f"{unit_type} slot full ({slot['filled']}/{slot['max']}) in {rd.detachment_name}",
+            detail=f"{matched_slot_key} slot full ({slot['filled']}/{slot['max']}) in {rd.detachment_name}",
         )
-
-    if slot.get('restriction'):
-        if not FOCValidator._matches_restriction(unit.name, slot['restriction']):
-            raise HTTPException(
-                status_code=422,
-                detail=f"'{unit.name}' not allowed in {unit_type} slot (restricted to: {slot['restriction']})",
-            )
 
     # --- Roster-wide unique unit limits ---
     if unit.constraints:
@@ -670,7 +717,7 @@ async def add_entry_to_detachment(roster_id: int, det_id: int, entry: RosterEntr
     # Calculate cost
     total_cost = PointsCalculator.calculate_unit_cost(unit, upgrades) * entry.quantity
 
-    # Create entry with native slot name
+    # Create entry with matched slot key (base or restricted variant)
     roster_entry = RosterEntry.create(
         roster_detachment=rd,
         unit=unit,
@@ -678,7 +725,7 @@ async def add_entry_to_detachment(roster_id: int, det_id: int, entry: RosterEntr
         quantity=entry.quantity,
         upgrades=json.dumps(upgrades) if upgrades else None,
         total_cost=total_cost,
-        category=unit.unit_type,  # Native HH3 slot name
+        category=matched_slot_key,
     )
 
     # Recalculate roster total
@@ -849,6 +896,30 @@ async def get_detachments(
 async def get_display_groups():
     """Get display group mappings for the unit browser."""
     return DISPLAY_GROUPS
+
+
+# ===== DOCTRINES =====
+
+class DoctrineUpdate(BaseModel):
+    doctrine_id: Optional[str] = None  # Category ID, or null to clear
+
+@app.get("/api/doctrines")
+async def list_doctrines():
+    """Get available Cohort Doctrines."""
+    return get_available_doctrines()
+
+@app.patch("/api/rosters/{roster_id}/doctrine")
+async def set_roster_doctrine(roster_id: int, body: DoctrineUpdate):
+    """Set or clear the Cohort Doctrine for a roster."""
+    try:
+        roster = Roster.get_by_id(roster_id)
+    except Roster.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Roster not found")
+
+    roster.doctrine = body.doctrine_id
+    roster.save()
+
+    return _build_roster_response(roster)
 
 
 # ===== META ANALYSIS =====

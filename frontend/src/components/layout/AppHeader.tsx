@@ -1,73 +1,41 @@
-import { useRosterStore } from '../../stores/rosterStore.ts';
-
-interface Props {
-  onToggleRoster: () => void;
-  rosterVisible: boolean;
+function AquilaEmblem({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 28" fill="currentColor" className={className}>
+      {/* Left wing */}
+      <path d="M28 14 L6 5 L12 11 L3 9 L14 14 L3 19 L12 17 L6 23 Z" opacity="0.7" />
+      {/* Right wing */}
+      <path d="M36 14 L58 5 L52 11 L61 9 L50 14 L61 19 L52 17 L58 23 Z" opacity="0.7" />
+      {/* Center star */}
+      <path d="M32 4 L34 12 L40 8 L35 14 L42 14 L35 16 L40 20 L34 16 L32 24 L30 16 L24 20 L29 16 L22 14 L29 14 L24 8 L30 12 Z" />
+      {/* Inner ring */}
+      <circle cx="32" cy="14" r="3.5" opacity="0.9" />
+      <circle cx="32" cy="14" r="2" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
+    </svg>
+  );
 }
 
-export default function AppHeader({ onToggleRoster, rosterVisible }: Props) {
-  const { totalPoints, pointsLimit, rosterId } = useRosterStore();
-  const over = totalPoints > pointsLimit;
-
+export default function AppHeader() {
   return (
-    <header className="relative z-10 border-b border-edge-700 bg-plate-900">
-      {/* Top accent — thicker bronze line */}
-      <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-600/40 to-transparent" />
+    <header className="relative z-10 bg-plate-900">
+      {/* Top accent — ornate bronze line */}
+      <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-500/50 to-transparent" />
 
-      <div className="flex items-center justify-between px-5 py-3.5 lg:px-6">
-        {/* Left: Identity */}
-        <div className="flex items-center gap-3.5">
-          <div className="hidden sm:block">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-gold-500/50">
-              <path d="M12 2L9 7H4L7 12L4 17H9L12 22L15 17H20L17 12L20 7H15L12 2Z" fill="currentColor" />
-            </svg>
-          </div>
+      <div className="flex items-center px-5 py-3.5 lg:px-7 lg:py-4">
+        <div className="flex items-center gap-4">
+          <AquilaEmblem className="hidden w-12 text-gold-500/40 sm:block" />
           <div>
-            <h1 className="text-imperial text-[13px] leading-tight lg:text-sm">
+            <h1 className="text-imperial text-base leading-tight tracking-[0.14em] lg:text-[17px]">
               Solar Auxilia
             </h1>
-            <p className="font-label -mt-px text-[9px] font-medium tracking-[0.25em] text-gold-500/70">
-              REGIMENTAL DATASLATE
+            <p className="font-label mt-0.5 text-[10px] font-medium tracking-[0.3em] text-gold-600/60 uppercase">
+              Regimental Dataslate
             </p>
           </div>
         </div>
-
-        {/* Center: Points readout (desktop) */}
-        {rosterId && (
-          <div className="hidden items-center gap-3 sm:flex">
-            <div className="flex items-baseline gap-1">
-              <span className={`font-data text-sm font-medium tabular-nums ${over ? 'text-danger' : 'text-gold-400'}`}>
-                {totalPoints}
-              </span>
-              <span className="font-data text-[10px] text-text-dim">/</span>
-              <span className="font-data text-[10px] text-text-secondary tabular-nums">
-                {pointsLimit}
-              </span>
-            </div>
-            <span className="font-label text-[9px] font-semibold tracking-[0.15em] text-text-dim uppercase">
-              pts
-            </span>
-          </div>
-        )}
-
-        {/* Right: Mobile toggle */}
-        <button
-          onClick={onToggleRoster}
-          className="font-label flex items-center gap-1.5 rounded-sm border border-edge-600/60 bg-plate-800/60 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-text-secondary uppercase transition-all hover:border-gold-600/40 hover:text-gold-400 lg:hidden"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            {rosterVisible ? (
-              <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
-            ) : (
-              <path strokeLinecap="round" d="M9 5h10M9 9h10M9 13h10M9 17h10M5 5v0M5 9v0M5 13v0M5 17v0" />
-            )}
-          </svg>
-          {rosterVisible ? 'Units' : 'Roster'}
-        </button>
       </div>
 
-      {/* Bottom rule */}
-      <div className="h-px bg-gradient-to-r from-transparent via-gold-700/20 to-transparent" />
+      {/* Bottom ornate rule */}
+      <div className="divider-imperial" />
     </header>
   );
 }

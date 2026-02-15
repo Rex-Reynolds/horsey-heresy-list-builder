@@ -176,3 +176,90 @@ export const SLOT_STRIPE_COLORS: Record<string, string> = {
   'Heavy Transport': 'border-l-teal-600',
   'Lord of War': 'border-l-gold-500',
 };
+
+// Background fill colors for slot progress bars (native slot names)
+export const SLOT_FILL_COLORS: Record<string, string> = {
+  'High Command': 'bg-purple-500/70',
+  'Command': 'bg-purple-600/70',
+  'Troops': 'bg-emerald-600/70',
+  'Elites': 'bg-blue-500/70',
+  'Retinue': 'bg-blue-600/70',
+  'Fast Attack': 'bg-orange-500/70',
+  'Recon': 'bg-orange-600/70',
+  'Support': 'bg-rose-500/70',
+  'Armour': 'bg-rose-500/70',
+  'Heavy Assault': 'bg-rose-500/70',
+  'War-engine': 'bg-rose-600/70',
+  'Transport': 'bg-teal-500/70',
+  'Heavy Transport': 'bg-teal-600/70',
+  'Lord of War': 'bg-gold-500/70',
+};
+
+// Card background tint class per native slot (subtle gradient wash from stripe edge)
+export const SLOT_CARD_TINTS: Record<string, string> = {
+  'High Command': 'card-tint-purple',
+  'Command': 'card-tint-purple',
+  'Troops': 'card-tint-emerald',
+  'Elites': 'card-tint-blue',
+  'Retinue': 'card-tint-blue',
+  'Fast Attack': 'card-tint-orange',
+  'Recon': 'card-tint-orange',
+  'Support': 'card-tint-rose',
+  'Armour': 'card-tint-rose',
+  'Heavy Assault': 'card-tint-rose',
+  'War-engine': 'card-tint-rose',
+  'Transport': 'card-tint-teal',
+  'Heavy Transport': 'card-tint-teal',
+  'Lord of War': 'card-tint-gold',
+};
+
+// Reverse mapping: native slot name → display group
+export const NATIVE_TO_DISPLAY_GROUP: Record<string, string> = Object.entries(SLOT_DISPLAY_GROUPS)
+  .reduce((acc, [group, slots]) => {
+    for (const slot of slots) acc[slot] = group;
+    return acc;
+  }, {} as Record<string, string>);
+
+// Color config for CategoryFilter buttons per display group
+export const FILTER_COLORS: Record<string, { active: string; inactive: string; dot: string }> = {
+  'All': {
+    active: 'border-gold-500/40 bg-gold-600/15 text-gold-300 shadow-[0_0_8px_rgba(158,124,52,0.1)]',
+    inactive: 'hover:border-gold-500/20 hover:text-gold-400/80',
+    dot: 'bg-gold-500',
+  },
+  'HQ': {
+    active: 'border-purple-500/40 bg-purple-500/12 text-purple-300 shadow-[0_0_8px_rgba(147,51,234,0.08)]',
+    inactive: 'hover:border-purple-500/20 hover:text-purple-400/80',
+    dot: 'bg-purple-500',
+  },
+  'Troops': {
+    active: 'border-emerald-500/40 bg-emerald-500/12 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.08)]',
+    inactive: 'hover:border-emerald-500/20 hover:text-emerald-400/80',
+    dot: 'bg-emerald-500',
+  },
+  'Elites': {
+    active: 'border-blue-500/40 bg-blue-500/12 text-blue-300 shadow-[0_0_8px_rgba(59,130,246,0.08)]',
+    inactive: 'hover:border-blue-500/20 hover:text-blue-400/80',
+    dot: 'bg-blue-500',
+  },
+  'Fast Attack': {
+    active: 'border-orange-500/40 bg-orange-500/12 text-orange-300 shadow-[0_0_8px_rgba(249,115,22,0.08)]',
+    inactive: 'hover:border-orange-500/20 hover:text-orange-400/80',
+    dot: 'bg-orange-500',
+  },
+  'Heavy Support': {
+    active: 'border-rose-500/40 bg-rose-500/12 text-rose-300 shadow-[0_0_8px_rgba(244,63,94,0.08)]',
+    inactive: 'hover:border-rose-500/20 hover:text-rose-400/80',
+    dot: 'bg-rose-500',
+  },
+  'Dedicated Transport': {
+    active: 'border-teal-500/40 bg-teal-500/12 text-teal-300 shadow-[0_0_8px_rgba(20,184,166,0.08)]',
+    inactive: 'hover:border-teal-500/20 hover:text-teal-400/80',
+    dot: 'bg-teal-500',
+  },
+  'Lord of War': {
+    active: 'border-gold-500/40 bg-gold-600/15 text-gold-300 shadow-[0_0_8px_rgba(158,124,52,0.1)]',
+    inactive: 'hover:border-gold-500/20 hover:text-gold-400/80',
+    dot: 'bg-gold-500',
+  },
+};

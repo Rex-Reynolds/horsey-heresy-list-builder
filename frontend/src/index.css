@@ -1,44 +1,45 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════
-   REGIMENTAL DATASLATE MK.I
+   REGIMENTAL DATASLATE MK.II
    Solar Auxilia — Field Muster Interface
+   Imperium of Man — 30th Millennium
    ═══════════════════════════════════════════ */
 
 @theme {
   /* Service Grey — Exertus field base */
-  --color-void: #0e1117;
-  --color-plate-950: #111518;
-  --color-plate-900: #161a1f;
-  --color-plate-800: #1e2328;
-  --color-plate-700: #272d34;
-  --color-plate-600: #333a42;
-  --color-plate-500: #3f4850;
+  --color-void: #0c0f14;
+  --color-plate-950: #10131a;
+  --color-plate-900: #151a21;
+  --color-plate-800: #1c2229;
+  --color-plate-700: #252c35;
+  --color-plate-600: #313a44;
+  --color-plate-500: #3d4752;
 
   /* Ferrosteel — machined edges (warmer) */
-  --color-edge-700: #242a30;
-  --color-edge-600: #303840;
-  --color-edge-500: #3e4850;
-  --color-edge-400: #506068;
-  --color-edge-300: #647880;
+  --color-edge-700: #232930;
+  --color-edge-600: #2e363f;
+  --color-edge-500: #3c4650;
+  --color-edge-400: #4e5e68;
+  --color-edge-300: #627680;
 
   /* Burnished Bronze — Castellax Bronze / Runelord Brass */
-  --color-gold-50: #f8f0dc;
-  --color-gold-100: #ecdab0;
-  --color-gold-200: #d8bc7a;
-  --color-gold-300: #c8a45a;
-  --color-gold-400: #b48f3c;
-  --color-gold-500: #9a7830;
-  --color-gold-600: #7e6220;
-  --color-gold-700: #5e4818;
-  --color-gold-800: #403210;
-  --color-gold-900: #261e0a;
+  --color-gold-50: #faf2de;
+  --color-gold-100: #eedcb4;
+  --color-gold-200: #dac07e;
+  --color-gold-300: #caa85e;
+  --color-gold-400: #b89340;
+  --color-gold-500: #9e7c34;
+  --color-gold-600: #826624;
+  --color-gold-700: #604a1a;
+  --color-gold-800: #423412;
+  --color-gold-900: #28200c;
 
   /* Ivory — for display text */
-  --color-ivory: #e8e0d0;
+  --color-ivory: #ebe3d2;
 
   /* Crimson — SA regimental accent */
-  --color-crimson: #c44040;
+  --color-crimson: #c43838;
 
   /* Amber readout */
   --color-amber-glow: #d4a840;
@@ -60,9 +61,9 @@
   --color-royal-dim: #5e4890;
 
   /* Text hierarchy — warm cream-grey */
-  --color-text-primary: #d4cfc4;
-  --color-text-secondary: #8a8478;
-  --color-text-dim: #585248;
+  --color-text-primary: #d6d1c6;
+  --color-text-secondary: #8c8680;
+  --color-text-dim: #5a544c;
 }
 
 /* ── Base ── */
@@ -78,41 +79,49 @@ body {
 
 /* ── Atmospheric layers ── */
 
-/* Layer 1: Warm vignette gradient */
+/* Layer 1: Warm vignette gradient — deeper, more dramatic */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 9998;
   pointer-events: none;
-  background: radial-gradient(
-    ellipse at 50% 30%,
-    transparent 40%,
-    rgba(14, 17, 23, 0.4) 100%
-  );
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(130, 102, 36, 0.03) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      transparent 30%,
+      rgba(12, 15, 20, 0.5) 100%
+    );
 }
 
-/* Layer 2: Noise grain (slightly more visible) */
+/* Layer 2: Noise grain (slightly more visible, finer grain) */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 256px 256px;
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(16, 19, 26, 0.5); }
 ::-webkit-scrollbar-thumb {
   background: var(--color-edge-600);
-  border-radius: 2px;
+  border-radius: 1px;
+  border: 1px solid rgba(130, 102, 36, 0.06);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-edge-400);
+  border-color: rgba(130, 102, 36, 0.15);
 }
 
 /* ── Typography ── */
@@ -138,25 +147,136 @@ body::before {
 /* ── Glow borders (bronze-toned) ── */
 .glow-border {
   box-shadow:
-    inset 0 1px 0 0 rgba(180, 143, 60, 0.05),
-    inset 0 0 0 1px rgba(36, 42, 48, 0.8);
+    inset 0 1px 0 0 rgba(180, 143, 60, 0.06),
+    inset 0 0 0 1px rgba(36, 42, 48, 0.9);
 }
 
 .glow-border-active {
   box-shadow:
-    inset 0 1px 0 0 rgba(180, 143, 60, 0.1),
-    inset 0 0 0 1px rgba(180, 143, 60, 0.12),
-    0 4px 16px rgba(0, 0, 0, 0.3);
+    inset 0 1px 0 0 rgba(180, 143, 60, 0.12),
+    inset 0 0 0 1px rgba(180, 143, 60, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Imperial Frame — decorative corner brackets ── */
+.imperial-frame {
+  position: relative;
+  border: 1px solid rgba(94, 72, 24, 0.15);
+}
+
+.imperial-frame::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 20px;
+  height: 20px;
+  border-top: 2px solid var(--color-gold-500);
+  border-left: 2px solid var(--color-gold-500);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+.imperial-frame::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 20px;
+  height: 20px;
+  border-bottom: 2px solid var(--color-gold-500);
+  border-right: 2px solid var(--color-gold-500);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+/* Full 4-corner frame (pair with .imperial-frame on parent, apply this to a child wrapper) */
+.imperial-frame-inner::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 20px;
+  height: 20px;
+  border-top: 2px solid var(--color-gold-500);
+  border-right: 2px solid var(--color-gold-500);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+.imperial-frame-inner::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 20px;
+  height: 20px;
+  border-bottom: 2px solid var(--color-gold-500);
+  border-left: 2px solid var(--color-gold-500);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+/* ── Imperial heading underline ── */
+.heading-imperial {
+  position: relative;
+  padding-bottom: 10px;
+}
+
+.heading-imperial::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-gold-500), var(--color-gold-700), transparent);
+}
+
+/* ── Imperial CTA button ── */
+.btn-imperial {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-gold-500);
+  transition: all 0.2s ease;
+}
+
+.btn-imperial::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(180, 143, 60, 0.12) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.btn-imperial:hover {
+  border-color: var(--color-gold-400);
+  box-shadow:
+    0 0 12px rgba(180, 143, 60, 0.15),
+    0 0 30px rgba(180, 143, 60, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.btn-imperial:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 0 6px rgba(180, 143, 60, 0.1),
+    inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ── Animations ── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.98) translateY(4px); }
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -195,6 +315,16 @@ body::before {
   to { transform: rotate(360deg); }
 }
 
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(16px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes entryFlash {
+  0% { background: rgba(180, 143, 60, 0.15); }
+  100% { background: transparent; }
+}
+
 @keyframes widthExpand {
   from { width: 0; }
   to { width: 100%; }
@@ -219,6 +349,14 @@ body::before {
 
 .animate-scan-reveal {
   animation: scanReveal 0.4s ease-out both;
+}
+
+.animate-toast-in {
+  animation: toastIn 0.25s ease-out both;
+}
+
+.animate-entry-flash {
+  animation: entryFlash 1.5s ease-out both;
 }
 
 /* Staggered entrance */
@@ -262,6 +400,31 @@ body::before {
   );
 }
 
+/* Divider with center diamond ornament */
+.divider-imperial {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 5%,
+    var(--color-gold-700) 35%,
+    var(--color-gold-500) 50%,
+    var(--color-gold-700) 65%,
+    transparent 95%
+  );
+  position: relative;
+}
+
+.divider-imperial::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 5px;
+  height: 5px;
+  background: var(--color-gold-600);
+}
+
 /* ── Data readout table ── */
 .data-readout {
   border-collapse: separate;
@@ -272,32 +435,42 @@ body::before {
   font-family: 'Barlow Condensed', system-ui, sans-serif;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
   color: var(--color-gold-500);
-  padding: 5px 6px;
+  padding: 7px 10px;
   border-bottom: 2px solid var(--color-gold-700);
   white-space: nowrap;
-  background: rgba(180, 143, 60, 0.03);
+  background: rgba(180, 143, 60, 0.04);
+}
+
+.data-readout th:nth-child(even) {
+  background: rgba(180, 143, 60, 0.06);
 }
 
 .data-readout td {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  font-weight: 400;
+  font-size: 0.88rem;
+  font-weight: 500;
   color: var(--color-text-primary);
-  padding: 4px 6px;
+  padding: 7px 10px;
   text-align: center;
   border-bottom: 1px solid rgba(36, 42, 48, 0.5);
   position: relative;
 }
 
+.data-readout td:nth-child(even) {
+  background: rgba(180, 143, 60, 0.02);
+}
+
 .data-readout td:first-child {
-  font-family: 'Barlow', system-ui, sans-serif;
-  font-weight: 500;
+  font-family: 'Instrument Serif', 'Georgia', serif;
+  font-weight: 400;
   text-align: left;
-  color: var(--color-text-secondary);
-  font-size: 0.7rem;
+  color: var(--color-gold-300);
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
+  background: transparent;
 }
 
 .data-readout tr:last-child td {
@@ -305,7 +478,11 @@ body::before {
 }
 
 .data-readout tr:hover td {
-  background: rgba(180, 143, 60, 0.02);
+  background: rgba(180, 143, 60, 0.03);
+}
+
+.data-readout tr:hover td:first-child {
+  background: transparent;
 }
 
 /* Stat value color coding */
@@ -329,11 +506,12 @@ body::before {
 
 /* ── Panel styles ── */
 .terminal-panel {
-  background: linear-gradient(180deg, rgba(22, 26, 31, 0.95) 0%, rgba(17, 21, 24, 0.98) 100%);
+  background: linear-gradient(180deg, rgba(21, 26, 33, 0.96) 0%, rgba(16, 19, 26, 0.98) 100%);
   border: 1px solid var(--color-edge-700);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(180, 143, 60, 0.03);
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(180, 143, 60, 0.04);
 }
 
 /* ── Utility transitions ── */
@@ -343,4 +521,165 @@ body::before {
 .hover-lift:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Unit card enhanced hover ── */
+.unit-card-hover {
+  transition: all 0.2s ease;
+}
+.unit-card-hover:hover {
+  box-shadow:
+    inset 0 1px 0 0 rgba(180, 143, 60, 0.08),
+    inset 0 0 0 1px rgba(46, 54, 63, 0.9),
+    0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Scan line overlay for expanded detail areas ── */
+.scan-lines {
+  position: relative;
+}
+.scan-lines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(180, 143, 60, 0.025) 3px,
+    rgba(180, 143, 60, 0.025) 4px
+  );
+  z-index: 1;
+}
+
+/* ── Input styling ── */
+.input-imperial {
+  border: 1px solid rgba(46, 54, 63, 0.6);
+  background: rgba(28, 34, 41, 0.8);
+  transition: all 0.2s ease;
+}
+.input-imperial:focus {
+  border-color: rgba(130, 102, 36, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(130, 102, 36, 0.08),
+    inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* ── Scroll shadows — content fade hints ── */
+.scroll-shadow {
+  --scroll-shadow-size: 24px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--scroll-shadow-size),
+    black calc(100% - var(--scroll-shadow-size)),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--scroll-shadow-size),
+    black calc(100% - var(--scroll-shadow-size)),
+    transparent 100%
+  );
+}
+
+/* ── Badge enhanced ── */
+.badge-slot {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Scrollbar hide (for horizontal scroll strips) ── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Points flash — number value changed ── */
+@keyframes pointsFlash {
+  0% { color: var(--color-gold-200); transform: scale(1.1); }
+  100% { color: inherit; transform: scale(1); }
+}
+.animate-points-flash {
+  animation: pointsFlash 0.5s ease-out both;
+}
+
+/* ── Number bump — budget chip value changed ── */
+@keyframes numberBump {
+  0% { transform: scale(1.15); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.animate-number-bump {
+  animation: numberBump 0.3s ease-out;
+}
+
+/* ── Quick-add button ── */
+.quick-add-btn {
+  opacity: 0.5;
+  transition: all 0.15s ease;
+}
+.group:hover .quick-add-btn,
+.quick-add-btn:focus-visible {
+  opacity: 1;
+}
+@media (max-width: 1023px) {
+  .quick-add-btn {
+    opacity: 1;
+  }
+}
+
+/* ── Card category tint gradients ── */
+.card-tint-purple { background-image: linear-gradient(90deg, rgba(147, 51, 234, 0.05) 0%, transparent 35%); }
+.card-tint-emerald { background-image: linear-gradient(90deg, rgba(5, 150, 105, 0.05) 0%, transparent 35%); }
+.card-tint-blue { background-image: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 35%); }
+.card-tint-orange { background-image: linear-gradient(90deg, rgba(249, 115, 22, 0.05) 0%, transparent 35%); }
+.card-tint-rose { background-image: linear-gradient(90deg, rgba(244, 63, 94, 0.05) 0%, transparent 35%); }
+.card-tint-teal { background-image: linear-gradient(90deg, rgba(20, 184, 166, 0.05) 0%, transparent 35%); }
+.card-tint-gold { background-image: linear-gradient(90deg, rgba(184, 147, 64, 0.06) 0%, transparent 35%); }
+
+/* ── Slot fill bar ── */
+.slot-fill-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(37, 44, 53, 0.6);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.slot-fill-bar-inner {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+}
+
+/* ── Slot row interactive empty state ── */
+.slot-row-empty {
+  border: 1px dashed rgba(90, 84, 76, 0.25);
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+.slot-row-empty:hover {
+  border-color: rgba(158, 124, 52, 0.3);
+  background: rgba(158, 124, 52, 0.03);
+}
+
+/* ── Mobile bottom bar ── */
+.mobile-bottom-bar {
+  background: linear-gradient(180deg, rgba(16, 19, 26, 0.95) 0%, rgba(12, 15, 20, 0.98) 100%);
+  border-top: 1px solid rgba(180, 143, 60, 0.12);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Setup screen background ── */
+.setup-bg {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(130, 102, 36, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 50%, rgba(16, 19, 26, 0.6) 0%, var(--color-void) 100%);
 }

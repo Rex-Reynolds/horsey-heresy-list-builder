@@ -20,6 +20,7 @@ class Unit(BaseModel):
     model_min = IntegerField(default=1)
     model_max = IntegerField(null=True)  # None = no upper bound
     is_legacy = BooleanField(default=False)  # Expanded/Legacy unit from Legacies PDF
+    tercio_categories = TextField(null=True)  # JSON: list of tercio unlock category IDs
 
 
 class Weapon(BaseModel):
@@ -75,3 +76,4 @@ class Detachment(BaseModel):
     unit_restrictions = TextField(null=True)  # JSON: {slot_name: [allowed unit name patterns]}
     faction = CharField(null=True, index=True)  # "Solar Auxilia", null = generic
     costs = TextField(null=True)  # JSON: {auxiliary: int, apex: int}
+    modifiers = TextField(null=True)  # JSON: parsed modifier rules for dynamic slot/cost adjustments

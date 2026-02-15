@@ -99,3 +99,24 @@ export function useValidateRoster(rosterId: number | null) {
     },
   });
 }
+
+export function useSetDoctrine(rosterId: number | null) {
+  const qc = useQueryClient();
+  return useMutation<RosterResponse, Error, { doctrine_id: string | null }>({
+    mutationFn: async (body) => {
+      const { data } = await client.patch(`/api/rosters/${rosterId}/doctrine`, body);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['roster', rosterId] }),
+  });
+}
+
+export function useDoctrines() {
+  return useQuery<Array<{ id: string; name: string }>>({
+    queryKey: ['doctrines'],
+    queryFn: async () => {
+      const { data } = await client.get('/api/doctrines');
+      return data;
+    },
+  });
+}

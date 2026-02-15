@@ -22,7 +22,7 @@ const SLOT_COLORS: Record<string, string> = {
 export default function Badge({ label }: { label: string }) {
   const colors = SLOT_COLORS[label] ?? 'bg-plate-600/50 text-text-secondary';
   return (
-    <span className={`inline-block rounded-sm px-2 py-0.5 font-label text-[10px] font-semibold uppercase tracking-wider ${colors}`}>
+    <span className={`badge-slot inline-block rounded-sm px-2 py-0.5 font-label text-[11px] font-semibold uppercase tracking-wider ${colors}`}>
       {label}
     </span>
   );

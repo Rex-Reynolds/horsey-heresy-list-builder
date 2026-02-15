@@ -4,6 +4,21 @@ import { useRosterStore } from '../../stores/rosterStore.ts';
 
 const POINTS_OPTIONS = [1000, 1500, 2000, 2500, 3000, 4000, 5000];
 
+function AquilaEmblem() {
+  return (
+    <svg viewBox="0 0 64 28" fill="currentColor" className="mx-auto mb-4 w-16 text-gold-500/30">
+      {/* Left wing */}
+      <path d="M28 14 L6 5 L12 11 L3 9 L14 14 L3 19 L12 17 L6 23 Z" opacity="0.6" />
+      {/* Right wing */}
+      <path d="M36 14 L58 5 L52 11 L61 9 L50 14 L61 19 L52 17 L58 23 Z" opacity="0.6" />
+      {/* Center star */}
+      <path d="M32 4 L34 12 L40 8 L35 14 L42 14 L35 16 L40 20 L34 16 L32 24 L30 16 L24 20 L29 16 L22 14 L29 14 L24 8 L30 12 Z" />
+      {/* Inner ring */}
+      <circle cx="32" cy="14" r="3.5" opacity="0.9" />
+    </svg>
+  );
+}
+
 export default function RosterSetup() {
   const createMutation = useCreateRoster();
   const syncFromResponse = useRosterStore((s) => s.syncFromResponse);
@@ -11,9 +26,13 @@ export default function RosterSetup() {
   const [name, setName] = useState('My Solar Auxilia List');
   const [points, setPoints] = useState(3000);
 
+  const trimmedName = name.trim();
+  const nameValid = trimmedName.length > 0;
+
   function handleCreate() {
+    if (!nameValid) return;
     createMutation.mutate(
-      { name, points_limit: points },
+      { name: trimmedName, points_limit: points },
       {
         onSuccess: (data) => {
           syncFromResponse(data);
@@ -23,41 +42,42 @@ export default function RosterSetup() {
   }
 
   return (
-    <div className="flex h-full flex-col items-center justify-center p-6">
-      <div className="w-full max-w-xs animate-fade-in-scale rounded-sm border border-edge-600/30 bg-plate-900/60 p-6 space-y-5">
+    <div className="flex h-full flex-col items-center justify-center p-8">
+      <div className="imperial-frame relative w-full max-w-sm animate-fade-in-scale bg-plate-900/60 p-8 space-y-6">
+        {/* Inner corner ornaments */}
+        <div className="imperial-frame-inner pointer-events-none absolute inset-0" />
+
         {/* Emblem */}
         <div className="text-center">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" className="mx-auto mb-3 text-gold-600/40">
-            <path d="M12 2L9 7H4L7 12L4 17H9L12 22L15 17H20L17 12L20 7H15L12 2Z" />
-          </svg>
-          <h2 className="text-imperial text-xs">New Roster</h2>
-          <p className="mt-1 text-[10px] text-text-dim">Configure your force allocation</p>
+          <AquilaEmblem />
+          <h2 className="text-imperial text-base tracking-[0.14em]">New Roster</h2>
+          <p className="mt-1.5 text-xs text-text-dim">Configure your force allocation</p>
         </div>
 
-        <div className="divider-glow" />
+        <div className="divider-imperial" />
 
         {/* Name */}
         <div>
-          <label className="font-label mb-1 block text-[9px] font-semibold tracking-wider text-text-dim uppercase">
+          <label className="font-label mb-2 block text-[11px] font-semibold tracking-[0.15em] text-text-dim uppercase">
             Designation
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-sm border border-edge-600/50 bg-plate-800/80 px-3 py-2 text-xs text-text-primary outline-none transition-all focus:border-gold-600/40"
+            className="input-imperial w-full rounded-sm px-3.5 py-2.5 text-sm text-text-primary outline-none"
           />
         </div>
 
         {/* Points */}
         <div>
-          <label className="font-label mb-1 block text-[9px] font-semibold tracking-wider text-text-dim uppercase">
+          <label className="font-label mb-2 block text-[11px] font-semibold tracking-[0.15em] text-text-dim uppercase">
             Points Allocation
           </label>
           <select
             value={points}
             onChange={(e) => setPoints(Number(e.target.value))}
-            className="w-full rounded-sm border border-edge-600/50 bg-plate-800/80 px-3 py-2 text-xs text-text-primary outline-none transition-all focus:border-gold-600/40"
+            className="input-imperial w-full rounded-sm px-3.5 py-2.5 text-sm text-text-primary outline-none"
           >
             {POINTS_OPTIONS.map((p) => (
               <option key={p} value={p}>
@@ -70,13 +90,13 @@ export default function RosterSetup() {
         {/* Create */}
         <button
           onClick={handleCreate}
-          disabled={createMutation.isPending}
-          className="font-label w-full rounded-sm bg-gold-600 py-2 text-[10px] font-bold tracking-[0.15em] text-white uppercase transition-all hover:bg-gold-500 disabled:opacity-40"
+          disabled={createMutation.isPending || !nameValid}
+          className="btn-imperial font-label w-full rounded-sm bg-gold-600 py-3 text-xs font-bold tracking-[0.15em] text-white uppercase disabled:opacity-40"
         >
           {createMutation.isPending ? 'Initializing...' : 'Initialize Roster'}
         </button>
 
-        <p className="text-center text-[9px] leading-relaxed text-text-dim">
+        <p className="text-center text-[11px] leading-relaxed text-text-dim">
           Add detachments after creation to build your force.
         </p>
       </div>
