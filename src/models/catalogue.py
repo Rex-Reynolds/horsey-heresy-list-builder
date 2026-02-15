@@ -1,7 +1,7 @@
 """BSData catalogue models."""
 import json
 
-from peewee import CharField, IntegerField, TextField, ForeignKeyField, CompositeKey
+from peewee import BooleanField, CharField, IntegerField, TextField, ForeignKeyField, CompositeKey
 from src.models.database import BaseModel
 
 
@@ -10,12 +10,16 @@ class Unit(BaseModel):
 
     bs_id = CharField(unique=True, index=True)  # BattleScribe UUID
     name = CharField(index=True)
-    unit_type = CharField(index=True)  # Normalized FOC: HQ, Troops, Elites, etc.
-    bsdata_category = CharField(null=True, index=True)  # Original BSData category name
+    unit_type = CharField(index=True)  # Native HH3 slot: Armour, Support, Recon, etc.
+    bsdata_category = CharField(null=True, index=True)  # Same as unit_type (deprecated, kept for compat)
     base_cost = IntegerField()
     profiles = TextField()  # JSON: model stats (WS, BS, S, T, W, I, A, LD, SAV, INV)
     rules = TextField(null=True)  # JSON: special rules
     constraints = TextField(null=True)  # JSON: min/max model counts
+    budget_categories = TextField(null=True)  # JSON: list of budget-relevant category IDs
+    model_min = IntegerField(default=1)
+    model_max = IntegerField(null=True)  # None = no upper bound
+    is_legacy = BooleanField(default=False)  # Expanded/Legacy unit from Legacies PDF
 
 
 class Weapon(BaseModel):
@@ -70,3 +74,4 @@ class Detachment(BaseModel):
     constraints = TextField()  # JSON: {slot_name: {min, max}}
     unit_restrictions = TextField(null=True)  # JSON: {slot_name: [allowed unit name patterns]}
     faction = CharField(null=True, index=True)  # "Solar Auxilia", null = generic
+    costs = TextField(null=True)  # JSON: {auxiliary: int, apex: int}

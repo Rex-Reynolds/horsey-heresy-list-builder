@@ -43,6 +43,24 @@ GENERIC_DETACHMENT_KEYWORDS = [
 # Categories to skip (locked "Prime" variants, etc.)
 SKIP_CATEGORY_PREFIXES = ["Prime ", "Officer of the Line"]
 
+# Cost type IDs from BSData
+COST_TYPE_AUXILIARY = "3e8e-05ee-be52-12d6"
+COST_TYPE_APEX = "159d-855c-533d-f592"
+
+# Budget-relevant category IDs
+BUDGET_CATEGORIES = {
+    "6dbf-654a-f06f-2d69": {"name": "Command", "target": "auxiliary", "value": 1},
+    "901a-6b71-7a29-4597": {"name": "Officer of the Line (2)", "target": "auxiliary", "value": 2},
+    "ff44-f49f-732b-c3a7": {"name": "+1 Auxiliary from High Command", "target": "auxiliary", "value": 1},
+    "8a97-1585-93e7-c561": {"name": "+1 Apex from High Command", "target": "apex", "value": 1},
+}
+
+# IDs that decrement auxiliary budget
+BUDGET_DECREMENTS = {
+    "c857-47bd-6a4f-fcf8": {"name": "Special Assignment", "target": "auxiliary", "value": -1},
+    "9501-add0-621d-f40f": {"name": "Crux Magisterium", "target": "auxiliary", "value": -1},
+}
+
 
 class DetachmentLoader:
     """Load Force Organization Chart detachment rules from game system file."""
@@ -141,6 +159,19 @@ class DetachmentLoader:
 
         return False
 
+    def _parse_costs(self, force_element) -> Dict[str, int]:
+        """Extract budget costs from forceEntry <costs> elements."""
+        costs = {}
+        cost_elements = self.parser._xpath(force_element, './costs/cost')
+        for c in cost_elements:
+            type_id = c.get('typeId')
+            value = int(float(c.get('value', 0)))
+            if type_id == COST_TYPE_AUXILIARY:
+                costs['auxiliary'] = value
+            elif type_id == COST_TYPE_APEX:
+                costs['apex'] = value
+        return costs
+
     def _parse_sub_detachment(self, force_element, parent_id: str) -> Optional[Dict[str, Any]]:
         """
         Parse a sub-detachment forceEntry into database format.
@@ -161,6 +192,7 @@ class DetachmentLoader:
         detachment_type = self._classify_detachment_type(name)
         faction = self._detect_faction(force_element, name)
         constraints, unit_restrictions = self._parse_category_slots(force_element)
+        costs = self._parse_costs(force_element)
 
         return {
             'bs_id': force_id,
@@ -170,6 +202,7 @@ class DetachmentLoader:
             'constraints': json.dumps(constraints),
             'unit_restrictions': json.dumps(unit_restrictions) if unit_restrictions else None,
             'faction': faction,
+            'costs': json.dumps(costs) if costs else None,
         }
 
     def _parse_standalone_detachments(self) -> List[Dict[str, Any]]:
@@ -192,6 +225,7 @@ class DetachmentLoader:
 
             force_id = fe.get('id')
             constraints, unit_restrictions = self._parse_category_slots(fe)
+            costs = self._parse_costs(fe)
 
             detachments.append({
                 'bs_id': force_id,
@@ -201,6 +235,7 @@ class DetachmentLoader:
                 'constraints': json.dumps(constraints),
                 'unit_restrictions': json.dumps(unit_restrictions) if unit_restrictions else None,
                 'faction': None,
+                'costs': json.dumps(costs) if costs else None,
             })
 
         return detachments
@@ -321,8 +356,17 @@ class DetachmentLoader:
         """
         if ' - ' in raw_name:
             slot_name, restriction = raw_name.split(' - ', 1)
-            return slot_name.strip(), restriction.strip()
-        return raw_name.strip(), None
+            slot_name = slot_name.strip()
+        else:
+            slot_name = raw_name.strip()
+            restriction = None
+
+        # Normalize "War Engine" (no hyphen) -> "War-engine" (with hyphen)
+        # BSData uses both forms inconsistently
+        if slot_name.lower() == 'war engine':
+            slot_name = 'War-engine'
+
+        return slot_name, restriction.strip() if restriction else None
 
     def get_detachment_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """Get a specific detachment by name."""
@@ -336,3 +380,24 @@ class DetachmentLoader:
         """Get list of all detachment names."""
         detachments = self.load_all_detachments()
         return [d['name'] for d in detachments]
+
+    def load_composition_rules(self) -> Dict[str, Any]:
+        """
+        Extract composition rules from the root Crusade FOC.
+
+        Returns static budget rules used by CompositionValidator:
+        - Budget categories and their effects
+        - Budget decrements (Special Assignment, Crux Magisterium)
+        - Primary min/max
+        - Warlord points threshold
+        """
+        return {
+            "budget_increments": {
+                cat_id: info for cat_id, info in BUDGET_CATEGORIES.items()
+            },
+            "budget_decrements": {
+                cat_id: info for cat_id, info in BUDGET_DECREMENTS.items()
+            },
+            "primary": {"min": 1, "max": 1},
+            "warlord_points_threshold": 3000,
+        }

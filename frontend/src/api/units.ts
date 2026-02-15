@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import client from './client.ts';
-import type { Unit, Upgrade } from '../types/index.ts';
+import type { Unit, UnitUpgradesResponse } from '../types/index.ts';
 
 export function useUnits(category?: string, search?: string) {
   return useQuery<Unit[]>({
@@ -16,7 +16,7 @@ export function useUnits(category?: string, search?: string) {
 }
 
 export function useUnitUpgrades(unitId: number | null) {
-  return useQuery<Upgrade[]>({
+  return useQuery<UnitUpgradesResponse>({
     queryKey: ['unit-upgrades', unitId],
     queryFn: async () => {
       const { data } = await client.get(`/api/units/${unitId}/upgrades`);

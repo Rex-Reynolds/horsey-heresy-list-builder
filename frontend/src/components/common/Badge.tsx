@@ -1,17 +1,28 @@
-const CATEGORY_COLORS: Record<string, string> = {
-  HQ: 'bg-purple-900/60 text-purple-300 border-purple-700/50',
-  Troops: 'bg-green-900/60 text-green-300 border-green-700/50',
-  Elites: 'bg-blue-900/60 text-blue-300 border-blue-700/50',
-  'Fast Attack': 'bg-orange-900/60 text-orange-300 border-orange-700/50',
-  'Heavy Support': 'bg-red-900/60 text-red-300 border-red-700/50',
-  'Dedicated Transport': 'bg-teal-900/60 text-teal-300 border-teal-700/50',
-  'Lord of War': 'bg-gold-900/60 text-gold-300 border-gold-700/50',
+const SLOT_COLORS: Record<string, string> = {
+  'High Command': 'bg-purple-600/80 text-purple-100',
+  'Command': 'bg-purple-700/70 text-purple-200',
+  'Troops': 'bg-emerald-700/70 text-emerald-100',
+  'Elites': 'bg-blue-700/70 text-blue-100',
+  'Retinue': 'bg-blue-800/60 text-blue-200',
+  'Fast Attack': 'bg-orange-700/70 text-orange-100',
+  'Recon': 'bg-orange-800/60 text-orange-200',
+  'Support': 'bg-rose-700/70 text-rose-100',
+  'Armour': 'bg-rose-700/70 text-rose-100',
+  'Heavy Assault': 'bg-rose-700/70 text-rose-100',
+  'War-engine': 'bg-rose-800/60 text-rose-200',
+  'Transport': 'bg-teal-700/70 text-teal-100',
+  'Heavy Transport': 'bg-teal-800/60 text-teal-200',
+  'Lord of War': 'bg-gold-600/80 text-gold-50',
+  // Legacy display group names
+  'HQ': 'bg-purple-700/70 text-purple-200',
+  'Heavy Support': 'bg-rose-700/70 text-rose-100',
+  'Dedicated Transport': 'bg-teal-700/70 text-teal-100',
 };
 
 export default function Badge({ label }: { label: string }) {
-  const colors = CATEGORY_COLORS[label] ?? 'bg-slate-700/60 text-slate-300 border-slate-600/50';
+  const colors = SLOT_COLORS[label] ?? 'bg-plate-600/50 text-text-secondary';
   return (
-    <span className={`inline-block rounded border px-2 py-0.5 text-xs font-medium ${colors}`}>
+    <span className={`inline-block rounded-sm px-2 py-0.5 font-label text-[10px] font-semibold uppercase tracking-wider ${colors}`}>
       {label}
     </span>
   );

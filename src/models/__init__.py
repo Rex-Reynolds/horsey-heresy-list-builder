@@ -2,7 +2,7 @@
 from src.models.database import db, initialize_database
 from src.models.tournament import Tournament, ArmyList, UnitEntry
 from src.models.catalogue import Unit, Weapon, Upgrade, UnitUpgrade, Detachment
-from src.models.roster import Roster, RosterEntry
+from src.models.roster import Roster, RosterDetachment, RosterEntry
 from src.models.collection import Collection, CollectionItem
 
 __all__ = [
@@ -17,6 +17,7 @@ __all__ = [
     "UnitUpgrade",
     "Detachment",
     "Roster",
+    "RosterDetachment",
     "RosterEntry",
     "Collection",
     "CollectionItem",

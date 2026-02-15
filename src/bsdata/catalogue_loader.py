@@ -6,14 +6,43 @@ from typing import Optional
 
 from src.bsdata.parser import BattleScribeParser
 from src.bsdata.repository import get_catalogue_path
-from src.bsdata.category_mapping import normalize_category
+from src.bsdata.category_mapping import SKIP_CATEGORIES
 from src.bsdata.catalogue_cache import CatalogueCache
 from src.bsdata.upgrade_extractor import UpgradeExtractor
-from src.bsdata.detachment_loader import DetachmentLoader
+from src.bsdata.detachment_loader import DetachmentLoader, BUDGET_CATEGORIES
 from src.models import Unit, Weapon, Upgrade, UnitUpgrade, Detachment, db
 from src.config import BSDATA_DIR
 
 logger = logging.getLogger(__name__)
+
+# Solar Auxilia Legacy/Expanded units from "Legacies of the Age of Darkness" PDF v1.1
+LEGACY_UNIT_NAMES = frozenset([
+    'Surgeon-Primus Aevos Jovan',
+    'Expeditionary Navigator',
+    'Davinite Lodge Priest',
+    'Companion Section',
+    'Medicae Section',
+    'Cyclops Demolition Vehicle',
+    'Aurox Transport',
+    'Tarantula Section',
+    'Carnodon Strike Tank',
+    'Avenger Strike Fighter',
+    'Destroyer Tank Hunter',
+    'Thunderer Siege Tank',
+    'Minotaur Artillery Tank',
+    'Macharius Heavy Tank',
+    'Praetor Armoured Assault Launcher',
+    'Crassus Armoured Assault Transport',
+    'Baneblade Super-heavy Battle Tank',
+    'Hellhammer Super-heavy Battle Tank',
+    'Banehammer Super-heavy Assault Tank',
+    'Stormlord Super-heavy Assault Tank',
+    'Stormblade Super-heavy Tank',
+    'Shadowsword Super-heavy Tank Destroyer',
+    'Stormsword Super-heavy Siege Tank',
+    'Marauder Bomber',
+    'Marauder Destroyer',
+])
 
 
 class SolarAuxiliaCatalogue:
@@ -91,6 +120,83 @@ class SolarAuxiliaCatalogue:
         logger.debug(f"Built category map with {len(category_map)} entries")
         return category_map
 
+    def _build_budget_category_map(self) -> dict[str, list[str]]:
+        """
+        Build mapping of unit ID -> budget-relevant category IDs from entryLinks.
+
+        Budget categories like "+1 Apex from High Command" or "Officer of the Line (2)"
+        are non-primary categoryLinks on the root entryLink elements.
+        """
+        budget_map: dict[str, list[str]] = {}
+        budget_ids = set(BUDGET_CATEGORIES.keys())
+
+        if self.parser.ns:
+            ns = self.parser.ns
+            entry_links = self.parser.root.xpath(
+                './bs:entryLinks/bs:entryLink', namespaces=ns
+            )
+            for link in entry_links:
+                target_id = link.get('targetId')
+                cat_links = link.xpath(
+                    './bs:categoryLinks/bs:categoryLink', namespaces=ns
+                )
+                cats = []
+                for cl in cat_links:
+                    cat_target = cl.get('targetId')
+                    if cat_target in budget_ids:
+                        cats.append(cat_target)
+                if cats:
+                    budget_map[target_id] = cats
+        else:
+            entry_links = self.parser.root.xpath('./entryLinks/entryLink')
+            for link in entry_links:
+                target_id = link.get('targetId')
+                cat_links = link.xpath('./categoryLinks/categoryLink')
+                cats = []
+                for cl in cat_links:
+                    cat_target = cl.get('targetId')
+                    if cat_target in budget_ids:
+                        cats.append(cat_target)
+                if cats:
+                    budget_map[target_id] = cats
+
+        logger.debug(f"Built budget category map: {len(budget_map)} units with budget categories")
+        return budget_map
+
+    def _extract_model_bounds(self, unit_element) -> tuple[int, int | None]:
+        """
+        Extract model count bounds from child selectionEntry[@type="model"] elements.
+
+        Sums min/max constraints across all model children. Returns (model_min, model_max).
+        model_max=None means no upper bound (single-model units without children).
+        """
+        model_children = self.parser._xpath(
+            unit_element, './selectionEntries/selectionEntry[@type="model"]'
+        )
+        if not model_children:
+            return 1, None
+
+        total_min = 0
+        total_max = 0
+        for child in model_children:
+            constraints = self.parser._parse_constraints(child)
+            child_min = 0
+            child_max = None
+            for c in constraints:
+                if c['field'] == 'selections' and c['scope'] == 'parent':
+                    if c['type'] == 'min':
+                        child_min = int(c['value'])
+                    elif c['type'] == 'max':
+                        child_max = int(c['value'])
+            total_min += child_min
+            if child_max is not None:
+                total_max += child_max
+            else:
+                # No max constraint on this child — treat unit as unbounded
+                return total_min or 1, None
+
+        return max(total_min, 1), total_max or None
+
     def load_all_units(self) -> list[dict]:
         """
         Load all units from the catalogue.
@@ -101,6 +207,7 @@ class SolarAuxiliaCatalogue:
         """
         logger.info("Loading all units from catalogue...")
 
+        budget_map = self._build_budget_category_map()
         units = []
         unit_entries = self.parser.get_all_selection_entries(entry_type='unit')
 
@@ -120,15 +227,21 @@ class SolarAuxiliaCatalogue:
                 continue
 
             bsdata_category = self.category_map[unit_id]
-            primary_category = normalize_category(bsdata_category)
+
+            # Skip non-unit categories
+            if bsdata_category in SKIP_CATEGORIES:
+                continue
 
             # Get base cost (unit's own cost + mandatory children)
             base_cost = self.parser.compute_base_unit_cost(entry_element)
 
+            # Extract model count bounds from child model entries
+            model_min, model_max = self._extract_model_bounds(entry_element)
+
             units.append({
                 'bs_id': unit_data['id'],
                 'name': unit_data['name'],
-                'unit_type': primary_category,
+                'unit_type': bsdata_category,  # Native HH3 slot name
                 'bsdata_category': bsdata_category,
                 'base_cost': int(base_cost),
                 'profiles': unit_data['profiles'],
@@ -136,6 +249,9 @@ class SolarAuxiliaCatalogue:
                 'constraints': unit_data['constraints'],
                 'entry_links': unit_data['entry_links'],
                 'selection_entry_groups': unit_data['selection_entry_groups'],
+                'budget_categories': budget_map.get(unit_id),
+                'model_min': model_min,
+                'model_max': model_max,
                 '_element': entry_element,  # Raw XML for upgrade extraction
             })
 
@@ -204,6 +320,7 @@ class SolarAuxiliaCatalogue:
 
             for unit_data in units:
                 # Create unit record
+                budget_cats = unit_data.get('budget_categories')
                 unit = Unit.create(
                     bs_id=unit_data['bs_id'],
                     name=unit_data['name'],
@@ -213,6 +330,10 @@ class SolarAuxiliaCatalogue:
                     profiles=json.dumps(unit_data['profiles']),
                     rules=json.dumps(unit_data['rules']),
                     constraints=json.dumps(unit_data['constraints']),
+                    budget_categories=json.dumps(budget_cats) if budget_cats else None,
+                    model_min=unit_data.get('model_min', 1),
+                    model_max=unit_data.get('model_max'),
+                    is_legacy=unit_data['name'] in LEGACY_UNIT_NAMES,
                 )
 
                 # Extract upgrades from raw XML element (new comprehensive approach)
@@ -300,6 +421,13 @@ class SolarAuxiliaCatalogue:
                     logger.info(f"Inserted {len(detachments)} detachments into database")
                 else:
                     logger.warning("No detachments extracted")
+
+                # Step 6: Generate composition rules JSON
+                rules = det_loader.load_composition_rules()
+                rules_path = BSDATA_DIR.parent / "composition_rules.json"
+                with open(rules_path, 'w') as f:
+                    json.dump(rules, f, indent=2)
+                logger.info(f"Wrote composition rules to {rules_path}")
             except Exception as e:
                 logger.warning(f"Failed to load detachments: {e}")
 
@@ -323,16 +451,15 @@ class SolarAuxiliaCatalogue:
         element = elements[0]
         entry = self.parser.parse_selection_entry(element)
 
-        # Use category map and normalize to FOC
+        # Use native category as slot type
         unit_id = entry['id']
         bsdata_category = self.category_map.get(unit_id, "Uncategorized")
-        primary_category = normalize_category(bsdata_category)
         base_cost = self.parser.compute_base_unit_cost(element)
 
         return {
             'bs_id': entry['id'],
             'name': entry['name'],
-            'unit_type': primary_category,
+            'unit_type': bsdata_category,  # Native HH3 slot name
             'bsdata_category': bsdata_category,
             'base_cost': base_cost,
             'profiles': entry['profiles'],

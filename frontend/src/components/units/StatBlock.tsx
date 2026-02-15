@@ -2,6 +2,39 @@ import type { StatBlock as StatBlockType } from '../../types/index.ts';
 
 const COLUMNS = ['M', 'WS', 'BS', 'S', 'T', 'W', 'I', 'A', 'LD', 'SAV'] as const;
 
+// Thresholds for color coding — higher is better for offensive, lower for defensive
+const STAT_THRESHOLDS: Record<string, { high: number; low: number }> = {
+  WS: { high: 5, low: 3 },
+  BS: { high: 5, low: 3 },
+  S: { high: 6, low: 3 },
+  T: { high: 6, low: 3 },
+  W: { high: 3, low: 1 },
+  I: { high: 5, low: 2 },
+  A: { high: 3, low: 1 },
+  LD: { high: 9, low: 7 },
+};
+
+function getStatClass(col: string, value: string): string {
+  const threshold = STAT_THRESHOLDS[col];
+  if (!threshold) return '';
+
+  const num = parseInt(value, 10);
+  if (isNaN(num)) return '';
+
+  if (num >= threshold.high) return 'stat-high';
+  if (num <= threshold.low) return 'stat-low';
+  return '';
+}
+
+function getSaveClass(value: string): string {
+  if (!value || value === '-') return 'stat-low';
+  const num = parseInt(value.replace('+', ''), 10);
+  if (isNaN(num)) return '';
+  if (num <= 3) return 'stat-high';
+  if (num >= 6) return 'stat-low';
+  return '';
+}
+
 interface Props {
   stats: StatBlockType[];
 }
@@ -9,34 +42,31 @@ interface Props {
 export default function StatBlock({ stats }: Props) {
   if (stats.length === 0) return null;
 
-  // Check if any stat block has INV
   const showInv = stats.some((s) => s.INV && s.INV !== '-' && s.INV !== '');
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-xs">
+    <div className="overflow-x-auto rounded-sm border border-edge-600/30">
+      <table className="data-readout w-full">
         <thead>
-          <tr className="border-b border-slate-600 text-gold-400">
-            <th className="px-2 py-1 text-left font-medium">Profile</th>
+          <tr>
+            <th className="text-left">Unit</th>
             {COLUMNS.map((col) => (
-              <th key={col} className="px-2 py-1 text-center font-medium">
-                {col}
-              </th>
+              <th key={col} className="text-center">{col}</th>
             ))}
-            {showInv && <th className="px-2 py-1 text-center font-medium">INV</th>}
+            {showInv && <th className="text-center">INV</th>}
           </tr>
         </thead>
         <tbody>
           {stats.map((s, i) => (
-            <tr key={i} className="border-b border-slate-700/50">
-              <td className="px-2 py-1 font-medium text-slate-300">{s.name}</td>
-              {COLUMNS.map((col) => (
-                <td key={col} className="px-2 py-1 text-center text-slate-400">
-                  {s[col]}
-                </td>
-              ))}
+            <tr key={i}>
+              <td>{s.name}</td>
+              {COLUMNS.map((col) => {
+                const val = s[col];
+                const cls = col === 'SAV' ? getSaveClass(val) : getStatClass(col, val);
+                return <td key={col} className={cls}>{val}</td>;
+              })}
               {showInv && (
-                <td className="px-2 py-1 text-center text-slate-400">{s.INV ?? '-'}</td>
+                <td className="stat-special">{s.INV ?? '-'}</td>
               )}
             </tr>
           ))}

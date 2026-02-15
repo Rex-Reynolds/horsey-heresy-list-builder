@@ -1,4 +1,4 @@
-import { FOC_CATEGORIES } from '../../types/index.ts';
+import { DISPLAY_GROUP_ORDER } from '../../types/index.ts';
 
 interface Props {
   selected: string | null;
@@ -6,9 +6,9 @@ interface Props {
 }
 
 export default function CategoryFilter({ selected, onChange }: Props) {
-  const categories = ['All', ...FOC_CATEGORIES];
+  const categories = ['All', ...DISPLAY_GROUP_ORDER];
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1">
       {categories.map((cat) => {
         const value = cat === 'All' ? null : cat;
         const active = selected === value;
@@ -16,10 +16,10 @@ export default function CategoryFilter({ selected, onChange }: Props) {
           <button
             key={cat}
             onClick={() => onChange(value)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            className={`font-label rounded-sm border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase transition-all ${
               active
-                ? 'border-gold-500 bg-gold-500/20 text-gold-300'
-                : 'border-slate-600 bg-slate-800 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                ? 'border-gold-500/50 bg-gold-600/20 text-gold-300'
+                : 'border-edge-600/30 bg-plate-800/40 text-text-dim hover:border-edge-400/50 hover:text-text-secondary'
             }`}
           >
             {cat}

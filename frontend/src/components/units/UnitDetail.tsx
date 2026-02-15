@@ -1,9 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { Unit, Upgrade } from '../../types/index.ts';
 import { useUnitUpgrades } from '../../api/units.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
-import { useAddEntry } from '../../api/rosters.ts';
+import { useAddEntry, useAddDetachment } from '../../api/rosters.ts';
+import { useUnitAvailability } from '../../hooks/useUnitAvailability.ts';
 import { parseProfiles, parseRules } from '../../utils/profileParser.ts';
+import client from '../../api/client.ts';
 import StatBlock from './StatBlock.tsx';
 import UpgradeList from './UpgradeList.tsx';
 
@@ -12,40 +14,93 @@ interface Props {
 }
 
 export default function UnitDetail({ unit }: Props) {
-  const { data: upgrades = [], isLoading: upgradesLoading } = useUnitUpgrades(unit.id);
+  const { data: upgradeData, isLoading: upgradesLoading } = useUnitUpgrades(unit.id);
+  const groups = upgradeData?.groups ?? [];
+  const ungrouped = upgradeData?.ungrouped ?? [];
+
   const [selectedUpgrades, setSelectedUpgrades] = useState<Set<number>>(new Set());
-  const { rosterId, addEntry } = useRosterStore();
-  const addEntryMutation = useAddEntry(rosterId);
+  const { rosterId, addEntry, addDetachment, syncFromResponse } = useRosterStore();
+  const [targetDetId, setTargetDetId] = useState<number | null>(null);
+
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const getAvailability = useUnitAvailability();
+  const availability = getAvailability(unit.unit_type, unit.name, unit.id, unit.constraints);
+  const { status, openDetachments, fullDetachments, unlockableDetachments, rosterLimitMessage } = availability;
+
+  const effectiveDetId =
+    targetDetId ?? (openDetachments.length === 1 ? openDetachments[0].id : null);
+
+  const addEntryMutation = useAddEntry(rosterId, effectiveDetId);
+  const addDetMutation = useAddDetachment(rosterId);
 
   const { statBlocks, traits } = parseProfiles(unit.profiles);
   const rules = parseRules(unit.rules);
 
-  const toggleUpgrade = useCallback((id: number) => {
+  const upgradeGroupMap = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const g of groups) {
+      for (const u of g.upgrades) {
+        map.set(u.id, g.group_name);
+      }
+    }
+    return map;
+  }, [groups]);
+
+  const toggleUpgrade = useCallback((id: number, groupName?: string) => {
     setSelectedUpgrades((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        const gName = groupName ?? upgradeGroupMap.get(id);
+        if (gName) {
+          const group = groups.find((g) => g.group_name === gName);
+          if (group && group.max_quantity === 1) {
+            for (const u of group.upgrades) {
+              next.delete(u.id);
+            }
+          }
+        }
+        next.add(id);
+      }
       return next;
     });
-  }, []);
+  }, [upgradeGroupMap, groups]);
 
-  const upgradeCost = upgrades
+  const allUpgrades = useMemo(
+    () => [...ungrouped, ...groups.flatMap((g) => g.upgrades)],
+    [ungrouped, groups],
+  );
+
+  const upgradeCost = allUpgrades
     .filter((u: Upgrade) => selectedUpgrades.has(u.id))
     .reduce((sum: number, u: Upgrade) => sum + u.cost, 0);
   const totalCost = unit.base_cost + upgradeCost;
 
   function handleAdd() {
-    if (!rosterId) return;
+    if (!rosterId || !effectiveDetId) return;
 
-    const upgradesList = upgrades
+    for (const group of groups) {
+      if (group.min_quantity > 0) {
+        const selectedInGroup = group.upgrades.filter((u) => selectedUpgrades.has(u.id)).length;
+        if (selectedInGroup < group.min_quantity) {
+          setAddError(`"${group.group_name}" requires at least ${group.min_quantity} selection(s)`);
+          return;
+        }
+      }
+    }
+
+    const upgradesList = allUpgrades
       .filter((u: Upgrade) => selectedUpgrades.has(u.id))
       .map((u: Upgrade) => ({ upgrade_id: u.bs_id, quantity: 1 }));
 
+    setAddError(null);
     addEntryMutation.mutate(
-      { unit_id: unit.id, quantity: 1, upgrades: upgradesList },
+      { unit_id: unit.id, quantity: unit.model_min, upgrades: upgradesList },
       {
         onSuccess: (data) => {
-          addEntry({
+          addEntry(effectiveDetId, {
             id: data.id,
             unitId: unit.id,
             name: unit.name,
@@ -53,27 +108,76 @@ export default function UnitDetail({ unit }: Props) {
             baseCost: unit.base_cost,
             upgrades: upgradesList,
             upgradeCost,
-            quantity: 1,
+            quantity: unit.model_min,
             totalCost: data.total_cost,
+            modelMin: unit.model_min,
+            modelMax: unit.model_max,
           });
           setSelectedUpgrades(new Set());
+          setTargetDetId(null);
+          if (rosterId) {
+            client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
+              syncFromResponse(resp);
+            });
+          }
+        },
+        onError: (err: any) => {
+          const detail = err?.response?.data?.detail;
+          setAddError(detail ?? 'Failed to add unit');
         },
       },
     );
   }
 
+  function handleAddDetachment(detId: number, detType: string) {
+    addDetMutation.mutate(
+      { detachment_id: detId, detachment_type: detType },
+      {
+        onSuccess: (data) => {
+          addDetachment({
+            id: data.id,
+            detachmentId: data.detachment_id,
+            name: data.name,
+            type: data.type,
+            slots: data.slots,
+            entries: [],
+          });
+          if (rosterId) {
+            client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
+              syncFromResponse(resp);
+            });
+          }
+        },
+      },
+    );
+  }
+
+  const buttonLabel = (() => {
+    if (addEntryMutation.isPending) return 'Adding...';
+    if (!rosterId) return 'Create Roster First';
+    if (status === 'roster_limit') return 'Roster Limit Reached';
+    if (status === 'no_detachment') return 'Add Detachment First';
+    if (status === 'no_slot') return 'No Matching Slot';
+    if (status === 'slot_full') return 'Slots Full';
+    if (status === 'addable' && !effectiveDetId) return 'Select Detachment';
+    return 'Add to Roster';
+  })();
+
+  const buttonDisabled =
+    !rosterId || (status !== 'addable') || !effectiveDetId || addEntryMutation.isPending;
+
   return (
     <div className="space-y-3">
-      {/* Stat blocks */}
+      {/* Stats */}
       <StatBlock stats={statBlocks} />
 
       {/* Traits */}
       {traits.length > 0 && (
         <div>
-          <h4 className="mb-1 text-xs font-medium text-slate-400">Special Rules</h4>
+          <SectionLabel>Special Rules</SectionLabel>
           <div className="flex flex-wrap gap-1">
             {traits.map((t, i) => (
-              <span key={i} className="rounded bg-slate-700/60 px-2 py-0.5 text-xs text-slate-300">
+              <span key={i} className="rounded-sm border border-edge-600/30 bg-plate-700/30 px-1.5 py-0.5 text-[10px] text-text-secondary">
                 {t}
               </span>
             ))}
@@ -84,15 +188,17 @@ export default function UnitDetail({ unit }: Props) {
       {/* Rules */}
       {rules.length > 0 && (
         <div>
-          <h4 className="mb-1 text-xs font-medium text-slate-400">Rules</h4>
-          <div className="space-y-1">
+          <SectionLabel>Rules</SectionLabel>
+          <div className="space-y-0.5">
             {rules.map((r, i) => (
-              <details key={i} className="group rounded bg-slate-700/40 px-2 py-1">
-                <summary className="cursor-pointer text-xs font-medium text-slate-300 group-open:text-gold-400">
+              <details key={i} className="group rounded-sm border border-edge-700/30 bg-plate-800/30">
+                <summary className="cursor-pointer px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors group-open:text-gold-400">
                   {r.name}
                 </summary>
                 {r.description && (
-                  <p className="mt-1 text-xs leading-relaxed text-slate-400">{r.description}</p>
+                  <p className="border-t border-edge-700/20 px-2.5 py-2 text-[11px] leading-relaxed text-text-dim">
+                    {r.description}
+                  </p>
                 )}
               </details>
             ))}
@@ -102,26 +208,196 @@ export default function UnitDetail({ unit }: Props) {
 
       {/* Upgrades */}
       <UpgradeList
-        upgrades={upgrades}
+        groups={groups}
+        ungrouped={ungrouped}
         selected={selectedUpgrades}
         onToggle={toggleUpgrade}
         loading={upgradesLoading}
       />
 
-      {/* Add to roster */}
-      <div className="flex items-center justify-between pt-2">
-        <span className="text-sm font-medium text-gold-300">{totalCost} pts total</span>
+      {/* Detachment picker */}
+      {rosterId && status === 'addable' && openDetachments.length > 1 && (
+        <div>
+          <SectionLabel>Add to detachment</SectionLabel>
+          <select
+            value={targetDetId ?? ''}
+            onChange={(e) => setTargetDetId(e.target.value ? Number(e.target.value) : null)}
+            className="w-full rounded-sm border border-edge-600/50 bg-plate-800 px-2 py-1.5 text-[11px] text-text-primary outline-none transition-colors focus:border-gold-600/40"
+          >
+            <option value="">Select...</option>
+            {openDetachments.map((d) => {
+              const slot = d.slots[unit.unit_type];
+              const filled = d.entries.filter((e) => e.category === unit.unit_type).reduce((s, e) => s + e.quantity, 0);
+              const restriction = slot?.restriction;
+              return (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({filled}/{slot?.max ?? '?'})
+                  {restriction ? ` — ${restriction}` : ''}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+      )}
+
+      {/* Status messages */}
+      {rosterId && status === 'roster_limit' && rosterLimitMessage && (
+        <InfoPanel variant="caution">
+          <p className="text-[11px] text-caution">{rosterLimitMessage}</p>
+        </InfoPanel>
+      )}
+
+      {rosterId && status === 'no_slot' && (
+        <InfoPanel variant="neutral">
+          <p className="text-[11px] text-text-secondary">
+            No detachment has a <span className="font-medium text-text-primary">{unit.unit_type}</span> slot.
+          </p>
+          {unlockableDetachments.length > 0 && (
+            <DetachmentSuggestions
+              label={`Unlock ${unit.unit_type}`}
+              detachments={unlockableDetachments}
+              onAdd={handleAddDetachment}
+              loading={addDetMutation.isPending}
+            />
+          )}
+        </InfoPanel>
+      )}
+
+      {rosterId && status === 'slot_full' && (
+        <InfoPanel variant="caution">
+          <p className="text-[11px] text-caution">
+            All {unit.unit_type} slots are full.
+          </p>
+          <div className="space-y-0.5">
+            {fullDetachments.map((d) => {
+              const slot = d.slots[unit.unit_type];
+              const filled = d.entries.filter((e) => e.category === unit.unit_type).reduce((s, e) => s + e.quantity, 0);
+              return (
+                <p key={d.id} className="font-data text-[9px] text-text-dim">
+                  {d.name}: {unit.unit_type} {filled}/{slot?.max ?? '?'}
+                </p>
+              );
+            })}
+          </div>
+          {unlockableDetachments.length > 0 && (
+            <DetachmentSuggestions
+              label="Add more slots"
+              detachments={unlockableDetachments}
+              onAdd={handleAddDetachment}
+              loading={addDetMutation.isPending}
+            />
+          )}
+        </InfoPanel>
+      )}
+
+      {rosterId && status === 'no_detachment' && (
+        <InfoPanel variant="neutral">
+          <p className="text-[11px] text-text-secondary">Add a detachment to start building your roster.</p>
+          {unlockableDetachments.length > 0 && (
+            <DetachmentSuggestions
+              label={`Detachments with ${unit.unit_type}`}
+              detachments={unlockableDetachments}
+              onAdd={handleAddDetachment}
+              loading={addDetMutation.isPending}
+            />
+          )}
+        </InfoPanel>
+      )}
+
+      {/* Error */}
+      {addError && (
+        <p className="text-[11px] text-danger">{addError}</p>
+      )}
+
+      {/* Add footer */}
+      <div className="flex items-center justify-between border-t border-edge-700/30 pt-2.5">
+        <div>
+          <span className="font-data text-sm font-medium tabular-nums text-gold-300">
+            {totalCost}
+          </span>
+          <span className="ml-1 text-[10px] text-text-dim">pts</span>
+          {unit.model_min > 1 && (
+            <span className="ml-2 font-data text-[9px] text-text-dim">
+              ({unit.model_min}{unit.model_max && unit.model_max !== unit.model_min ? `-${unit.model_max}` : ''} models)
+            </span>
+          )}
+        </div>
         <button
           onClick={handleAdd}
-          disabled={!rosterId || addEntryMutation.isPending}
-          className="rounded-lg bg-gold-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gold-500 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={buttonDisabled}
+          className={`font-label rounded-sm px-4 py-1.5 text-[10px] font-semibold tracking-wider uppercase transition-all disabled:cursor-not-allowed disabled:opacity-25 ${
+            status === 'addable'
+              ? 'bg-gold-600 text-white hover:bg-gold-500'
+              : status === 'slot_full'
+                ? 'bg-plate-700 text-caution'
+                : 'bg-plate-700 text-text-dim'
+          }`}
         >
-          {addEntryMutation.isPending ? 'Adding...' : 'Add to Roster'}
+          {buttonLabel}
         </button>
       </div>
       {!rosterId && (
-        <p className="text-xs text-slate-500">Create a roster first to add units.</p>
+        <p className="text-[10px] text-text-dim">Create a roster first to add units.</p>
       )}
+    </div>
+  );
+}
+
+/* ── Sub-components ── */
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h4 className="font-label mb-1 text-[9px] font-semibold tracking-wider text-text-dim uppercase">
+      {children}
+    </h4>
+  );
+}
+
+function InfoPanel({ children, variant }: { children: React.ReactNode; variant: 'neutral' | 'caution' }) {
+  return (
+    <div className={`space-y-2 rounded-sm border p-2.5 ${
+      variant === 'caution'
+        ? 'border-caution/15 bg-caution/4'
+        : 'border-edge-600/30 bg-plate-700/20'
+    }`}>
+      {children}
+    </div>
+  );
+}
+
+function DetachmentSuggestions({
+  label,
+  detachments,
+  onAdd,
+  loading,
+}: {
+  label: string;
+  detachments: Array<{ id: number; name: string; type: string }>;
+  onAdd: (id: number, type: string) => void;
+  loading: boolean;
+}) {
+  return (
+    <div>
+      <p className="font-label mb-1 text-[9px] font-semibold tracking-wider text-text-dim uppercase">
+        {label}
+      </p>
+      <div className="space-y-0.5">
+        {detachments.map((d) => (
+          <div key={d.id} className="flex items-center justify-between border border-edge-700/20 bg-plate-800/40 px-2 py-1">
+            <span className="text-[11px] text-text-secondary">
+              {d.name}
+              <span className="ml-1 text-text-dim">({d.type})</span>
+            </span>
+            <button
+              onClick={() => onAdd(d.id, d.type)}
+              disabled={loading}
+              className="font-label shrink-0 rounded-sm bg-gold-600/70 px-2 py-0.5 text-[9px] font-semibold tracking-wider text-white uppercase transition-all hover:bg-gold-500 disabled:opacity-30"
+            >
+              + Add
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

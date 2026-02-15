@@ -5,174 +5,119 @@ from typing import List, Tuple, Dict, Any
 from collections import Counter
 
 from src.models import Detachment
-from src.bsdata.detachment_loader import DetachmentLoader
-from src.config import BSDATA_DIR
 
 logger = logging.getLogger(__name__)
 
-# Default Primary Detachment constraints for Solar Auxilia
-# Used when DB is empty and .gst parsing fails
-SA_PRIMARY_DEFAULTS = {
-    'High Command': {'min': 0, 'max': 1},
-    'Command': {'min': 1, 'max': 3},
-    'Troops': {'min': 2, 'max': 4},
-    'Elites': {'min': 0, 'max': 4},
-    'Fast Attack': {'min': 0, 'max': 2},
-    'Support': {'min': 0, 'max': 3},
-    'Armour': {'min': 0, 'max': 3},
-    'Heavy Assault': {'min': 0, 'max': 2},
-    'Recon': {'min': 0, 'max': 2},
-    'War-engine': {'min': 0, 'max': 1},
-    'Transport': {'min': 0, 'max': 4},
-    'Heavy Transport': {'min': 0, 'max': 2},
-    'Lord of War': {'min': 0, 'max': 1},
-    'Retinue': {'min': 0, 'max': 1},
-}
-
 
 class FOCValidator:
-    """Validate army rosters against FOC detachment constraints."""
+    """Validate army rosters against detachment constraints using native HH3 slot names."""
 
-    def __init__(self, detachment_type: str = "Crusade Primary Detachment"):
+    def __init__(self, detachment: Detachment):
         """
-        Initialize FOC validator.
+        Initialize FOC validator for a specific detachment.
 
         Args:
-            detachment_type: Name of detachment to validate against
+            detachment: Detachment model instance
         """
-        self.detachment_data = None
-        self.unit_restrictions = {}
+        self.detachment = detachment
+        self.detachment_name = detachment.name
+        self.constraints = json.loads(detachment.constraints) if detachment.constraints else {}
+        self.unit_restrictions = (
+            json.loads(detachment.unit_restrictions) if detachment.unit_restrictions else {}
+        )
 
-        # Try DB first
-        try:
-            det = Detachment.get_or_none(Detachment.name == detachment_type)
-            if det:
-                self.detachment_data = {
-                    'name': det.name,
-                    'constraints': det.constraints,
-                    'unit_restrictions': det.unit_restrictions,
-                }
-        except Exception:
-            pass
-
-        # Fallback to .gst loader
-        if not self.detachment_data:
-            try:
-                gst_path = BSDATA_DIR / "Horus Heresy 3rd Edition.gst"
-                loader = DetachmentLoader(gst_path)
-                det_data = loader.get_detachment_by_name(detachment_type)
-                if det_data:
-                    self.detachment_data = det_data
-            except Exception:
-                pass
-
-        # Final fallback to hardcoded defaults
-        if not self.detachment_data:
-            logger.warning(f"Detachment '{detachment_type}' not found, using SA primary defaults")
-            self.detachment_data = {
-                'name': detachment_type,
-                'constraints': json.dumps(SA_PRIMARY_DEFAULTS),
-                'unit_restrictions': None,
-            }
-
-        self.detachment_name = self.detachment_data['name']
-        self.constraints = json.loads(self.detachment_data['constraints'])
-        if self.detachment_data.get('unit_restrictions'):
-            self.unit_restrictions = json.loads(self.detachment_data['unit_restrictions'])
-
-        logger.debug(f"FOC Validator initialized for: {self.detachment_name}")
-
-    def validate_roster(self, roster_entries: List[Any]) -> Tuple[bool, List[str]]:
+    def validate_entries(self, entries: List[Any]) -> List[str]:
         """
-        Validate roster entries against FOC constraints.
+        Validate entries against this detachment's constraints.
 
         Args:
-            roster_entries: List of RosterEntry instances with .category attribute
+            entries: List of RosterEntry instances with .category and .unit_name
 
         Returns:
-            Tuple of (is_valid: bool, errors: list[str])
+            List of error strings (empty = valid)
         """
         errors = []
 
-        # Count units by category (use bsdata_category if available, fall back to category)
-        category_counts = self._count_categories(roster_entries)
+        # Count entries by native slot name
+        slot_counts = Counter()
+        for entry in entries:
+            slot_counts[entry.category] += entry.quantity
 
-        # Validate each category against constraints
-        for category, limits in self.constraints.items():
-            count = category_counts.get(category, 0)
+        # Validate each slot against constraints
+        for slot_name, limits in self.constraints.items():
+            count = slot_counts.get(slot_name, 0)
             min_required = limits.get('min', 0)
             max_allowed = limits.get('max', 999)
 
             if count < min_required:
                 errors.append(
-                    f"{category}: minimum {min_required} required, found {count}"
+                    f"[{self.detachment_name}] {slot_name}: "
+                    f"minimum {min_required} required, found {count}"
                 )
 
             if count > max_allowed:
                 errors.append(
-                    f"{category}: maximum {max_allowed} allowed, found {count}"
+                    f"[{self.detachment_name}] {slot_name}: "
+                    f"maximum {max_allowed} allowed, found {count}"
                 )
 
-        # Check for uncategorized units
-        for category in category_counts.keys():
-            if category not in self.constraints:
-                count = category_counts[category]
+        # Check for entries in slots not allowed by this detachment
+        for slot_name in slot_counts:
+            if slot_name not in self.constraints:
                 errors.append(
-                    f"{category}: {count} unit(s) not allowed in {self.detachment_name}"
+                    f"[{self.detachment_name}] {slot_name}: "
+                    f"{slot_counts[slot_name]} unit(s) not allowed in this detachment"
                 )
 
-        is_valid = len(errors) == 0
+        # Check unit restrictions
+        for entry in entries:
+            restriction = self.unit_restrictions.get(entry.category)
+            if restriction:
+                # Check if the unit name matches any allowed pattern
+                if not self._matches_restriction(entry.unit_name, restriction):
+                    errors.append(
+                        f"[{self.detachment_name}] {entry.unit_name}: "
+                        f"not allowed in {entry.category} slot (restricted to: {restriction})"
+                    )
 
-        if is_valid:
-            logger.info(f"Roster is valid for {self.detachment_name}")
-        else:
-            logger.warning(f"Roster validation failed: {len(errors)} error(s)")
+        return errors
 
-        return is_valid, errors
+    @staticmethod
+    def _matches_restriction(unit_name: str, restriction: str) -> bool:
+        """
+        Check if a unit name matches a restriction string.
 
-    def _count_categories(self, roster_entries: List[Any]) -> Dict[str, int]:
-        """Count roster entries by category."""
-        categories = [entry.category for entry in roster_entries]
-        return dict(Counter(categories))
+        Restriction examples:
+            "Leman Russ Strike, Leman Russ Assault or Malcador Heavy tank units only"
+            "Lasrifle Section Units only"
+            "Hermes Light Sentinel units only"
+        """
+        # Clean restriction text
+        restriction_clean = restriction.lower()
+        restriction_clean = restriction_clean.replace(" units only", "")
+        restriction_clean = restriction_clean.replace(" only", "")
 
-    def get_category_limits(self, category: str) -> Tuple[int, int]:
-        """Get min/max limits for a specific FOC category."""
-        limits = self.constraints.get(category, {'min': 0, 'max': 0})
-        return limits.get('min', 0), limits.get('max', 0)
+        # Split on ", " and " or "
+        parts = []
+        for part in restriction_clean.replace(" or ", ", ").split(", "):
+            parts.append(part.strip())
 
-    def get_all_category_limits(self) -> Dict[str, Dict[str, int]]:
-        """Get all category limits for this detachment."""
-        return self.constraints.copy()
+        unit_lower = unit_name.lower()
+        return any(part in unit_lower or unit_lower in part for part in parts if part)
 
-    def get_remaining_slots(self, roster_entries: List[Any]) -> Dict[str, Dict[str, int]]:
-        """Calculate remaining slots for each category."""
-        category_counts = self._count_categories(roster_entries)
-        remaining = {}
+    def get_slot_status(self, entries: List[Any]) -> Dict[str, Dict[str, Any]]:
+        """Get detailed slot status for each constraint."""
+        slot_counts = Counter()
+        for entry in entries:
+            slot_counts[entry.category] += entry.quantity
 
-        for category, limits in self.constraints.items():
-            current = category_counts.get(category, 0)
-            max_allowed = limits.get('max', 999)
-            min_required = limits.get('min', 0)
-
-            remaining[category] = {
-                'current': current,
-                'min': min_required,
-                'max': max_allowed,
-                'remaining': max_allowed - current,
-                'deficit': max(0, min_required - current),
+        status = {}
+        for slot_name, limits in self.constraints.items():
+            status[slot_name] = {
+                'min': limits.get('min', 0),
+                'max': limits.get('max', 999),
+                'filled': slot_counts.get(slot_name, 0),
+                'restriction': self.unit_restrictions.get(slot_name),
             }
 
-        return remaining
-
-    def suggest_additions(self, roster_entries: List[Any]) -> List[str]:
-        """Suggest which categories need more units to meet minimums."""
-        remaining = self.get_remaining_slots(roster_entries)
-        suggestions = []
-
-        for category, stats in remaining.items():
-            if stats['deficit'] > 0:
-                suggestions.append(
-                    f"Add {stats['deficit']} more {category} unit(s) (minimum: {stats['min']})"
-                )
-
-        return suggestions
+        return status

@@ -73,24 +73,25 @@ class PointsCalculator:
         Calculate total points for a roster.
 
         Args:
-            roster: Roster model instance with .entries backref
+            roster: Roster model instance with .detachments backref
 
         Returns:
             Total points cost for the roster
         """
         total = 0
 
-        for entry in roster.entries:
-            # Use cached total_cost if available
-            if entry.total_cost:
-                total += entry.total_cost
-            else:
-                # Recalculate if not cached
-                if entry.unit:
-                    upgrades = json.loads(entry.upgrades) if entry.upgrades else []
-                    entry_cost = PointsCalculator.calculate_unit_cost(entry.unit, upgrades)
-                    entry_cost *= entry.quantity  # Multiply by quantity
-                    total += entry_cost
+        for rd in roster.detachments:
+            for entry in rd.entries:
+                # Use cached total_cost if available
+                if entry.total_cost:
+                    total += entry.total_cost
+                else:
+                    # Recalculate if not cached
+                    if entry.unit:
+                        upgrades = json.loads(entry.upgrades) if entry.upgrades else []
+                        entry_cost = PointsCalculator.calculate_unit_cost(entry.unit, upgrades)
+                        entry_cost *= entry.quantity
+                        total += entry_cost
 
         return total
 

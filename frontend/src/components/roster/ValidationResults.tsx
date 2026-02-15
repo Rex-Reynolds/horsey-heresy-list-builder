@@ -8,18 +8,25 @@ export default function ValidationResults({ isValid, errors }: Props) {
 
   if (isValid) {
     return (
-      <div className="rounded-lg border border-green-800 bg-green-900/20 px-3 py-2 text-sm text-green-300">
-        Roster is valid
+      <div className="flex items-center gap-2 rounded-sm border border-valid/15 bg-valid/5 px-2.5 py-1.5">
+        <svg className="h-3 w-3 text-valid" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        <span className="font-label text-[10px] font-semibold tracking-wide text-valid uppercase">
+          Roster Valid
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-red-800 bg-red-900/20 px-3 py-2">
-      <p className="mb-1 text-xs font-bold uppercase text-red-400">Validation Errors</p>
+    <div className="rounded-sm border border-danger/15 bg-danger/5 px-2.5 py-1.5">
+      <p className="font-label mb-0.5 text-[9px] font-bold tracking-wider text-danger uppercase">
+        Validation Errors
+      </p>
       <ul className="space-y-0.5">
         {errors.map((err, i) => (
-          <li key={i} className="text-xs text-red-300">
+          <li key={i} className="text-[10px] text-danger/70">
             {err}
           </li>
         ))}

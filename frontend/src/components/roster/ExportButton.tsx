@@ -2,10 +2,12 @@ import { useRosterStore } from '../../stores/rosterStore.ts';
 import { generateRosterText, downloadRosterText } from '../../utils/exportRoster.ts';
 
 export default function ExportButton() {
-  const { rosterName, detachmentType, pointsLimit, entries, totalPoints } = useRosterStore();
+  const { rosterName, pointsLimit, detachments, totalPoints } = useRosterStore();
+
+  const totalEntries = detachments.reduce((s, d) => s + d.entries.length, 0);
 
   function handleExport() {
-    const text = generateRosterText(rosterName, detachmentType, pointsLimit, entries, totalPoints);
+    const text = generateRosterText(rosterName, pointsLimit, detachments, totalPoints);
     const filename = `${rosterName.replace(/\s+/g, '_')}.txt`;
     downloadRosterText(text, filename);
   }
@@ -13,8 +15,8 @@ export default function ExportButton() {
   return (
     <button
       onClick={handleExport}
-      disabled={entries.length === 0}
-      className="w-full rounded-lg border border-slate-600 bg-slate-800 py-2 text-xs font-medium text-slate-300 transition-colors hover:border-gold-500 hover:text-gold-400 disabled:cursor-not-allowed disabled:opacity-40"
+      disabled={totalEntries === 0}
+      className="font-label w-full rounded-sm border border-edge-600/40 bg-plate-800/40 py-1.5 text-[10px] font-semibold tracking-wider text-text-secondary uppercase transition-all hover:border-gold-600/30 hover:text-gold-400 disabled:cursor-not-allowed disabled:opacity-25"
     >
       Export as Text
     </button>

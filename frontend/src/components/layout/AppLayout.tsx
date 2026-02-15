@@ -9,14 +9,19 @@ interface Props {
 export default function AppLayout({ left, right, rosterVisible }: Props) {
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden">
-      {/* Main panel: units browser */}
-      <main className={`flex-1 overflow-y-auto p-4 lg:block lg:p-6 ${rosterVisible ? 'hidden' : 'block'}`}>
+      {/* Unit browser */}
+      <main className={`flex-1 overflow-y-auto bg-void p-4 lg:block lg:p-5 ${rosterVisible ? 'hidden' : 'block'}`}>
         {left}
       </main>
 
+      {/* Divider */}
+      <div className="hidden w-[2px] lg:block" style={{
+        background: 'linear-gradient(180deg, transparent 0%, var(--color-edge-600) 15%, var(--color-gold-700) 50%, var(--color-edge-600) 85%, transparent 100%)',
+      }} />
+
       {/* Roster panel */}
       <aside
-        className={`w-full overflow-y-auto border-l border-slate-700 bg-slate-900/50 lg:block lg:w-[420px] ${
+        className={`w-full overflow-y-auto bg-plate-950 lg:block lg:w-[420px] ${
           rosterVisible ? 'block' : 'hidden'
         }`}
       >

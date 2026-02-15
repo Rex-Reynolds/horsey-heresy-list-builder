@@ -1,83 +1,211 @@
 import { create } from 'zustand';
-import type { SelectedUpgrade } from '../types/index.ts';
+import type { SelectedUpgrade, SlotStatus, RosterDetachmentResponse, RosterEntryResponse, CompositionStatus } from '../types/index.ts';
 
 export interface RosterEntry {
   id: number;
   unitId: number;
   name: string;
-  category: string;
+  category: string; // Native HH3 slot name
   baseCost: number;
   upgrades: SelectedUpgrade[];
   upgradeCost: number;
   quantity: number;
   totalCost: number;
+  modelMin: number;
+  modelMax: number | null;
 }
+
+export interface RosterDetachment {
+  id: number;
+  detachmentId: number;
+  name: string;
+  type: string; // "Primary", "Auxiliary", "Apex"
+  slots: Record<string, SlotStatus>;
+  entries: RosterEntry[];
+}
+
+const DEFAULT_COMPOSITION: CompositionStatus = {
+  primary_count: 0,
+  primary_max: 1,
+  auxiliary_budget: 0,
+  auxiliary_used: 0,
+  apex_budget: 0,
+  apex_used: 0,
+  warlord_available: false,
+  warlord_count: 0,
+};
 
 interface RosterState {
   rosterId: number | null;
   rosterName: string;
-  detachmentType: string;
   pointsLimit: number;
-  entries: RosterEntry[];
+  detachments: RosterDetachment[];
+  composition: CompositionStatus;
   validationErrors: string[];
   isValid: boolean | null;
 
   totalPoints: number;
 
-  setRoster: (id: number, name: string, detachment: string, limit: number) => void;
-  addEntry: (entry: RosterEntry) => void;
-  removeEntry: (entryId: number) => void;
-  updateQuantity: (entryId: number, quantity: number) => void;
-  syncEntries: (entries: RosterEntry[]) => void;
+  setRoster: (id: number, name: string, limit: number, detachments: RosterDetachment[]) => void;
+  addDetachment: (det: RosterDetachment) => void;
+  removeDetachment: (detId: number) => void;
+  updateDetachmentSlots: (detId: number, slots: Record<string, SlotStatus>) => void;
+  addEntry: (detachmentId: number, entry: RosterEntry) => void;
+  removeEntry: (detachmentId: number, entryId: number) => void;
+  updateQuantity: (detachmentId: number, entryId: number, quantity: number) => void;
+  setComposition: (composition: CompositionStatus) => void;
+  syncFromResponse: (resp: {
+    id: number;
+    name: string;
+    points_limit: number;
+    detachments: RosterDetachmentResponse[];
+    composition?: CompositionStatus;
+  }) => void;
   setValidation: (isValid: boolean, errors: string[]) => void;
   clearRoster: () => void;
 }
 
-function calcTotal(entries: RosterEntry[]): number {
-  return entries.reduce((sum, e) => sum + e.totalCost, 0);
+function calcTotal(detachments: RosterDetachment[]): number {
+  return detachments.reduce(
+    (sum, d) => sum + d.entries.reduce((s, e) => s + e.totalCost, 0),
+    0,
+  );
+}
+
+function mapResponseDetachments(dets: RosterDetachmentResponse[]): RosterDetachment[] {
+  return dets.map((d) => ({
+    id: d.id,
+    detachmentId: d.detachment_id,
+    name: d.name,
+    type: d.type,
+    slots: d.slots,
+    entries: d.entries.map(mapResponseEntry),
+  }));
+}
+
+function mapResponseEntry(e: RosterEntryResponse): RosterEntry {
+  return {
+    id: e.id,
+    unitId: e.unit_id,
+    name: e.unit_name,
+    category: e.category,
+    baseCost: e.total_cost / Math.max(e.quantity, 1), // Approximate
+    upgrades: e.upgrades,
+    upgradeCost: 0,
+    quantity: e.quantity,
+    totalCost: e.total_cost,
+    modelMin: e.model_min ?? 1,
+    modelMax: e.model_max ?? null,
+  };
 }
 
 export const useRosterStore = create<RosterState>((set) => ({
   rosterId: null,
   rosterName: '',
-  detachmentType: '',
   pointsLimit: 3000,
-  entries: [],
+  detachments: [],
+  composition: DEFAULT_COMPOSITION,
   validationErrors: [],
   isValid: null,
   totalPoints: 0,
 
-  setRoster: (id, name, detachment, limit) =>
-    set({ rosterId: id, rosterName: name, detachmentType: detachment, pointsLimit: limit, entries: [], totalPoints: 0, isValid: null, validationErrors: [] }),
-
-  addEntry: (entry) =>
-    set((s) => {
-      const entries = [...s.entries, entry];
-      return { entries, totalPoints: calcTotal(entries) };
+  setRoster: (id, name, limit, detachments) =>
+    set({
+      rosterId: id,
+      rosterName: name,
+      pointsLimit: limit,
+      detachments,
+      totalPoints: calcTotal(detachments),
+      isValid: null,
+      validationErrors: [],
     }),
 
-  removeEntry: (entryId) =>
+  addDetachment: (det) =>
     set((s) => {
-      const entries = s.entries.filter((e) => e.id !== entryId);
-      return { entries, totalPoints: calcTotal(entries) };
+      const detachments = [...s.detachments, det];
+      return { detachments };
     }),
 
-  updateQuantity: (entryId, quantity) =>
+  removeDetachment: (detId) =>
     set((s) => {
-      const entries = s.entries.map((e) =>
-        e.id === entryId
-          ? { ...e, quantity, totalCost: (e.baseCost + e.upgradeCost) * quantity }
-          : e,
+      const detachments = s.detachments.filter((d) => d.id !== detId);
+      return { detachments, totalPoints: calcTotal(detachments) };
+    }),
+
+  updateDetachmentSlots: (detId, slots) =>
+    set((s) => ({
+      detachments: s.detachments.map((d) =>
+        d.id === detId ? { ...d, slots } : d,
+      ),
+    })),
+
+  addEntry: (detachmentId, entry) =>
+    set((s) => {
+      const detachments = s.detachments.map((d) =>
+        d.id === detachmentId
+          ? { ...d, entries: [...d.entries, entry] }
+          : d,
       );
-      return { entries, totalPoints: calcTotal(entries) };
+      return { detachments, totalPoints: calcTotal(detachments) };
     }),
 
-  syncEntries: (entries) =>
-    set({ entries, totalPoints: calcTotal(entries) }),
+  removeEntry: (detachmentId, entryId) =>
+    set((s) => {
+      const detachments = s.detachments.map((d) =>
+        d.id === detachmentId
+          ? { ...d, entries: d.entries.filter((e) => e.id !== entryId) }
+          : d,
+      );
+      return { detachments, totalPoints: calcTotal(detachments) };
+    }),
+
+  updateQuantity: (detachmentId, entryId, quantity) =>
+    set((s) => {
+      const detachments = s.detachments.map((d) =>
+        d.id === detachmentId
+          ? {
+              ...d,
+              entries: d.entries.map((e) =>
+                e.id === entryId
+                  ? { ...e, quantity, totalCost: (e.baseCost + e.upgradeCost) * quantity }
+                  : e,
+              ),
+            }
+          : d,
+      );
+      return { detachments, totalPoints: calcTotal(detachments) };
+    }),
+
+  setComposition: (composition) =>
+    set({ composition }),
+
+  syncFromResponse: (resp) =>
+    set(() => {
+      const detachments = mapResponseDetachments(resp.detachments);
+      return {
+        rosterId: resp.id,
+        rosterName: resp.name,
+        pointsLimit: resp.points_limit,
+        detachments,
+        totalPoints: calcTotal(detachments),
+        composition: resp.composition ?? DEFAULT_COMPOSITION,
+        isValid: null,
+        validationErrors: [],
+      };
+    }),
 
   setValidation: (isValid, errors) =>
     set({ isValid, validationErrors: errors }),
 
   clearRoster: () =>
-    set({ rosterId: null, rosterName: '', detachmentType: '', pointsLimit: 3000, entries: [], totalPoints: 0, isValid: null, validationErrors: [] }),
+    set({
+      rosterId: null,
+      rosterName: '',
+      pointsLimit: 3000,
+      detachments: [],
+      composition: DEFAULT_COMPOSITION,
+      totalPoints: 0,
+      isValid: null,
+      validationErrors: [],
+    }),
 }));
