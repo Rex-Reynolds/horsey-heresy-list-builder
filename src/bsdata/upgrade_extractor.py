@@ -223,6 +223,16 @@ class UpgradeExtractor:
 
         return upgrades
 
+    def _resolve_group_entry_link(self, group_element: etree.Element, context_prefix: str,
+                                    min_qty: int = 0, max_qty: int = 1) -> List[Dict[str, Any]]:
+        """
+        Resolve a selectionEntryGroup element into its contained upgrades.
+
+        Reuses _extract_from_single_group() to recursively extract all entries
+        (entryLinks + inline entries + nested sub-groups) from the group.
+        """
+        return self._extract_from_single_group(group_element, context_prefix)
+
     def _extract_entry_links(self, element: etree.Element, context_prefix: str) -> List[Dict[str, Any]]:
         """Extract upgrades from entryLink references on an element."""
         upgrades = []
@@ -234,10 +244,21 @@ class UpgradeExtractor:
 
             target_id = link.get('targetId')
             link_name = link.get('name')
+            link_type = link.get('type', '')
             if not target_id:
                 continue
 
-            # Look up the target in cache
+            # Handle selectionEntryGroup links — resolve the group recursively
+            if link_type == 'selectionEntryGroup':
+                group_el = self.cache.get_group_element_by_id(target_id)
+                if group_el is not None:
+                    group_upgrades = self._resolve_group_entry_link(group_el, context_prefix)
+                    upgrades.extend(group_upgrades)
+                else:
+                    logger.debug(f"Group entry link target not found in cache: {target_id} ({link_name})")
+                continue
+
+            # Look up the target in cache (selectionEntry links)
             entry = self.cache.get_entry_by_id(target_id)
             if not entry:
                 logger.debug(f"Entry link target not found in cache: {target_id} ({link_name})")
@@ -324,7 +345,16 @@ class UpgradeExtractor:
 
                 target_id = link.get('targetId')
                 link_name = link.get('name')
+                link_type = link.get('type', '')
                 if not target_id:
+                    continue
+
+                # Handle nested selectionEntryGroup links
+                if link_type == 'selectionEntryGroup':
+                    group_el = self.cache.get_group_element_by_id(target_id)
+                    if group_el is not None:
+                        upgrades.extend(self._resolve_group_entry_link(
+                            group_el, full_group_name + " > ", min_qty, max_qty))
                     continue
 
                 entry = self.cache.get_entry_by_id(target_id)
@@ -408,8 +438,18 @@ class UpgradeExtractor:
                 continue
             target_id = link.get('targetId')
             link_name = link.get('name')
+            link_type = link.get('type', '')
             if not target_id:
                 continue
+
+            # Handle nested selectionEntryGroup links
+            if link_type == 'selectionEntryGroup':
+                group_el = self.cache.get_group_element_by_id(target_id)
+                if group_el is not None:
+                    upgrades.extend(self._resolve_group_entry_link(
+                        group_el, full_group_name + " > ", min_qty, max_qty))
+                continue
+
             entry = self.cache.get_entry_by_id(target_id)
             if not entry:
                 continue

@@ -11,7 +11,7 @@ interface Props {
 export default function CategoryFilter({ selected, onChange, counts, slotCounts, requiredSlots }: Props) {
   const categories = ['All', ...DISPLAY_GROUP_ORDER];
   return (
-    <div className="category-filter-scroll scrollbar-hide -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+    <div className="category-filter-scroll category-filter-mobile scrollbar-hide -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:flex-nowrap">
       {categories.map((cat) => {
         const value = cat === 'All' ? null : cat;
         const active = selected === value;
@@ -23,7 +23,7 @@ export default function CategoryFilter({ selected, onChange, counts, slotCounts,
           <button
             key={cat}
             onClick={() => onChange(value)}
-            className={`font-label relative flex shrink-0 items-center gap-1.5 rounded-sm border px-3.5 py-2 text-[12px] font-semibold tracking-wider uppercase transition-all ${
+            className={`font-label relative flex shrink-0 items-center gap-1.5 rounded-sm border px-3.5 py-2.5 text-[12px] font-semibold tracking-wider uppercase transition-all min-h-[38px] ${
               active
                 ? colors.active
                 : `border-transparent bg-transparent text-text-dim ${colors.inactive}`
@@ -32,9 +32,9 @@ export default function CategoryFilter({ selected, onChange, counts, slotCounts,
             {/* Color dot indicator with optional pulse overlay */}
             {cat !== 'All' && (
               <span className="relative">
-                <span className={`block h-1.5 w-1.5 shrink-0 rounded-full ${colors.dot} ${active ? 'opacity-90' : 'opacity-30'}`} />
+                <span className={`block h-2 w-2 shrink-0 rounded-full ${colors.dot} ${active ? 'opacity-90' : 'opacity-30'}`} />
                 {isRequired && (
-                  <span className={`absolute inset-0 h-1.5 w-1.5 rounded-full ${colors.dot} animate-ping opacity-40`} />
+                  <span className={`absolute inset-0 h-2 w-2 rounded-full ${colors.dot} animate-ping opacity-40`} />
                 )}
               </span>
             )}

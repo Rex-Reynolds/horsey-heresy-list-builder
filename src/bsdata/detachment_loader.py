@@ -280,7 +280,7 @@ class DetachmentLoader:
                 continue  # Already handled
             if fe.get('hidden') == 'true':
                 continue
-            if 'Example' in name or 'Unrestricted' in name:
+            if 'Example' in name or 'Unrestricted' in name or 'Allied Detachment' in name:
                 continue
 
             force_id = fe.get('id')

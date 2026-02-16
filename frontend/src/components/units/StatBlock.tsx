@@ -1,6 +1,9 @@
+import { useState, useEffect } from 'react';
 import type { StatBlock as StatBlockType } from '../../types/index.ts';
 
 const COLUMNS = ['M', 'WS', 'BS', 'S', 'T', 'W', 'I', 'A', 'LD', 'SAV'] as const;
+const ROW1_COLS = ['M', 'WS', 'BS', 'S', 'T'] as const;
+const ROW2_COLS = ['W', 'I', 'A', 'LD', 'SAV'] as const;
 
 // Thresholds for color coding — higher is better for offensive, lower for defensive
 const STAT_THRESHOLDS: Record<string, { high: number; low: number }> = {
@@ -40,10 +43,76 @@ interface Props {
 }
 
 export default function StatBlock({ stats }: Props) {
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 480px)');
+    setIsNarrow(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   if (stats.length === 0) return null;
 
   const showInv = stats.some((s) => s.INV && s.INV !== '-' && s.INV !== '');
 
+  // Narrow/mobile: 2-row key-value layout
+  if (isNarrow) {
+    return (
+      <div className="stat-block-frame relative overflow-hidden rounded-sm border border-edge-600/30">
+        <div className="absolute top-0 left-0 h-3 w-3 border-t-2 border-l-2 border-gold-600/50 rounded-tl-sm" />
+        <div className="absolute top-0 right-0 h-3 w-3 border-t-2 border-r-2 border-gold-600/50 rounded-tr-sm" />
+        <div className="absolute bottom-0 left-0 h-3 w-3 border-b-2 border-l-2 border-gold-600/30 rounded-bl-sm" />
+        <div className="absolute bottom-0 right-0 h-3 w-3 border-b-2 border-r-2 border-gold-600/30 rounded-br-sm" />
+        <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-500 to-transparent" />
+        <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
+          <span className="font-label text-[9px] font-bold tracking-[0.2em] text-gold-500/70 uppercase">Unit Profile</span>
+          <span className="h-px flex-1 bg-gold-600/15" />
+        </div>
+        <div className="stat-inner-panel space-y-3">
+          {stats.map((s, i) => (
+            <div key={i}>
+              <p className="font-unit-name text-[13px] text-gold-300 mb-1.5">{s.name}</p>
+              <div className="grid grid-cols-5 gap-1">
+                {ROW1_COLS.map((col) => {
+                  const val = s[col];
+                  const cls = getStatClass(col, val);
+                  return (
+                    <div key={col} className="text-center">
+                      <div className="font-label text-[8px] font-bold tracking-[0.15em] text-gold-400/70 uppercase">{col}</div>
+                      <div className={`font-data text-[15px] font-semibold ${cls}`}>{val}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className={`grid gap-1 mt-1 ${showInv ? 'grid-cols-6' : 'grid-cols-5'}`}>
+                {ROW2_COLS.map((col) => {
+                  const val = s[col];
+                  const cls = col === 'SAV' ? getSaveClass(val) : getStatClass(col, val);
+                  return (
+                    <div key={col} className="text-center">
+                      <div className="font-label text-[8px] font-bold tracking-[0.15em] text-gold-400/70 uppercase">{col}</div>
+                      <div className={`font-data text-[15px] font-semibold ${cls}`}>{val}</div>
+                    </div>
+                  );
+                })}
+                {showInv && (
+                  <div className="text-center">
+                    <div className="font-label text-[8px] font-bold tracking-[0.15em] text-gold-400/70 uppercase">INV</div>
+                    <div className="font-data text-[15px] font-semibold stat-special">{s.INV ?? '-'}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="h-[1px] bg-gradient-to-r from-transparent via-gold-700/40 to-transparent" />
+      </div>
+    );
+  }
+
+  // Wide: standard table layout
   return (
     <div className="stat-block-frame relative overflow-hidden rounded-sm border border-edge-600/30">
       {/* Imperial corner accents */}

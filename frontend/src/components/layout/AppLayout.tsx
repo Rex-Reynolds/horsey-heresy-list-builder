@@ -16,20 +16,33 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
   const totalEntries = detachments.reduce((s, d) => s + d.entries.length, 0);
   const over = totalPoints > pointsLimit;
 
-  // Compute total slot fill across all detachments
+  // Compute total slot fill + unfilled required slots
   let slotFilled = 0;
   let slotMax = 0;
+  let requiredUnfilled = 0;
   for (const det of detachments) {
     for (const status of Object.values(det.slots)) {
       if (status.max > 0 && status.max < 999) {
         slotFilled += Math.min(status.filled, status.max);
         slotMax += status.max;
       }
+      if (status.min > 0 && status.filled < status.min) {
+        requiredUnfilled += (status.min - status.filled);
+      }
     }
   }
   const slotPct = slotMax > 0 ? Math.min((slotFilled / slotMax) * 100, 100) : 0;
 
   const lastAddedInfo = useUIStore((s) => s.lastAddedInfo);
+
+  // Actionable status message
+  const statusMsg = detachments.length === 0
+    ? null
+    : requiredUnfilled > 0
+      ? `${requiredUnfilled} required slot${requiredUnfilled !== 1 ? 's' : ''} unfilled`
+      : !isValid && validationErrors.length > 0
+        ? `${validationErrors.length} issue${validationErrors.length !== 1 ? 's' : ''}`
+        : null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
@@ -53,11 +66,16 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
 
       <button
         onClick={onOpen}
-        className="mobile-bottom-bar flex w-full flex-col px-5 py-4"
+        className="mobile-bottom-bar flex w-full flex-col px-5 pb-5 pt-3"
       >
+        {/* Drag handle affordance */}
+        <div className="mb-2.5 flex w-full justify-center">
+          <div className="h-1 w-10 rounded-full bg-gold-500/30" />
+        </div>
+
         {/* Slot fill progress bar */}
         {slotMax > 0 && (
-          <div className="mb-2 w-full slot-fill-bar">
+          <div className="mb-2.5 w-full slot-fill-bar">
             <div
               className={`slot-fill-bar-inner ${slotFilled >= slotMax ? 'bg-valid/80' : 'bg-gold-500/60'}`}
               style={{ width: `${slotPct}%` }}
@@ -65,52 +83,54 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
           </div>
         )}
         <div className="flex w-full items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-baseline gap-1.5">
-            <span className={`font-data text-lg font-semibold tabular-nums ${over ? 'text-danger' : 'text-gold-400'}`}>
-              {totalPoints}
-            </span>
-            <span className="font-data text-xs text-text-dim">/</span>
-            <span className="font-data text-xs tabular-nums text-text-secondary">{pointsLimit}</span>
-            <span className="font-label text-[10px] tracking-wider text-text-dim uppercase">pts</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-baseline gap-1.5">
+              <span className={`font-data text-lg font-semibold tabular-nums ${over ? 'text-danger' : 'text-gold-400'}`}>
+                {totalPoints}
+              </span>
+              <span className="font-data text-xs text-text-dim">/</span>
+              <span className="font-data text-xs tabular-nums text-text-secondary">{pointsLimit}</span>
+              <span className="font-label text-[10px] tracking-wider text-text-dim uppercase">pts</span>
+            </div>
+            {/* Actionable status instead of raw numbers */}
+            {statusMsg ? (
+              <span className={`font-label text-[11px] font-semibold tracking-wide ${
+                requiredUnfilled > 0 ? 'text-caution/80' : 'text-danger/80'
+              }`}>
+                {statusMsg}
+              </span>
+            ) : totalEntries > 0 ? (
+              <span className="font-label rounded-sm border border-edge-600/25 bg-plate-700/40 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-text-secondary">
+                {totalEntries} unit{totalEntries !== 1 ? 's' : ''}
+              </span>
+            ) : null}
+            {isValid !== null && !statusMsg && (
+              <span className={`flex h-4 w-4 items-center justify-center rounded-full ${
+                isValid ? 'bg-valid/20' : 'bg-danger/20'
+              }`}>
+                {isValid ? (
+                  <svg className="h-2.5 w-2.5 text-valid" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <span className="font-data text-[9px] font-bold text-danger">{validationErrors.length}</span>
+                )}
+              </span>
+            )}
           </div>
-          {totalEntries > 0 && (
-            <span className="font-label rounded-sm border border-edge-600/25 bg-plate-700/40 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-text-secondary">
-              {totalEntries} unit{totalEntries !== 1 ? 's' : ''}
+          <div className="flex items-center gap-2">
+            <span className="font-label text-sm font-semibold tracking-wider text-gold-400 uppercase">
+              Roster
             </span>
-          )}
-          {detachments.length > 0 && (
-            <span className="font-data text-[10px] tabular-nums text-text-dim">
-              {detachments.length} det
-            </span>
-          )}
-          {isValid !== null && (
-            <span className={`flex h-4 w-4 items-center justify-center rounded-full ${
-              isValid ? 'bg-valid/20' : 'bg-danger/20'
-            }`}>
-              {isValid ? (
-                <svg className="h-2.5 w-2.5 text-valid" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <span className="font-data text-[9px] font-bold text-danger">{validationErrors.length}</span>
-              )}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-label text-sm font-semibold tracking-wider text-gold-400 uppercase">
-            View Roster
-          </span>
-          {totalEntries > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-600/20 px-1.5 font-data text-[10px] font-bold tabular-nums text-gold-400">
-              {totalEntries}
-            </span>
-          )}
-          <svg className="h-4 w-4 text-gold-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-          </svg>
-        </div>
+            {totalEntries > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-600/20 px-1.5 font-data text-[10px] font-bold tabular-nums text-gold-400">
+                {totalEntries}
+              </span>
+            )}
+            <svg className="h-4 w-4 text-gold-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+            </svg>
+          </div>
         </div>
       </button>
     </div>
@@ -185,7 +205,7 @@ export default function AppLayout({ left, right }: Props) {
     <>
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Unit browser — dimmed when no detachments */}
-        <main className="relative flex-1 overflow-y-auto bg-void p-4 pb-20 lg:p-6 lg:pb-6">
+        <main className="relative flex-1 overflow-y-auto bg-void p-4 pb-20 lg:p-6 lg:pb-6" style={{ scrollPaddingTop: '200px' }}>
           {hasNoDetachments && (
             <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-l from-plate-950/60 via-transparent to-transparent" />
           )}

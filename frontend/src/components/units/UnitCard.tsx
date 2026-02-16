@@ -11,6 +11,13 @@ const DOT_STYLES: Partial<Record<UnitAvailability, { color: string; shape: 'circ
   roster_limit: { color: 'bg-danger/40', shape: 'dash' },
 };
 
+/** Cost tier thresholds for visual differentiation */
+function getCostTier(cost: number): 'standard' | 'elite' | 'flagship' {
+  if (cost >= 300) return 'flagship';
+  if (cost >= 150) return 'elite';
+  return 'standard';
+}
+
 /** Extract weapon names from profiles JSON */
 function extractWeaponSummary(profilesRaw: string | null): string | null {
   if (!profilesRaw) return null;
@@ -77,7 +84,7 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
     && (unit.model_min > 1 || unit.model_max > 1);
 
   const totalCost = unit.base_cost;
-  const isExpensive = totalCost >= 200;
+  const tier = getCostTier(totalCost);
 
   const weaponSummary = useMemo(() => extractWeaponSummary(unit.profiles), [unit.profiles]);
 
@@ -93,7 +100,9 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
     return (
       <div
         ref={cardRef}
-        className={`group flex items-center gap-2.5 rounded-sm border-l-3 px-3 py-2 transition-all duration-200 ${stripe} ${
+        className={`group flex items-center gap-2.5 rounded-sm px-3 py-2.5 transition-all duration-200 ${
+          tier === 'flagship' ? 'border-l-4' : 'border-l-3'
+        } ${stripe} ${
           `glow-border unit-card-hover bg-plate-900/80 hover:bg-plate-800/70 ${tint}`
         } ${dimmed ? 'opacity-35' : ''}`}
       >
@@ -111,11 +120,11 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
         <button onClick={onClick} className="min-w-0 flex-1 truncate text-left font-unit-name text-[14px] font-medium text-text-primary">
           <HighlightedName name={unit.name} term={searchTerm} />
         </button>
-        <Badge label={unit.unit_type} />
-        {/* Cost */}
-        <span className={`shrink-0 font-data text-[13px] font-semibold tabular-nums ${isExpensive ? 'text-gold-300' : 'text-gold-400'}`}>
+        {/* Cost first, then badge */}
+        <span className={`cost-pill shrink-0 font-data text-[13px] font-semibold tabular-nums ${tier === 'flagship' ? 'text-gold-300' : 'text-gold-400'}`}>
           {totalCost}<span className="text-[10px] font-normal text-gold-500/50">pts</span>
         </span>
+        <Badge label={unit.unit_type} />
         {/* Quick add */}
         {onQuickAdd && (
           <span
@@ -141,115 +150,116 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
   return (
     <div
       ref={cardRef}
-      className={`group rounded-sm border-l-3 transition-all duration-200 ${stripe} ${
+      className={`group rounded-sm transition-all duration-200 ${
+        tier === 'flagship' ? 'border-l-4 unit-tier-elite' : tier === 'elite' ? 'border-l-4' : 'border-l-3'
+      } ${stripe} ${
         expanded
           ? 'glow-border-active bg-plate-800'
           : `glow-border unit-card-hover bg-plate-900/80 hover:bg-plate-800/70 ${tint}`
-      } ${dimmed ? 'opacity-35' : ''} ${isExpensive && !expanded && !dimmed ? 'ring-1 ring-gold-700/10' : ''}`}
+      } ${dimmed ? 'opacity-35' : ''} ${tier === 'flagship' && !expanded && !dimmed ? 'ring-1 ring-gold-700/15' : ''}`}
     >
       <button
         onClick={onClick}
-        className={`flex w-full items-center gap-3 text-left ${isExpensive ? 'px-4 py-3.5' : 'px-4 py-3'}`}
+        className="flex w-full items-start gap-3 px-4 py-3.5 text-left"
       >
         {/* Status indicator — shape varies for color-blind accessibility */}
         {dotStyle && (
-          dotStyle.shape === 'diamond' ? (
-            <span className={`h-2.5 w-2.5 shrink-0 rotate-45 ring-2 ring-current/5 ${dotStyle.color}`} />
-          ) : dotStyle.shape === 'dash' ? (
-            <span className={`h-1 w-3 shrink-0 rounded-full ${dotStyle.color}`} />
-          ) : (
-            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-current/5 ${dotStyle.color}`} />
-          )
+          <div className="mt-1.5 shrink-0">
+            {dotStyle.shape === 'diamond' ? (
+              <span className={`block h-2.5 w-2.5 rotate-45 ring-2 ring-current/5 ${dotStyle.color}`} />
+            ) : dotStyle.shape === 'dash' ? (
+              <span className={`block h-1 w-3 rounded-full ${dotStyle.color}`} />
+            ) : (
+              <span className={`block h-2.5 w-2.5 rounded-full ring-2 ring-current/5 ${dotStyle.color}`} />
+            )}
+          </div>
         )}
 
-        {/* Name + badge — allow wrapping */}
+        {/* Name + metadata — main content area */}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <span className="font-unit-name text-[16px] font-medium leading-normal text-text-primary"><HighlightedName name={unit.name} term={searchTerm} /></span>
+          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <span className={`font-unit-name font-medium leading-normal text-text-primary ${tier === 'flagship' ? 'text-[17px]' : 'text-[16px]'}`}>
+              <HighlightedName name={unit.name} term={searchTerm} />
+            </span>
+            {/* Cost inline with name for natural reading flow */}
+            <span className={`cost-pill inline-flex items-baseline gap-0.5 rounded-sm border px-2 py-0.5 font-data font-semibold tabular-nums ${
+              tier === 'flagship'
+                ? 'border-gold-500/35 bg-gold-900/50 text-[14px] text-gold-300 shadow-[0_0_8px_rgba(184,147,64,0.10)]'
+                : tier === 'elite'
+                  ? 'border-gold-500/25 bg-gold-900/40 text-[13px] text-gold-300'
+                  : 'border-gold-600/25 bg-gold-900/40 text-[13px] text-gold-400'
+            }`}>
+              {totalCost}
+              <span className="text-[10px] font-normal text-gold-500/50">pts</span>
+            </span>
+            {unit.cost_per_model > 0 && (
+              <span className="font-data text-[10px] tabular-nums text-text-dim">
+                ({unit.cost_per_model}/ea)
+              </span>
+            )}
+          </div>
+          {/* Second line: badge + model range + weapon summary */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
             <Badge label={unit.unit_type} />
             {unit.is_legacy && (
               <span className="shrink-0 rounded-sm border border-gold-700/30 bg-gold-900/40 px-1.5 py-px font-label text-[10px] font-semibold tracking-wider text-gold-500/70 uppercase">
                 Legacy
               </span>
             )}
-          </div>
-          {/* Weapon summary + model range — collapsed only */}
-          {!expanded && (weaponSummary || (hasModelRange && unit.model_min !== unit.model_max)) && (
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-text-secondary/80 truncate">
-              {weaponSummary && (
-                <>
-                  <svg className="h-3 w-3 shrink-0 text-text-dim/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                  </svg>
-                  <span className="truncate">{weaponSummary}</span>
-                </>
-              )}
-              {hasModelRange && unit.model_min !== unit.model_max && (
-                <span className="shrink-0 font-data text-[10px]">
-                  {unit.model_min}&ndash;{unit.model_max} models
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Model count + cost pill */}
-        <div className="flex shrink-0 items-center gap-2.5">
-          {hasModelRange && (
-            <span className="font-data text-[11px] text-text-dim">
-              {unit.model_min === unit.model_max
-                ? `${unit.model_min}`
-                : `${unit.model_min}\u2013${unit.model_max}`
-              }
-            </span>
-          )}
-          <span className={`inline-flex items-baseline gap-0.5 rounded-sm border px-2 py-0.5 font-data font-semibold tabular-nums ${
-            isExpensive
-              ? 'border-gold-500/35 bg-gold-900/50 text-[15px] text-gold-300 shadow-[0_0_8px_rgba(184,147,64,0.08)]'
-              : 'border-gold-600/25 bg-gold-900/40 text-sm text-gold-400'
-          }`}>
-            {totalCost}
-            <span className="text-[10px] font-normal text-gold-500/50">pts</span>
-          </span>
-          {unit.cost_per_model > 0 && (
-            <span className="font-data text-[10px] tabular-nums text-text-dim">
-              ({unit.cost_per_model}/ea)
-            </span>
-          )}
-        </div>
-
-        {/* Quick add button — wrench for defaults, + for plain */}
-        {onQuickAdd && !expanded && (
-          <span
-            role="button"
-            tabIndex={0}
-            onClick={handleQuickAddClick}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAddClick(e as unknown as React.MouseEvent); }}
-            className={`quick-add-btn quick-add-ripple flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-valid/20 bg-valid/5 text-valid/60 transition-all hover:border-valid/40 hover:bg-valid/15 hover:text-valid ${rippling ? 'rippling' : ''}`}
-            title={unit.has_required_upgrades ? 'Quick add (with defaults)' : 'Quick add (no upgrades)'}
-          >
-            {unit.has_required_upgrades ? (
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.384 3.079A.75.75 0 015 17.656V4.344a.75.75 0 011.036-.693l5.384 3.079a.75.75 0 010 1.268l-5.384 3.08M15 12h6m-3-3v6" />
-              </svg>
-            ) : (
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" d="M12 5v14M5 12h14" />
-              </svg>
+            {hasModelRange && (
+              <span className="font-data text-[11px] tabular-nums text-text-dim">
+                {unit.model_min === unit.model_max
+                  ? `${unit.model_min} model${unit.model_min !== 1 ? 's' : ''}`
+                  : `${unit.model_min}\u2013${unit.model_max} models`
+                }
+              </span>
             )}
-          </span>
-        )}
+            {!expanded && weaponSummary && (
+              <span className="flex items-center gap-1 text-[11px] text-text-secondary/70 truncate">
+                <svg className="h-2.5 w-2.5 shrink-0 text-text-dim/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+                <span className="truncate">{weaponSummary}</span>
+              </span>
+            )}
+          </div>
+        </div>
 
-        {/* Chevron */}
-        <svg
-          className={`h-3.5 w-3.5 shrink-0 text-text-dim transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        {/* Action zone — separated from content */}
+        <div className="flex shrink-0 items-center gap-2 mt-1">
+          {/* Quick add button */}
+          {onQuickAdd && !expanded && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handleQuickAddClick}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAddClick(e as unknown as React.MouseEvent); }}
+              className={`quick-add-btn quick-add-ripple flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-valid/20 bg-valid/5 text-valid/60 transition-all hover:border-valid/40 hover:bg-valid/15 hover:text-valid ${rippling ? 'rippling' : ''}`}
+              title={unit.has_required_upgrades ? 'Quick add (with defaults)' : 'Quick add (no upgrades)'}
+            >
+              {unit.has_required_upgrades ? (
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.384 3.079A.75.75 0 015 17.656V4.344a.75.75 0 011.036-.693l5.384 3.079a.75.75 0 010 1.268l-5.384 3.08M15 12h6m-3-3v6" />
+                </svg>
+              ) : (
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+                </svg>
+              )}
+            </span>
+          )}
+
+          {/* Chevron */}
+          <svg
+            className={`h-3.5 w-3.5 shrink-0 text-text-dim transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </button>
 
       {expanded && (

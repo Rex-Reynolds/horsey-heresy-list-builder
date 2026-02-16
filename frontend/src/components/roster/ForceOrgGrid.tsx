@@ -101,11 +101,18 @@ export default function ForceOrgGrid({ slots, onSlotClick }: Props) {
               )}
 
               <div className="relative flex items-center justify-between gap-1.5">
-                <span className={`font-label text-[11px] font-semibold tracking-wide uppercase truncate ${
-                  isRequired ? 'text-caution/70' : isEmpty ? 'text-text-dim/80' : 'text-text-secondary'
-                }`}>
-                  {name}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <span className={`font-label text-[11px] font-semibold tracking-wide uppercase block truncate ${
+                    isRequired ? 'text-caution/70' : isEmpty ? 'text-text-dim/80' : 'text-text-secondary'
+                  }`}>
+                    {baseName}
+                  </span>
+                  {name !== baseName && (
+                    <span className="slot-restriction block truncate uppercase mt-0.5">
+                      {name.slice(baseName.length + 3).trim()}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {/* Filled dots — larger */}
                   {hasFiniteMax && status.max <= 6 ? (

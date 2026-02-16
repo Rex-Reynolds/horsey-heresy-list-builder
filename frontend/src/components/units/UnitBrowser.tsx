@@ -10,6 +10,7 @@ import { NATIVE_TO_DISPLAY_GROUP, DISPLAY_GROUP_ORDER, FILTER_COLORS, SLOT_DISPL
 import { useUIStore as useUIStoreView } from '../../stores/uiStore.ts';
 import CategoryFilter from '../common/CategoryFilter.tsx';
 import SearchInput from '../common/SearchInput.tsx';
+import type { SearchInputHandle } from '../common/SearchInput.tsx';
 import LoadingSpinner from '../common/LoadingSpinner.tsx';
 import EmptyState from '../common/EmptyState.tsx';
 import UnitCard from './UnitCard.tsx';
@@ -247,7 +248,20 @@ export default function UnitBrowser() {
 
   // Keyboard navigation
   const listRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<SearchInputHandle>(null);
   const flatUnitIds = useMemo(() => displayUnits.map((i) => i.unit.id), [displayUnits]);
+
+  // Global Cmd+K / Ctrl+K to focus search
+  useEffect(() => {
+    function handleGlobalKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => window.removeEventListener('keydown', handleGlobalKey);
+  }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (!flatUnitIds.length) return;
@@ -261,10 +275,17 @@ export default function UnitBrowser() {
       e.preventDefault();
       const prevIdx = currentIdx > 0 ? currentIdx - 1 : flatUnitIds.length - 1;
       setExpandedId(flatUnitIds[prevIdx]);
+    } else if (e.key === 'Enter' && search && displayUnits.length === 1) {
+      // Quick-add single search result
+      e.preventDefault();
+      const item = displayUnits[0];
+      if (item.availability?.status === 'addable' && hasDetachments) {
+        handleQuickAdd(item.unit, e as unknown as React.MouseEvent);
+      }
     } else if (e.key === 'Escape') {
       setExpandedId(null);
     }
-  }, [flatUnitIds, expandedId]);
+  }, [flatUnitIds, expandedId, search, displayUnits, hasDetachments, handleQuickAdd]);
 
   function renderUnitCard(item: { unit: Unit; availability: ReturnType<typeof getAvailability> | undefined }) {
     const { unit, availability } = item;
@@ -301,7 +322,7 @@ export default function UnitBrowser() {
             )}
             {!isLoading && !error && displayUnits.length > 0 && (
               <span className="font-data text-[11px] tabular-nums text-text-dim">
-                {displayUnits.length} unit{displayUnits.length !== 1 ? 's' : ''}
+                {displayUnits.length} {(category || search) ? (displayUnits.length === 1 ? 'match' : 'matches') : (displayUnits.length === 1 ? 'unit' : 'units')}
               </span>
             )}
             {/* Grid/List toggle */}
@@ -366,7 +387,7 @@ export default function UnitBrowser() {
         {/* Search + sort + available */}
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <SearchInput value={search} onChange={setSearch} />
+            <SearchInput ref={searchRef} value={search} onChange={setSearch} showKbdHint />
           </div>
 
           {/* Sort dropdown */}
@@ -462,14 +483,14 @@ export default function UnitBrowser() {
                   </span>
                   <span className="font-data text-[10px] tabular-nums text-text-dim">{items.length}</span>
                 </div>
-                <div className={viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-1.5 xl:grid-cols-2'}>
+                <div className={viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 xl:grid-cols-2'}>
                   {items.map(renderUnitCard)}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className={`stagger-list ${viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-1.5 xl:grid-cols-2'}`}>
+          <div className={`stagger-list ${viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 xl:grid-cols-2'}`}>
             {displayUnits.map(renderUnitCard)}
           </div>
         )}

@@ -3,6 +3,8 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
 
+from lxml import etree
+
 from src.bsdata.parser import BattleScribeParser
 
 logger = logging.getLogger(__name__)
@@ -20,6 +22,7 @@ class CatalogueCache:
         """
         self.bsdata_dir = bsdata_dir
         self.loaded_catalogues: Dict[str, Dict[str, Any]] = {}
+        self.group_elements: Dict[str, Dict[str, etree._Element]] = {}
         logger.debug(f"CatalogueCache initialized with directory: {bsdata_dir}")
 
     def load_shared_catalogue(self, catalogue_name: str) -> int:
@@ -70,7 +73,11 @@ class CatalogueCache:
                     }
 
             self.loaded_catalogues[catalogue_name] = entry_cache
-            logger.info(f"✓ Cached {len(entry_cache)} entries from {catalogue_name}")
+
+            # Cache sharedSelectionEntryGroups as raw XML elements
+            group_cache = self._get_shared_selection_entry_groups(parser)
+            self.group_elements[catalogue_name] = group_cache
+            logger.info(f"✓ Cached {len(entry_cache)} entries + {len(group_cache)} groups from {catalogue_name}")
 
             return len(entry_cache)
 
@@ -112,6 +119,45 @@ class CatalogueCache:
 
         return entries
 
+    def _get_shared_selection_entry_groups(self, parser: BattleScribeParser) -> Dict[str, etree._Element]:
+        """
+        Extract sharedSelectionEntryGroups as raw XML elements keyed by ID.
+
+        These groups contain entryLinks to shared entries (weapons, wargear)
+        and need to be resolved when units reference them via entryLink
+        type="selectionEntryGroup".
+        """
+        groups = {}
+
+        if parser.ns:
+            group_elements = parser.root.xpath(
+                './/bs:sharedSelectionEntryGroups/bs:selectionEntryGroup',
+                namespaces=parser.ns
+            )
+        else:
+            group_elements = parser.root.xpath(
+                './/sharedSelectionEntryGroups/selectionEntryGroup'
+            )
+
+        for group_el in group_elements:
+            group_id = group_el.get('id')
+            if group_id:
+                groups[group_id] = group_el
+
+        return groups
+
+    def get_group_element_by_id(self, group_id: str) -> Optional[etree._Element]:
+        """
+        Look up a selectionEntryGroup XML element by ID across all loaded catalogues.
+
+        Returns:
+            Raw XML element, or None if not found
+        """
+        for catalogue_name, cache in self.group_elements.items():
+            if group_id in cache:
+                return cache[group_id]
+        return None
+
     def get_entry_by_id(self, entry_id: str) -> Optional[Dict[str, Any]]:
         """
         Resolve entry ID across all loaded catalogues.
@@ -144,6 +190,7 @@ class CatalogueCache:
     def clear(self):
         """Clear all cached catalogues."""
         self.loaded_catalogues.clear()
+        self.group_elements.clear()
         logger.debug("Catalogue cache cleared")
 
     def get_loaded_catalogues(self) -> list[str]:

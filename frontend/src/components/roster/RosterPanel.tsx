@@ -291,9 +291,9 @@ export default function RosterPanel() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Sticky header */}
-      <div className="sticky-roster-header border-b border-edge-700/40 p-4">
-        <div className="mb-3 flex items-center justify-between">
+      {/* Sticky header — compact layout */}
+      <div className="sticky-roster-header border-b border-edge-700/40 px-4 py-3">
+        <div className="mb-2 flex items-center justify-between">
           {editingName ? (
             <input
               ref={nameInputRef}
@@ -328,17 +328,16 @@ export default function RosterPanel() {
         </div>
         <PointsBar current={totalPoints} limit={pointsLimit} segments={pointsSegments} />
 
-        {/* Budget chips */}
-        <div className="divider-glow mt-3 mb-3" />
-        <div className="flex flex-wrap gap-x-3 gap-y-2">
+        {/* Budget chips — inline row below points bar */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <BudgetChip
-            label="Primary"
+            label="Pri"
             current={composition.primary_count}
             max={composition.primary_max}
             status={composition.primary_count > 0 ? 'valid' : 'empty'}
           />
           <BudgetChip
-            label="Auxiliary"
+            label="Aux"
             current={composition.auxiliary_used}
             max={composition.auxiliary_budget}
             status={auxRemaining < 0 ? 'over' : auxRemaining === 0 && composition.auxiliary_budget > 0 ? 'full' : 'empty'}
@@ -353,39 +352,45 @@ export default function RosterPanel() {
           )}
           {composition.warlord_available && (
             <BudgetChip
-              label="Warlord"
+              label="War"
               current={composition.warlord_count}
               max={1}
               status={composition.warlord_count > 0 ? 'valid' : 'empty'}
             />
           )}
+          {/* Inline composition summary — detachments only */}
+          {detachments.length > 0 && totalEntries > 0 && (
+            <span className="ml-auto font-data text-[10px] tabular-nums text-text-dim">
+              {detachments.length} det · {totalEntries} unit{totalEntries !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
 
-        {/* Next-action suggestion */}
+        {/* Next-action suggestion — only for early onboarding */}
         {(() => {
           const hint = getNextActionHint(composition, detachments.length, totalEntries);
-          if (!hint || detachments.length > 2) return null;
+          if (!hint || detachments.length > 1) return null;
           return (
             <button
               onClick={hint.type === 'add-detachment' ? () => { setShowDetPicker(true); setAddError(null); } : hint.type === 'browse' ? () => { if (window.innerWidth < 1024) setMobileRosterOpen(false); } : undefined}
-              className="mt-2 flex items-center gap-2 rounded-sm border border-gold-600/15 bg-gold-900/6 px-3 py-2 text-left transition-all hover:border-gold-500/20 hover:bg-gold-900/10 w-full"
+              className="mt-2 flex items-center gap-2 rounded-sm border border-gold-600/15 bg-gold-900/6 px-3 py-1.5 text-left transition-all hover:border-gold-500/20 hover:bg-gold-900/10 w-full"
             >
-              <svg className="h-3.5 w-3.5 shrink-0 text-gold-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="h-3 w-3 shrink-0 text-gold-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="font-label text-[11px] text-gold-400/80">{hint.text}</span>
             </button>
           );
         })()}
-
-        {/* Composition Summary */}
-        {detachments.length > 0 && totalEntries > 0 && (
-          <CompositionSummary detachments={detachments} totalPoints={totalPoints} />
-        )}
       </div>
 
       {/* Detachments */}
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
+        {/* Composition Summary — collapsible, in scrollable area */}
+        {detachments.length > 0 && totalEntries > 0 && (
+          <CompositionSummary detachments={detachments} totalPoints={totalPoints} />
+        )}
+
         {/* Onboarding hints */}
         {onboardingStep === 1 && (
           <OnboardingHint
@@ -530,12 +535,12 @@ function BudgetChip({ label, current, max, status }: {
 
   return (
     <div className={`flex items-center gap-0 rounded-sm border border-edge-600/25 bg-plate-800/50 transition-all ${glowClass} ${shaking ? 'animate-budget-shake' : ''}`}>
-      <span className={`w-[3px] self-stretch rounded-l-sm transition-colors ${barColor}`} />
-      <div className="flex items-center gap-2 px-2.5 py-1">
-        <span className="font-label text-[11px] font-semibold tracking-wider text-text-secondary uppercase">
+      <span className={`w-[2px] self-stretch rounded-l-sm transition-colors ${barColor}`} />
+      <div className="flex items-center gap-1.5 px-2 py-0.5">
+        <span className="font-label text-[10px] font-semibold tracking-wider text-text-secondary uppercase">
           {label}
         </span>
-        <span className={`font-data text-xs font-medium tabular-nums transition-colors ${textColor} ${bumped ? 'animate-number-bump' : ''}`}>
+        <span className={`font-data text-[11px] font-medium tabular-nums transition-colors ${textColor} ${bumped ? 'animate-number-bump' : ''}`}>
           {current}/{max}
         </span>
       </div>

@@ -4,6 +4,24 @@ import { SLOT_FILL_COLORS } from '../../types/index.ts';
 
 const TYPE_ORDER = ['Primary', 'Auxiliary', 'Apex', 'Lord of War', 'Allied', 'Other'];
 
+/** Brief gameplay descriptions for known detachment types */
+const DETACHMENT_DESCRIPTIONS: Record<string, string> = {
+  // Primary
+  'Crusade Primary Detachment': 'Standard force organisation — balanced access to all slot types.',
+  'Warlord Primary Detachment': 'Unlocks Lords of War and additional High Command. Requires 3000+ pts.',
+  // Tercio Auxiliaries
+  'Infantry Tercio': 'Focused on infantry with enhanced Troops and Support slots.',
+  'Armoured Tercio': 'Armour-heavy formation with expanded Armour and Heavy Support slots.',
+  'Artillery Tercio': 'Fire support formation emphasizing Artillery and Support units.',
+  'Recon Tercio': 'Mobile force with additional Recon and Fast Attack slots.',
+  'Pioneer Tercio': 'Forward deployment force with Veletaris and pathfinder specialists.',
+  'Mechanised Tercio': 'Combined arms with transport-mounted infantry and armour support.',
+  // Generic auxiliaries
+  'Auxiliary Detachment': 'Flexible support detachment with a mix of available slots.',
+  'Allied Detachment': 'Units from an allied faction to supplement your main force.',
+  'Apex Detachment': 'Elite formation for rare and powerful units.',
+};
+
 const SECTION_COLORS: Record<string, string> = {
   Primary: 'border-l-gold-500/60 text-gold-400/80',
   Auxiliary: 'border-l-steel/40 text-steel/80',
@@ -217,12 +235,20 @@ export default function DetachmentPickerModal({
                       >
                         <div className="px-4 py-3">
                           <div className="flex items-center justify-between gap-2">
-                            <span className={`text-[14px] font-medium ${isDisabled ? 'text-text-dim/60' : 'text-text-primary'}`}>
-                              {d.name}
-                              {d.faction && (
-                                <span className="ml-1.5 text-[11px] text-text-dim">[{d.faction}]</span>
+                            <div className="min-w-0 flex-1">
+                              <span className={`text-[14px] font-medium ${isDisabled ? 'text-text-dim/60' : 'text-text-primary'}`}>
+                                {d.name}
+                                {d.faction && (
+                                  <span className="ml-1.5 text-[11px] text-text-dim">[{d.faction}]</span>
+                                )}
+                              </span>
+                              {/* Gameplay description */}
+                              {!isDisabled && DETACHMENT_DESCRIPTIONS[d.name] && (
+                                <p className="mt-0.5 text-[11px] leading-relaxed text-text-dim/70">
+                                  {DETACHMENT_DESCRIPTIONS[d.name]}
+                                </p>
                               )}
-                            </span>
+                            </div>
                             <div className="flex items-center gap-2 shrink-0">
                               {/* Budget cost preview */}
                               {!disabledReason && (d.costs?.auxiliary ?? 0) > 0 && (

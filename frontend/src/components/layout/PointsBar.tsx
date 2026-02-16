@@ -58,9 +58,12 @@ export default function PointsBar({ current, limit, segments }: Props) {
   // Hover tooltip state
   const [hoveredSeg, setHoveredSeg] = useState<number | null>(null);
 
+  // Minimum visual width for segments so they're always visible
+  const MIN_SEG_WIDTH = 8; // px
+
   return (
     <div>
-      {/* Labels */}
+      {/* Labels — prominent numeric display */}
       <div className="mb-1.5 flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className={`font-data text-2xl font-bold tabular-nums tracking-tight transition-colors ${over ? 'text-danger' : 'text-gold-300'} ${flash ? 'animate-points-flash' : ''}`}>
@@ -79,7 +82,7 @@ export default function PointsBar({ current, limit, segments }: Props) {
             <span className={`font-data text-xs tabular-nums transition-colors ${
               nearLimit ? 'text-caution/80 animate-pulse' : 'text-text-dim/60'
             }`}>
-              {remaining} remaining
+              {remaining} left
             </span>
           ) : null}
         </div>
@@ -97,7 +100,7 @@ export default function PointsBar({ current, limit, segments }: Props) {
         {hasSegments ? (
           <div
             className="relative flex h-full transition-all duration-700 ease-out"
-            style={{ width: `${pct}%` }}
+            style={{ width: `${Math.max(pct, current > 0 ? 2 : 0)}%`, minWidth: current > 0 ? `${MIN_SEG_WIDTH}px` : undefined }}
           >
             {segments!.map((seg, i) => {
               const segPct = current > 0 ? (seg.points / current) * 100 : 0;
@@ -111,7 +114,7 @@ export default function PointsBar({ current, limit, segments }: Props) {
                 <div
                   key={i}
                   className={`relative h-full ${color} ${i > 0 ? 'border-l border-void/30' : ''} transition-colors hover:brightness-125`}
-                  style={{ width: `${segPct}%` }}
+                  style={{ width: `${segPct}%`, minWidth: `${MIN_SEG_WIDTH}px` }}
                   onMouseEnter={() => setHoveredSeg(i)}
                   onMouseLeave={() => setHoveredSeg(null)}
                 >
@@ -135,7 +138,7 @@ export default function PointsBar({ current, limit, segments }: Props) {
                 ? 'bg-gradient-to-r from-danger-dim to-danger'
                 : 'bg-gradient-to-r from-gold-700 via-gold-500 to-gold-400'
             }`}
-            style={{ width: `${pct}%` }}
+            style={{ width: `${pct}%`, minWidth: current > 0 ? `${MIN_SEG_WIDTH}px` : undefined }}
           />
         )}
 
@@ -170,51 +173,22 @@ export default function PointsBar({ current, limit, segments }: Props) {
         />
       </div>
 
-      {/* Numeric breakdown */}
-      <div className="mt-1.5 flex items-baseline justify-between">
-        <span className={`font-data text-[11px] tabular-nums ${over ? 'text-danger' : 'text-text-dim'}`}>
-          {current} / {limit}
-        </span>
-        {remaining !== 0 && (
-          <span className={`font-data text-[11px] tabular-nums ${
-            over ? 'text-danger' : nearLimit ? 'text-caution/80' : 'text-text-dim/60'
-          }`}>
-            {over ? `${Math.abs(remaining)} over` : `${remaining} remaining`}
-          </span>
+      {/* Compact segment legend + threshold labels combined */}
+      <div className="mt-1 flex items-center justify-between">
+        {hasSegments ? (
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            {segments!.map((seg) => (
+              <div key={seg.label} className="flex items-center gap-1">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-sm ${SEGMENT_COLORS[seg.type] ?? 'bg-edge-400'}`} />
+                <span className="font-label text-[9px] text-text-dim truncate max-w-[100px]">{seg.label}</span>
+                <span className="font-data text-[9px] tabular-nums text-text-dim/60">{seg.points}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span className="font-data text-[9px] tabular-nums text-text-dim/60">0</span>
         )}
-      </div>
-
-      {/* Segment legend */}
-      {hasSegments && (
-        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-          {segments!.map((seg) => (
-            <div key={seg.label} className="flex items-center gap-1.5">
-              <span className={`h-2 w-2 shrink-0 rounded-sm ${SEGMENT_COLORS[seg.type] ?? 'bg-edge-400'}`} />
-              <span className="font-label text-[10px] text-text-dim truncate max-w-[120px]">{seg.label}</span>
-              <span className="font-data text-[10px] tabular-nums text-text-dim/60">{seg.points}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Threshold labels */}
-      <div className="relative mt-0.5 h-3">
-        <span className="absolute left-0 font-data text-[9px] tabular-nums text-text-dim/60">0</span>
-        {ticks.map((t) => {
-          const tickPct = (t / limit) * 100;
-          return (
-            <span
-              key={t}
-              className={`absolute font-data text-[9px] tabular-nums -translate-x-1/2 ${
-                pct >= tickPct ? 'text-text-dim' : 'text-text-dim/50'
-              }`}
-              style={{ left: `${tickPct}%` }}
-            >
-              {t >= 1000 ? `${t / 1000}k` : t}
-            </span>
-          );
-        })}
-        <span className="absolute right-0 font-data text-[9px] tabular-nums text-text-dim">
+        <span className="font-data text-[9px] tabular-nums text-text-dim">
           {limit >= 1000 ? `${limit / 1000}k` : limit}
         </span>
       </div>

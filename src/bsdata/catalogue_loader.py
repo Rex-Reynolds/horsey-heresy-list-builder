@@ -367,6 +367,8 @@ class SolarAuxiliaCatalogue:
         for entry_id, entry_data in sa_cache.items():
             if entry_data.get('entry_type') == 'profile':
                 continue
+            if entry_data.get('type') == 'unit':
+                continue
             if entry_data.get('hidden'):
                 continue
             if entry_id in skip_ids:
