@@ -6,6 +6,7 @@ import RosterEntryCard from './RosterEntryCard.tsx';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
 import ForceOrgGrid from './ForceOrgGrid.tsx';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
+import { useTouchReorder } from '../../hooks/useTouchReorder.ts';
 
 interface Props {
   detachment: RosterDetachment;
@@ -15,6 +16,7 @@ interface Props {
   onDuplicateEntry?: (detachmentId: number, entry: RosterEntry) => void;
   onSlotClick?: (slotName: string, filled: number, max: number) => void;
   onReorderEntries?: (detachmentId: number, fromIndex: number, toIndex: number) => void;
+  onClearAll?: (detachmentId: number) => void;
   newEntryId?: number | null;
 }
 
@@ -182,15 +184,32 @@ export default function DetachmentSection({
   onDuplicateEntry,
   onSlotClick,
   onReorderEntries,
+  onClearAll,
   newEntryId,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [showAllSlots, setShowAllSlots] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [dragEntryId, setDragEntryId] = useState<number | null>(null);
   const [dragOverEntryId, setDragOverEntryId] = useState<number | null>(null);
   const detPoints = detachment.entries.reduce((s, e) => s + e.totalCost, 0);
+
+  // Touch-based reorder for mobile
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
+  const handleTouchReorder = useCallback((fromId: number, toId: number) => {
+    if (!onReorderEntries) return;
+    const fromIndex = detachment.entries.findIndex((e) => e.id === fromId);
+    const toIndex = detachment.entries.findIndex((e) => e.id === toId);
+    if (fromIndex !== -1 && toIndex !== -1) {
+      onReorderEntries(detachment.id, fromIndex, toIndex);
+    }
+  }, [detachment.entries, detachment.id, onReorderEntries]);
+
+  const { touchHandlers } = useTouchReorder({
+    enabled: isMobile && !!onReorderEntries && detachment.entries.length > 1,
+    onReorder: handleTouchReorder,
+  });
 
   // Drag-and-drop handlers for entry reordering
   const handleDragStart = useCallback((entryId: number, e: React.DragEvent) => {
@@ -299,6 +318,20 @@ export default function DetachmentSection({
           </div>
           <div className="flex items-center gap-2.5">
             <span className="font-data text-xs tabular-nums text-text-dim">{detPoints} pts</span>
+            {onClearAll && detachment.entries.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmClearAll(true);
+                }}
+                className="text-text-dim/50 transition-colors hover:text-caution"
+                title="Clear all units"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
             {onRemoveDetachment && detachment.type !== 'Primary' && (
               <button
                 onClick={(e) => {
@@ -321,12 +354,15 @@ export default function DetachmentSection({
           <ForceOrgGrid
             slots={relevantSlots}
             onSlotClick={onSlotClick}
+            entryNames={Object.fromEntries(
+              Object.entries(entriesBySlot).map(([slot, entries]) => [slot, entries.map((e) => e.name)])
+            )}
           />
         )}
 
         {/* Body */}
         {!collapsed && (
-          <div className="border-t border-edge-700/15 px-3.5 py-2 space-y-1">
+          <div className="border-t border-edge-700/15 px-3.5 py-2 space-y-1" {...touchHandlers}>
             {slotsToRender.map(([slotName, status]) => (
               <div key={slotName}>
                 <SlotRow
@@ -342,8 +378,6 @@ export default function DetachmentSection({
                       onRemove={(id) => onRemoveEntry(detachment.id, id)}
                       onUpdateQty={(id, qty) => onUpdateQty(detachment.id, id, qty)}
                       onDuplicate={onDuplicateEntry ? (e) => onDuplicateEntry(detachment.id, e) : undefined}
-                      expanded={expandedEntryId === entry.id}
-                      onToggleExpand={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
                       isNew={entry.id === newEntryId}
                       entryIndex={idx}
                       isDuplicateName={idx > 0 && arr[idx - 1].unitId === entry.unitId}
@@ -389,8 +423,6 @@ export default function DetachmentSection({
                         onRemove={(id) => onRemoveEntry(detachment.id, id)}
                         onUpdateQty={(id, qty) => onUpdateQty(detachment.id, id, qty)}
                         onDuplicate={onDuplicateEntry ? (e) => onDuplicateEntry(detachment.id, e) : undefined}
-                        expanded={expandedEntryId === entry.id}
-                        onToggleExpand={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
                         draggable={!!onReorderEntries && detachment.entries.length > 1}
                         onDragStart={(e) => handleDragStart(entry.id, e)}
                         onDragOver={(e) => handleDragOver(entry.id, e)}
@@ -418,6 +450,20 @@ export default function DetachmentSection({
           onRemoveDetachment?.(detachment.id);
         }}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      {/* Clear all confirmation dialog */}
+      <ConfirmDialog
+        open={confirmClearAll}
+        title="Clear All Units"
+        message={`Remove all ${detachment.entries.length} unit${detachment.entries.length !== 1 ? 's' : ''} from "${detachment.name}"? This cannot be undone.`}
+        confirmLabel="Clear All"
+        variant="caution"
+        onConfirm={() => {
+          setConfirmClearAll(false);
+          onClearAll?.(detachment.id);
+        }}
+        onCancel={() => setConfirmClearAll(false)}
       />
     </>
   );

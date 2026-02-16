@@ -1,5 +1,15 @@
 import type { ReactNode } from 'react';
 
+type EmptyVariant = 'search' | 'empty-slot' | 'empty-roster' | 'no-detachments' | 'default';
+
+const FLAVOR_TEXT: Record<EmptyVariant, string> = {
+  search: 'No units match your query, Strategos.',
+  'empty-slot': 'This position awaits reinforcement, Commander.',
+  'empty-roster': 'The Cohort awaits your command, Legate.',
+  'no-detachments': 'Initialize a detachment to marshal your forces.',
+  default: 'Nothing to display at this time.',
+};
+
 const ICONS: Record<string, ReactNode> = {
   search: (
     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -24,19 +34,24 @@ export default function EmptyState({
   suggestion,
   actionLabel,
   onAction,
+  variant = 'default',
+  flavorText,
 }: {
   message: string;
   icon?: string;
   suggestion?: string;
   actionLabel?: string;
   onAction?: () => void;
+  variant?: EmptyVariant;
+  flavorText?: string;
 }) {
   const svgIcon = ICONS[icon] ?? ICONS.default;
+  const flavor = flavorText ?? FLAVOR_TEXT[variant];
 
   return (
     <div className="relative flex flex-col items-center justify-center py-14 text-text-dim overflow-hidden">
-      {/* Aquila watermark */}
-      <svg viewBox="0 0 64 28" fill="currentColor" className="absolute w-24 opacity-[0.04] pointer-events-none">
+      {/* Aquila watermark with breathing animation */}
+      <svg viewBox="0 0 64 28" fill="currentColor" className="absolute w-24 aquila-breathe pointer-events-none">
         <path d="M28 14 L6 5 L12 11 L3 9 L14 14 L3 19 L12 17 L6 23 Z" />
         <path d="M36 14 L58 5 L52 11 L61 9 L50 14 L61 19 L52 17 L58 23 Z" />
         <path d="M32 4 L34 12 L40 8 L35 14 L42 14 L35 16 L40 20 L34 16 L32 24 L30 16 L24 20 L29 16 L22 14 L29 14 L24 8 L30 12 Z" />
@@ -46,6 +61,11 @@ export default function EmptyState({
       <div className="relative z-[1] flex flex-col items-center">
         <div className="mb-3 opacity-25">{svgIcon}</div>
         <p className="font-label text-[11px] font-medium tracking-wider uppercase">{message}</p>
+        {flavor && variant !== 'default' && (
+          <p className="mt-2 animate-flavor-reveal text-[11px] italic text-text-dim/40 text-center max-w-[300px]">
+            {flavor}
+          </p>
+        )}
         {suggestion && (
           <p className="mt-1.5 text-[11px] text-text-dim/50 text-center max-w-[280px]">{suggestion}</p>
         )}

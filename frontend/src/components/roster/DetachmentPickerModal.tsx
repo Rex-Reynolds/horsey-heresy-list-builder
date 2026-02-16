@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { Detachment, CompositionStatus } from '../../types/index.ts';
-import { SLOT_FILL_COLORS } from '../../types/index.ts';
+import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 
 const TYPE_ORDER = ['Primary', 'Auxiliary', 'Apex', 'Lord of War', 'Allied', 'Other'];
 
@@ -226,6 +226,7 @@ export default function DetachmentPickerModal({
                         onClick={() => !isDisabled && onSelect(d)}
                         disabled={isDisabled}
                         className={`block w-full rounded-sm border-l-2 text-left transition-all ${stripe} ${
+
                           isDisabled
                             ? 'cursor-not-allowed opacity-40 bg-plate-900/30'
                             : isPrimarySection
@@ -254,11 +255,17 @@ export default function DetachmentPickerModal({
                               {!disabledReason && (d.costs?.auxiliary ?? 0) > 0 && (
                                 <span className="rounded-sm border border-steel-dim/20 bg-steel/6 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-steel/70 uppercase">
                                   {d.costs.auxiliary} Aux
+                                  <span className="ml-1 text-[9px] text-steel/50">
+                                    ({composition.auxiliary_used + (d.costs?.auxiliary ?? 0)}/{composition.auxiliary_budget} after)
+                                  </span>
                                 </span>
                               )}
                               {!disabledReason && (d.costs?.apex ?? 0) > 0 && (
                                 <span className="rounded-sm border border-royal-dim/20 bg-royal/6 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wider text-royal/70 uppercase">
                                   {d.costs.apex} Apex
+                                  <span className="ml-1 text-[9px] text-royal/50">
+                                    ({composition.apex_used + (d.costs?.apex ?? 0)}/{composition.apex_budget} after)
+                                  </span>
                                 </span>
                               )}
                             </div>
@@ -275,7 +282,6 @@ export default function DetachmentPickerModal({
                           {visibleSlots.length > 0 && (
                             <div className="mt-2.5 grid grid-cols-4 gap-1.5">
                               {visibleSlots.map(([slot, c]) => {
-                                const dotColor = SLOT_FILL_COLORS[slot]?.replace('/70', '') ?? 'bg-edge-400';
                                 return (
                                 <span
                                   key={slot}
@@ -285,8 +291,11 @@ export default function DetachmentPickerModal({
                                       : 'border-edge-600/25 bg-plate-700/40 text-text-secondary'
                                   }`}
                                 >
-                                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isDisabled ? 'bg-edge-600/30' : dotColor}`} />
+                                  <UnitTypeIcon unitType={slot} className={`h-3 w-3 shrink-0 ${isDisabled ? 'text-text-dim/20' : 'text-text-dim/50'}`} />
                                   <span className="font-label font-semibold tracking-wider uppercase">{slot}</span>
+                                  {c.min > 0 && (
+                                    <span className="rounded-sm bg-caution/15 px-1 py-px font-label text-[8px] font-bold tracking-wider text-caution uppercase">req</span>
+                                  )}
                                   <span className="font-data text-text-dim">
                                     {c.min > 0 ? `${c.min}\u2013` : ''}{c.max}
                                   </span>

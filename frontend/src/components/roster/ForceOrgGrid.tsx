@@ -1,15 +1,17 @@
 import { useRef, useState, useEffect } from 'react';
 import type { SlotStatus } from '../../types/index.ts';
 import { SLOT_FILL_COLORS } from '../../types/index.ts';
+import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 
 interface Props {
   slots: [string, SlotStatus][];
   onSlotClick?: (slotName: string, filled: number, max: number) => void;
+  entryNames?: Record<string, string[]>;
 }
 
 const HINT_STORAGE_KEY = 'forceOrgHintDismissed';
 
-export default function ForceOrgGrid({ slots, onSlotClick }: Props) {
+export default function ForceOrgGrid({ slots, onSlotClick, entryNames }: Props) {
   // Track previous fill counts to detect increases
   const prevFills = useRef<Record<string, number>>({});
   const [recentlyFilled, setRecentlyFilled] = useState<Set<string>>(new Set());
@@ -103,6 +105,10 @@ export default function ForceOrgGrid({ slots, onSlotClick }: Props) {
 
           const baseName = name.includes(' - ') ? name.split(' - ', 1)[0].trim() : name;
           const slotColor = SLOT_FILL_COLORS[baseName] ?? 'bg-edge-400/70';
+          const unitNames = entryNames?.[name];
+          const tooltipText = unitNames && unitNames.length > 0
+            ? `${baseName}: ${unitNames.join(', ')}`
+            : `${baseName}: ${status.filled}/${status.max}`;
 
           const borderColor = isOverfilled
             ? 'border-danger/40'
@@ -122,9 +128,10 @@ export default function ForceOrgGrid({ slots, onSlotClick }: Props) {
               type="button"
               onClick={isClickable ? () => handleSlotClick(name, status.filled, status.max) : undefined}
               disabled={!isClickable}
-              className={`relative overflow-hidden rounded-sm border px-2.5 py-2 text-left transition-all ${borderColor} ${recentlyFilled.has(name) ? 'animate-slot-fill' : ''} ${
+              title={tooltipText}
+              className={`force-org-cell-hover relative overflow-hidden rounded-sm border px-2.5 py-2 text-left transition-all ${borderColor} ${recentlyFilled.has(name) ? 'animate-slot-fill-bump' : ''} ${
                 isClickable
-                  ? 'cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)] hover:shadow-[inset_0_0_0_1px_rgba(173,136,56,0.15)] hover:border-gold-600/25 hover:bg-plate-700/20'
+                  ? 'cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)] hover:border-gold-600/25 hover:bg-plate-700/20'
                   : ''
               } ${isEmpty && isClickable ? 'bg-transparent' : 'bg-plate-800/15'} ${
                 isRequired ? 'animate-pulse-glow' : ''
@@ -141,17 +148,25 @@ export default function ForceOrgGrid({ slots, onSlotClick }: Props) {
               )}
 
               <div className="relative flex items-center justify-between gap-1.5">
-                <div className="min-w-0 flex-1">
-                  <span className={`font-label text-[11px] font-semibold tracking-wide uppercase block truncate ${
-                    isRequired ? 'text-caution/70' : isEmpty ? 'text-text-dim/80' : 'text-text-secondary'
-                  }`}>
-                    {baseName}
-                  </span>
-                  {name !== baseName && (
-                    <span className="slot-restriction block truncate uppercase mt-0.5">
-                      {name.slice(baseName.length + 3).trim()}
+                <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                  <UnitTypeIcon
+                    unitType={baseName}
+                    className={`h-4 w-4 shrink-0 ${
+                      isRequired ? 'text-caution/60' : isEmpty ? 'text-text-dim/30' : 'text-text-dim/50'
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <span className={`font-label text-[11px] font-semibold tracking-wide uppercase block truncate ${
+                      isRequired ? 'text-caution/70' : isEmpty ? 'text-text-dim/80' : 'text-text-secondary'
+                    }`}>
+                      {baseName}
                     </span>
-                  )}
+                    {name !== baseName && (
+                      <span className="slot-restriction block truncate uppercase mt-0.5">
+                        {name.slice(baseName.length + 3).trim()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {/* Filled dots — larger */}

@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import type { RosterEntry } from '../../stores/rosterStore.ts';
 import { SLOT_STRIPE_COLORS } from '../../types/index.ts';
-import RosterEntryExpanded from './RosterEntryExpanded.tsx';
+import { useUIStore } from '../../stores/uiStore.ts';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 
 interface Props {
@@ -23,7 +23,8 @@ interface Props {
   isDragOver?: boolean;
 }
 
-export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, expanded, onToggleExpand, isNew, entryIndex, isDuplicateName, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragOver }: Props) {
+export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, isNew, entryIndex, isDuplicateName, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragOver }: Props) {
+  const openUpgradePanel = useUIStore((s) => s.openUpgradePanel);
   const cardRef = useRef<HTMLDivElement>(null);
   const prevQtyRef = useRef(entry.quantity);
   const [costBumped, setCostBumped] = useState(false);
@@ -60,12 +61,13 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
   return (
     <div
       ref={cardRef}
+      data-entry-id={entry.id}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
       onDrop={onDrop}
-      className={`group rounded-sm border-l-2 ${stripe} transition-all ${expanded ? 'glow-border-active bg-plate-800/40' : 'hover:bg-plate-800/40'} ${isNew ? 'animate-entry-flash' : ''} ${entryIndex !== undefined && entryIndex % 2 === 1 ? 'bg-plate-800/30' : 'bg-plate-800/20'} ${isDragOver ? 'border-t-2 border-t-gold-500/50' : ''}`}
+      className={`group rounded-sm border-l-2 ${stripe} transition-all hover:bg-plate-800/40 ${isNew ? 'animate-entry-flash' : ''} ${entryIndex !== undefined && entryIndex % 2 === 1 ? 'bg-plate-800/30' : 'bg-plate-800/20'} ${isDragOver ? 'border-t-2 border-t-gold-500/50' : ''}`}
     >
       <div className="flex items-center gap-2.5 px-3 py-2.5">
         {/* Drag handle */}
@@ -87,10 +89,10 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
             #{entryIndex + 1}
           </span>
         )}
-        {/* Info — clickable to expand */}
+        {/* Info — clickable to open upgrade panel */}
         <div
-          className={`min-w-0 flex-1 ${onToggleExpand ? 'cursor-pointer' : ''}`}
-          onClick={onToggleExpand}
+          className="min-w-0 flex-1 cursor-pointer"
+          onClick={() => openUpgradePanel(entry.id, detachmentId)}
         >
           <p className={`flex items-center gap-1.5 truncate text-[13px] font-medium ${isDuplicateName ? 'text-text-primary/60' : 'text-text-primary'}`}>
             <UnitTypeIcon unitType={entry.category} className="h-3.5 w-3.5 shrink-0 text-text-dim/35" />
@@ -178,14 +180,6 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
         </button>
       </div>
 
-      {/* Expanded: upgrade editor */}
-      {expanded && (
-        <RosterEntryExpanded
-          entry={entry}
-          detachmentId={detachmentId}
-          onClose={() => onToggleExpand?.()}
-        />
-      )}
     </div>
   );
 }

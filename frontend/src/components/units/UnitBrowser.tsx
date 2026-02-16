@@ -467,6 +467,7 @@ export default function UnitBrowser() {
           <EmptyState
             message={availableOnly ? 'No available units in this category' : 'No units found'}
             icon="search"
+            variant="search"
             suggestion={
               availableOnly
                 ? "Try disabling the 'Available' filter or switching categories"

@@ -231,19 +231,24 @@ export default function AppLayout({ left, right }: Props) {
           {left}
         </main>
 
-        {/* Desktop resize handle — interactive divider rail */}
+        {/* Desktop resize handle — decorative divider rail */}
         <div
-          className="resize-divider group relative hidden w-[10px] cursor-col-resize lg:block"
+          className="resize-divider panel-divider-depth group relative hidden w-[10px] cursor-col-resize lg:block"
           onPointerDown={handlePointerDown}
           onDoubleClick={handleDoubleClick}
           title="Drag to resize — double-click to reset"
         >
-          {/* Visible rail line */}
-          <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 transition-all group-hover:w-[3px] group-hover:shadow-[0_0_8px_rgba(130,102,36,0.15)]" style={{
-            background: 'linear-gradient(180deg, transparent 0%, var(--color-edge-600) 10%, var(--color-gold-600) 50%, var(--color-edge-600) 90%, transparent 100%)',
-          }} />
-          {/* Center diamond ornament */}
-          <div className="absolute left-1/2 top-1/2 h-[6px] w-[6px] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gold-600 transition-all group-hover:scale-150 group-hover:bg-gold-500" />
+          {/* Visible rail line — always gold-tinted */}
+          <div className="panel-divider-line absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 transition-all group-hover:w-[3px] group-hover:shadow-[0_0_8px_rgba(130,102,36,0.15)]" />
+          {/* Center diamond ornament — always visible */}
+          <div className="absolute left-1/2 top-1/2 h-[6px] w-[6px] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gold-600 opacity-60 transition-all group-hover:scale-150 group-hover:bg-gold-500 group-hover:opacity-100" />
+          {/* Horizontal notch marks above/below diamond */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2" style={{ marginTop: '-12px' }}>
+            <div className="panel-divider-notch" />
+          </div>
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2" style={{ marginTop: '10px' }}>
+            <div className="panel-divider-notch" />
+          </div>
           {/* Grip dots — visible on hover */}
           <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col gap-[6px] opacity-0 transition-opacity group-hover:opacity-60" style={{ marginTop: '-30px' }}>
             {[0,1,2].map(i => (

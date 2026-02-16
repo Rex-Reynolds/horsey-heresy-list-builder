@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 import { useUIStore } from '../../stores/uiStore.ts';
 import AnimatedNumber from '../common/AnimatedNumber.tsx';
@@ -18,6 +19,39 @@ function AquilaEmblem({ className = '' }: { className?: string }) {
   );
 }
 
+type ReadinessLevel = 'valid' | 'warning' | 'critical' | 'unknown';
+
+function ReadinessShield({ level }: { level: ReadinessLevel }) {
+  const colors: Record<ReadinessLevel, { fill: string; glow: string }> = {
+    valid: { fill: 'text-valid', glow: 'readiness-pulse' },
+    warning: { fill: 'text-caution', glow: '' },
+    critical: { fill: 'text-danger', glow: '' },
+    unknown: { fill: 'text-text-dim/40', glow: '' },
+  };
+
+  const { fill, glow } = colors[level];
+
+  return (
+    <div className={`relative ${glow}`} title={
+      level === 'valid' ? 'Army valid' : level === 'warning' ? 'Warnings present' : level === 'critical' ? 'Errors present' : 'Not validated'
+    }>
+      <svg className={`h-5 w-5 ${fill}`} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L3 7v5c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" opacity="0.2" />
+        <path d="M12 2L3 7v5c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        {level === 'valid' && (
+          <path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+        {level === 'critical' && (
+          <path d="M12 8v4m0 4h.01" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        )}
+        {level === 'warning' && (
+          <path d="M12 9v3m0 3h.01" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        )}
+      </svg>
+    </div>
+  );
+}
+
 export default function AppHeader() {
   const isValid = useRosterStore((s) => s.isValid);
   const errorCount = useRosterStore((s) => s.validationErrors.length);
@@ -25,10 +59,33 @@ export default function AppHeader() {
   const rosterName = useRosterStore((s) => s.rosterName);
   const totalPoints = useRosterStore((s) => s.totalPoints);
   const pointsLimit = useRosterStore((s) => s.pointsLimit);
+  const detachments = useRosterStore((s) => s.detachments);
 
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const setShowRosterDrawer = useUIStore((s) => s.setShowRosterDrawer);
+  const undoStack = useUIStore((s) => s.undoStack);
   const hasRoster = !!rosterId;
+
+  // Compute readiness level
+  const readiness: ReadinessLevel = !hasRoster || detachments.length === 0
+    ? 'unknown'
+    : isValid === true
+      ? 'valid'
+      : isValid === false && errorCount > 0
+        ? 'critical'
+        : 'warning';
+
+  // Keyboard hint visibility (first-visit pulse)
+  const [kbdHintSeen] = useState(() => {
+    try { return localStorage.getItem('sa_kbd_hint_seen') === '1'; } catch { return false; }
+  });
+
+  function handleKbdHintClick() {
+    try { localStorage.setItem('sa_kbd_hint_seen', '1'); } catch { /* noop */ }
+    // Fire synthetic keydown to open the keyboard shortcuts overlay
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
+  }
 
   return (
     <header className="relative z-10 bg-plate-900">
@@ -77,16 +134,43 @@ export default function AppHeader() {
               <AnimatedNumber value={totalPoints} />/{pointsLimit} <span className="text-[10px] text-text-dim">pts</span>
             </span>
           )}
-          {isValid !== null && !isValid && errorCount > 0 && (
+          {/* Undo hint — desktop only, when undo stack is non-empty */}
+          {hasRoster && undoStack.length > 0 && (
+            <span className="kbd-hint text-[9px]">
+              {navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl+'}Z undo
+            </span>
+          )}
+          {/* Readiness shield */}
+          {hasRoster && detachments.length > 0 && (
             <div className="flex items-center gap-1.5">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-danger/20">
+              <ReadinessShield level={readiness} />
+              {readiness === 'critical' && errorCount > 0 && (
                 <span className="font-data text-[9px] font-bold text-danger">{errorCount}</span>
-              </span>
-              <span className="font-label text-[9px] font-semibold tracking-[0.15em] text-danger/70 uppercase">
-                {errorCount === 1 ? 'Error' : 'Errors'}
-              </span>
+              )}
             </div>
           )}
+          {/* Roster drawer button */}
+          {hasRoster && (
+            <button
+              onClick={() => setShowRosterDrawer(true)}
+              className="flex h-6 w-6 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400"
+              title="My Rosters"
+            >
+              <svg className="h-3.5 w-3.5 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
+              </svg>
+            </button>
+          )}
+          {/* Keyboard shortcuts hint */}
+          <button
+            onClick={handleKbdHintClick}
+            className={`flex h-6 w-6 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400 ${
+              !kbdHintSeen ? 'kbd-hint-pulse' : ''
+            }`}
+            title="Keyboard shortcuts"
+          >
+            <span className="font-data text-[11px] font-bold text-text-dim">?</span>
+          </button>
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}

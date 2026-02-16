@@ -81,6 +81,15 @@ interface UIState {
   // Theme: 'dataslate' (dark) or 'parchment' (light)
   theme: 'dataslate' | 'parchment';
   toggleTheme: () => void;
+
+  // Roster drawer (right slide-in to browse/switch rosters)
+  showRosterDrawer: boolean;
+  setShowRosterDrawer: (open: boolean) => void;
+
+  // Upgrade panel (slide-over for editing entry upgrades)
+  upgradePanelEntry: { entryId: number; detachmentId: number } | null;
+  openUpgradePanel: (entryId: number, detachmentId: number) => void;
+  closeUpgradePanel: () => void;
 }
 
 let nextToastId = 0;
@@ -161,6 +170,13 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ panelWidth: clamped });
     try { localStorage.setItem('sa_panel_width', String(clamped)); } catch { /* storage unavailable */ }
   },
+
+  showRosterDrawer: false,
+  setShowRosterDrawer: (open) => set({ showRosterDrawer: open }),
+
+  upgradePanelEntry: null,
+  openUpgradePanel: (entryId, detachmentId) => set({ upgradePanelEntry: { entryId, detachmentId } }),
+  closeUpgradePanel: () => set({ upgradePanelEntry: null }),
 
   theme: (() => {
     try {

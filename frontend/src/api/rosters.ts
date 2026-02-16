@@ -2,6 +2,24 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import client from './client.ts';
 import type { RosterResponse, RosterDetachmentResponse, ValidationResponse, SelectedUpgrade } from '../types/index.ts';
 
+export function useRosters() {
+  return useQuery<RosterResponse[]>({
+    queryKey: ['rosters'],
+    queryFn: async () => {
+      const { data } = await client.get('/api/rosters');
+      return data;
+    },
+  });
+}
+
+export function useDeleteRoster() {
+  return useMutation<void, Error, number>({
+    mutationFn: async (rosterId) => {
+      await client.delete(`/api/rosters/${rosterId}`);
+    },
+  });
+}
+
 export function useCreateRoster() {
   return useMutation<RosterResponse, Error, { name: string; points_limit: number }>({
     mutationFn: async (body) => {

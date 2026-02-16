@@ -273,6 +273,25 @@ export default function RosterPanel() {
     });
   }
 
+  function handleClearAll(detachmentId: number) {
+    const det = detachments.find((d) => d.id === detachmentId);
+    if (!det || !rosterId) return;
+
+    // Delete all entries sequentially via API, then sync
+    Promise.all(
+      det.entries.map((e) =>
+        client.delete(`/api/rosters/${rosterId}/detachments/${detachmentId}/entries/${e.id}`)
+      )
+    ).then(() => {
+      client.get(`/api/rosters/${rosterId}`).then(({ data: resp }) => {
+        syncFromResponse(resp);
+      });
+      addToast(`Cleared ${det.entries.length} unit${det.entries.length !== 1 ? 's' : ''} from ${det.name}`);
+    }).catch(() => {
+      addToast('Failed to clear units', 'error');
+    });
+  }
+
   function handleUpdateQty(detachmentId: number, entryId: number, qty: number) {
     const det = detachments.find((d) => d.id === detachmentId);
     const entry = det?.entries.find((e) => e.id === entryId);
@@ -449,6 +468,7 @@ export default function RosterPanel() {
                   onDuplicateEntry={handleDuplicateEntry}
                   onSlotClick={(slotName, filled, max) => handleSlotClick(slotName, det.name, filled, max)}
                   onReorderEntries={reorderEntries}
+                  onClearAll={handleClearAll}
                   newEntryId={newEntryId}
                 />
               </div>

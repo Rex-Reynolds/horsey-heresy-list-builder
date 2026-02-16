@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCreateRoster } from '../../api/rosters.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
+import { useUIStore } from '../../stores/uiStore.ts';
 
 const POINTS_OPTIONS = [1000, 1500, 2000, 2500, 3000, 4000, 5000];
 
@@ -161,6 +162,15 @@ export default function RosterSetup() {
 
           <p className="text-center text-[11px] leading-relaxed text-text-dim">
             Add detachments after creation to build your force.
+          </p>
+
+          <p className="text-center">
+            <button
+              onClick={() => useUIStore.getState().setShowRosterDrawer(true)}
+              className="text-[11px] text-gold-500/60 underline underline-offset-2 transition-colors hover:text-gold-400"
+            >
+              or load an existing roster
+            </button>
           </p>
         </div>
       </div>

@@ -5,6 +5,8 @@ import AppLayout from './components/layout/AppLayout.tsx'
 import ToastContainer from './components/common/ToastContainer.tsx'
 import KeyboardShortcuts from './components/common/KeyboardShortcuts.tsx'
 import GuidedTour from './components/common/GuidedTour.tsx'
+import RosterDrawer from './components/roster/RosterDrawer.tsx'
+import UpgradePanel from './components/roster/UpgradePanel.tsx'
 import { useRosterStore } from './stores/rosterStore.ts'
 import { useUndoRedo } from './hooks/useUndoRedo.ts'
 import client from './api/client.ts'
@@ -110,6 +112,8 @@ function App() {
       <ToastContainer />
       <KeyboardShortcuts />
       <GuidedTour />
+      <RosterDrawer />
+      <UpgradePanel />
     </ErrorBoundary>
   )
 }
