@@ -1,6 +1,7 @@
 import { type ReactNode, useRef, useCallback, useState } from 'react';
 import { useUIStore, PANEL_DEFAULT } from '../../stores/uiStore.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
+import AnimatedNumber from '../common/AnimatedNumber.tsx';
 
 interface Props {
   left: ReactNode;
@@ -85,9 +86,10 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
         <div className="flex w-full items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-baseline gap-1.5">
-              <span className={`font-data text-lg font-semibold tabular-nums ${over ? 'text-danger' : 'text-gold-400'}`}>
-                {totalPoints}
-              </span>
+              <AnimatedNumber
+                value={totalPoints}
+                className={`font-data text-lg font-semibold tabular-nums ${over ? 'text-danger' : 'text-gold-400'}`}
+              />
               <span className="font-data text-xs text-text-dim">/</span>
               <span className="font-data text-xs tabular-nums text-text-secondary">{pointsLimit}</span>
               <span className="font-label text-[10px] tracking-wider text-text-dim uppercase">pts</span>

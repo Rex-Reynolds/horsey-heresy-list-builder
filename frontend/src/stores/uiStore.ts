@@ -30,11 +30,25 @@ function loadPanelWidth(): number {
   return PANEL_DEFAULT;
 }
 
+export interface UndoAction {
+  type: string;
+  description: string;
+  payload: Record<string, unknown>;
+}
+
 interface UIState {
   // Toast notifications
   toasts: Toast[];
   addToast: (message: string, type?: Toast['type'], onUndo?: () => void) => void;
   removeToast: (id: number) => void;
+
+  // Undo/redo history
+  undoStack: UndoAction[];
+  redoStack: UndoAction[];
+  pushUndo: (action: UndoAction) => void;
+  popUndo: () => UndoAction | undefined;
+  pushRedo: (action: UndoAction) => void;
+  popRedo: () => UndoAction | undefined;
 
   // Slot-click filter: set by roster panel, read by unit browser
   slotFilter: string | null;
@@ -63,12 +77,16 @@ interface UIState {
   // Resizable roster panel width (desktop only)
   panelWidth: number;
   setPanelWidth: (w: number) => void;
+
+  // Theme: 'dataslate' (dark) or 'parchment' (light)
+  theme: 'dataslate' | 'parchment';
+  toggleTheme: () => void;
 }
 
 let nextToastId = 0;
 let lastAddedTimer: ReturnType<typeof setTimeout> | undefined;
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
   toasts: [],
   addToast: (message, type = 'success', onUndo) => {
     const id = ++nextToastId;
@@ -81,6 +99,30 @@ export const useUIStore = create<UIState>((set) => ({
   },
   removeToast: (id) =>
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+
+  undoStack: [],
+  redoStack: [],
+  pushUndo: (action) => set((s) => ({
+    undoStack: [...s.undoStack.slice(-19), action],
+    redoStack: [],
+  })),
+  popUndo: () => {
+    const stack = get().undoStack;
+    if (stack.length === 0) return undefined;
+    const action = stack[stack.length - 1];
+    set({ undoStack: stack.slice(0, -1) });
+    return action;
+  },
+  pushRedo: (action) => set((s) => ({
+    redoStack: [...s.redoStack.slice(-19), action],
+  })),
+  popRedo: () => {
+    const stack = get().redoStack;
+    if (stack.length === 0) return undefined;
+    const action = stack[stack.length - 1];
+    set({ redoStack: stack.slice(0, -1) });
+    return action;
+  },
 
   slotFilter: null,
   setSlotFilter: (slot) => set({ slotFilter: slot }),
@@ -119,4 +161,18 @@ export const useUIStore = create<UIState>((set) => ({
     set({ panelWidth: clamped });
     try { localStorage.setItem('sa_panel_width', String(clamped)); } catch { /* storage unavailable */ }
   },
+
+  theme: (() => {
+    try {
+      const saved = localStorage.getItem('sa_theme');
+      if (saved === 'parchment') return 'parchment' as const;
+    } catch { /* storage unavailable */ }
+    return 'dataslate' as const;
+  })(),
+  toggleTheme: () => set((s) => {
+    const next = s.theme === 'dataslate' ? 'parchment' as const : 'dataslate' as const;
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('sa_theme', next); } catch { /* storage unavailable */ }
+    return { theme: next };
+  }),
 }));

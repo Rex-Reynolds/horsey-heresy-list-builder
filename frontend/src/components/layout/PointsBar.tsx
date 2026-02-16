@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import AnimatedNumber from '../common/AnimatedNumber.tsx';
 
 export interface PointsSegment {
   label: string;
@@ -66,9 +67,10 @@ export default function PointsBar({ current, limit, segments }: Props) {
       {/* Labels — prominent numeric display */}
       <div className="mb-1.5 flex items-baseline justify-between">
         <div className="flex items-baseline gap-1.5">
-          <span className={`font-data text-2xl font-bold tabular-nums tracking-tight transition-colors ${over ? 'text-danger' : 'text-gold-300'} ${flash ? 'animate-points-flash' : ''}`}>
-            {current}
-          </span>
+          <AnimatedNumber
+            value={current}
+            className={`font-data text-2xl font-bold tabular-nums tracking-tight transition-colors ${over ? 'text-danger' : 'text-gold-300'} ${flash ? 'animate-points-flash' : ''}`}
+          />
           <span className="font-data text-sm text-text-dim/60">/</span>
           <span className="font-data text-sm tabular-nums text-text-secondary">{limit}</span>
           <span className="font-label ml-0.5 text-[10px] font-semibold tracking-[0.15em] text-text-dim uppercase">pts</span>

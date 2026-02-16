@@ -189,12 +189,14 @@ export default function UnitDetail({ unit }: Props) {
 
   return (
     <div className="space-y-3.5">
-      {/* Stats */}
-      <StatBlock stats={statBlocks} />
+      {/* Stats — staggered reveal */}
+      <div className="animate-fade-in" style={{ animationDelay: '0ms' }}>
+        <StatBlock stats={statBlocks} />
+      </div>
 
       {/* Traits */}
       {traits.length > 0 && (
-        <div>
+        <div className="animate-fade-in" style={{ animationDelay: '80ms' }}>
           <SectionLabel>Special Rules</SectionLabel>
           <div className="flex flex-wrap gap-1.5">
             {traits.map((t, i) => (
@@ -208,7 +210,7 @@ export default function UnitDetail({ unit }: Props) {
 
       {/* Rules */}
       {rules.length > 0 && (
-        <div>
+        <div className="animate-fade-in" style={{ animationDelay: '160ms' }}>
           <SectionLabel>Rules</SectionLabel>
           <div className="space-y-1">
             {rules.map((r, i) => (
@@ -228,6 +230,7 @@ export default function UnitDetail({ unit }: Props) {
       )}
 
       {/* Upgrades */}
+      <div className="animate-fade-in" style={{ animationDelay: '240ms' }}>
       <UpgradeList
         groups={groups}
         ungrouped={ungrouped}
@@ -236,6 +239,7 @@ export default function UnitDetail({ unit }: Props) {
         loading={upgradesLoading}
         modelCount={modelCount}
       />
+      </div>
 
       {/* Detachment picker */}
       {rosterId && status === 'addable' && openDetachments.length > 1 && (

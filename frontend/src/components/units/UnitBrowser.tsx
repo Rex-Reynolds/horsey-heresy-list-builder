@@ -15,6 +15,7 @@ import LoadingSpinner from '../common/LoadingSpinner.tsx';
 import EmptyState from '../common/EmptyState.tsx';
 import UnitCard from './UnitCard.tsx';
 import UnitDetail from './UnitDetail.tsx';
+import CompareView from './CompareView.tsx';
 
 type SortMode = 'name' | 'cost-asc' | 'cost-desc';
 
@@ -30,6 +31,8 @@ export default function UnitBrowser() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [availableOnly, setAvailableOnly] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('name');
+  const [compareIds, setCompareIds] = useState<Set<number>>(new Set());
+  const compareMode = compareIds.size > 0;
 
   const { rosterId, detachments, addEntry, syncFromResponse, totalPoints, pointsLimit } = useRosterStore();
   const addToast = useUIStore((s) => s.addToast);
@@ -297,6 +300,12 @@ export default function UnitBrowser() {
         onClick={() => setExpandedId(expandedId === unit.id ? null : unit.id)}
         availability={availability?.status}
         onQuickAdd={hasDetachments && availability?.status === 'addable' && (!unit.has_required_upgrades || unit.default_upgrades) ? handleQuickAdd : undefined}
+        onCompareToggle={(u) => setCompareIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(u.id)) next.delete(u.id); else if (next.size < 4) next.add(u.id);
+          return next;
+        })}
+        isComparing={compareIds.has(unit.id)}
         searchTerm={search}
         compact={viewMode === 'list'}
       >
@@ -422,8 +431,27 @@ export default function UnitBrowser() {
               Available
             </button>
           )}
+          {compareMode && (
+            <button
+              onClick={() => setCompareIds(new Set())}
+              className="font-label shrink-0 rounded-sm border border-steel/25 bg-steel/6 px-2.5 py-2 text-[11px] font-semibold tracking-wider text-steel uppercase transition-all"
+            >
+              Clear ({compareIds.size})
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Comparison panel */}
+      {compareIds.size >= 2 && (
+        <div className="mt-3">
+          <CompareView
+            units={allUnits.filter((u) => compareIds.has(u.id))}
+            onRemove={(id) => setCompareIds((prev) => { const next = new Set(prev); next.delete(id); return next; })}
+            onClose={() => setCompareIds(new Set())}
+          />
+        </div>
+      )}
 
       {/* Content */}
       <div className="mt-3 outline-none" ref={listRef} tabIndex={-1} onKeyDown={handleKeyDown}>

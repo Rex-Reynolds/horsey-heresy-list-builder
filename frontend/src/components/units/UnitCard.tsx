@@ -3,6 +3,7 @@ import type { Unit } from '../../types/index.ts';
 import { SLOT_STRIPE_COLORS, SLOT_CARD_TINTS } from '../../types/index.ts';
 import type { UnitAvailability } from '../../hooks/useUnitAvailability.ts';
 import Badge from '../common/Badge.tsx';
+import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 
 const DOT_STYLES: Partial<Record<UnitAvailability, { color: string; shape: 'circle' | 'diamond' | 'dash' }>> = {
   addable: { color: 'bg-valid shadow-[0_0_6px_rgba(56,178,96,0.5)]', shape: 'circle' },
@@ -44,6 +45,8 @@ interface Props {
   onClick: () => void;
   availability?: UnitAvailability;
   onQuickAdd?: (unit: Unit, e: React.MouseEvent) => void;
+  onCompareToggle?: (unit: Unit) => void;
+  isComparing?: boolean;
   searchTerm?: string;
   compact?: boolean;
   children?: React.ReactNode;
@@ -62,7 +65,7 @@ function HighlightedName({ name, term }: { name: string; term?: string }) {
   );
 }
 
-export default function UnitCard({ unit, expanded, onClick, availability, onQuickAdd, searchTerm, compact, children }: Props) {
+export default function UnitCard({ unit, expanded, onClick, availability, onQuickAdd, onCompareToggle, isComparing, searchTerm, compact, children }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [rippling, setRippling] = useState(false);
   const dotStyle = availability ? DOT_STYLES[availability] : undefined;
@@ -116,7 +119,8 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
             <span className={`h-2 w-2 shrink-0 rounded-full ${dotStyle.color}`} />
           )
         )}
-        {/* Name */}
+        {/* Icon + Name */}
+        <UnitTypeIcon unitType={unit.unit_type} className="h-4 w-4 shrink-0 text-text-dim/50" />
         <button onClick={onClick} className="min-w-0 flex-1 truncate text-left font-unit-name text-[14px] font-medium text-text-primary">
           <HighlightedName name={unit.name} term={searchTerm} />
         </button>
@@ -178,7 +182,8 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
         {/* Name + metadata — main content area */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <span className={`font-unit-name font-medium leading-normal text-text-primary ${tier === 'flagship' ? 'text-[17px]' : 'text-[16px]'}`}>
+            <span className={`font-unit-name font-medium leading-normal text-text-primary inline-flex items-center gap-1.5 ${tier === 'flagship' ? 'text-[17px]' : 'text-[16px]'}`}>
+              <UnitTypeIcon unitType={unit.unit_type} className={`shrink-0 text-text-dim/40 ${tier === 'flagship' ? 'h-[18px] w-[18px]' : 'h-4 w-4'}`} />
               <HighlightedName name={unit.name} term={searchTerm} />
             </span>
             {/* Cost inline with name for natural reading flow */}
@@ -227,6 +232,26 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
 
         {/* Action zone — separated from content */}
         <div className="flex shrink-0 items-center gap-2 mt-1">
+          {/* Compare toggle */}
+          {onCompareToggle && !expanded && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onCompareToggle(unit); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onCompareToggle(unit); } }}
+              className={`quick-add-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border transition-all ${
+                isComparing
+                  ? 'border-steel/40 bg-steel/15 text-steel'
+                  : 'border-edge-600/20 bg-plate-700/5 text-text-dim/40 hover:border-steel/30 hover:bg-steel/8 hover:text-steel/80'
+              }`}
+              title={isComparing ? 'Remove from comparison' : 'Add to comparison'}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </span>
+          )}
+
           {/* Quick add button */}
           {onQuickAdd && !expanded && (
             <span

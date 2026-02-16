@@ -1,4 +1,6 @@
 import { useRosterStore } from '../../stores/rosterStore.ts';
+import { useUIStore } from '../../stores/uiStore.ts';
+import AnimatedNumber from '../common/AnimatedNumber.tsx';
 
 function AquilaEmblem({ className = '' }: { className?: string }) {
   return (
@@ -24,6 +26,8 @@ export default function AppHeader() {
   const totalPoints = useRosterStore((s) => s.totalPoints);
   const pointsLimit = useRosterStore((s) => s.pointsLimit);
 
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
   const hasRoster = !!rosterId;
 
   return (
@@ -70,7 +74,7 @@ export default function AppHeader() {
           {/* Points ticker — shown when roster active */}
           {hasRoster && (
             <span className={`font-data text-sm tabular-nums font-medium ${totalPoints > pointsLimit ? 'text-danger' : 'text-gold-300/80'}`}>
-              {totalPoints}/{pointsLimit} <span className="text-[10px] text-text-dim">pts</span>
+              <AnimatedNumber value={totalPoints} />/{pointsLimit} <span className="text-[10px] text-text-dim">pts</span>
             </span>
           )}
           {isValid !== null && !isValid && errorCount > 0 && (
@@ -83,6 +87,22 @@ export default function AppHeader() {
               </span>
             </div>
           )}
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex h-6 w-6 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400"
+            title={theme === 'dataslate' ? 'Switch to parchment (light) theme' : 'Switch to dataslate (dark) theme'}
+          >
+            {theme === 'dataslate' ? (
+              <svg className="h-3.5 w-3.5 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-valid/60 shadow-[0_0_4px_rgba(56,178,96,0.4)]" />
             <span className="font-label text-[9px] font-semibold tracking-[0.2em] text-text-dim/60 uppercase">Online</span>

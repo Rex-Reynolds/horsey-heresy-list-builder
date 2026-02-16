@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import type { RosterEntry } from '../../stores/rosterStore.ts';
 import { SLOT_STRIPE_COLORS } from '../../types/index.ts';
 import RosterEntryExpanded from './RosterEntryExpanded.tsx';
+import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 
 interface Props {
   entry: RosterEntry;
@@ -14,9 +15,15 @@ interface Props {
   isNew?: boolean;
   entryIndex?: number;
   isDuplicateName?: boolean;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  isDragOver?: boolean;
 }
 
-export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, expanded, onToggleExpand, isNew, entryIndex, isDuplicateName }: Props) {
+export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, expanded, onToggleExpand, isNew, entryIndex, isDuplicateName, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragOver }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const prevQtyRef = useRef(entry.quantity);
   const [costBumped, setCostBumped] = useState(false);
@@ -51,10 +58,31 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
   const stripe = SLOT_STRIPE_COLORS[entry.category] ?? 'border-l-edge-500';
 
   return (
-    <div ref={cardRef} className={`group rounded-sm border-l-2 ${stripe} transition-all ${expanded ? 'glow-border-active bg-plate-800/40' : 'hover:bg-plate-800/40'} ${isNew ? 'animate-entry-flash' : ''} ${entryIndex !== undefined && entryIndex % 2 === 1 ? 'bg-plate-800/30' : 'bg-plate-800/20'}`}>
+    <div
+      ref={cardRef}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      onDrop={onDrop}
+      className={`group rounded-sm border-l-2 ${stripe} transition-all ${expanded ? 'glow-border-active bg-plate-800/40' : 'hover:bg-plate-800/40'} ${isNew ? 'animate-entry-flash' : ''} ${entryIndex !== undefined && entryIndex % 2 === 1 ? 'bg-plate-800/30' : 'bg-plate-800/20'} ${isDragOver ? 'border-t-2 border-t-gold-500/50' : ''}`}
+    >
       <div className="flex items-center gap-2.5 px-3 py-2.5">
+        {/* Drag handle */}
+        {draggable && (
+          <span className="cursor-grab text-text-dim/30 transition-colors hover:text-text-dim/60 active:cursor-grabbing shrink-0 touch-none" title="Drag to reorder">
+            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="9" cy="6" r="1.5" />
+              <circle cx="15" cy="6" r="1.5" />
+              <circle cx="9" cy="12" r="1.5" />
+              <circle cx="15" cy="12" r="1.5" />
+              <circle cx="9" cy="18" r="1.5" />
+              <circle cx="15" cy="18" r="1.5" />
+            </svg>
+          </span>
+        )}
         {/* Entry number badge */}
-        {entryIndex !== undefined && (
+        {entryIndex !== undefined && !draggable && (
           <span className="font-data text-[10px] text-text-dim/40 w-4 text-center shrink-0">
             #{entryIndex + 1}
           </span>
@@ -64,7 +92,10 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
           className={`min-w-0 flex-1 ${onToggleExpand ? 'cursor-pointer' : ''}`}
           onClick={onToggleExpand}
         >
-          <p className={`truncate text-[13px] font-medium ${isDuplicateName ? 'text-text-primary/60' : 'text-text-primary'}`}>{entry.name}</p>
+          <p className={`flex items-center gap-1.5 truncate text-[13px] font-medium ${isDuplicateName ? 'text-text-primary/60' : 'text-text-primary'}`}>
+            <UnitTypeIcon unitType={entry.category} className="h-3.5 w-3.5 shrink-0 text-text-dim/35" />
+            <span className="truncate">{entry.name}</span>
+          </p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className={`font-data text-xs font-medium tabular-nums text-gold-500/80 ${costBumped ? 'animate-points-flash' : ''}`}>{entry.totalCost} pts</span>
             {entry.upgradeCost > 0 && (

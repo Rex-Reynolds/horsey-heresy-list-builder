@@ -14,6 +14,16 @@ const POINTS_LABELS: Record<number, string> = {
   5000: 'Apocalypse',
 };
 
+const POINTS_HINTS: Record<number, string> = {
+  1000: '1 Primary detachment, small engagement',
+  1500: '1 Primary + 1 Auxiliary detachment',
+  2000: 'Core game size with varied builds',
+  2500: 'Room for Apex detachments',
+  3000: 'Warlord detachment unlocked at this tier',
+  4000: 'Multiple Auxiliary detachments available',
+  5000: 'Full regimental deployment',
+};
+
 function AnimatedAquila() {
   return (
     <svg
@@ -128,6 +138,16 @@ export default function RosterSetup() {
                 </option>
               ))}
             </select>
+            {POINTS_HINTS[points] && (
+              <p className="mt-1.5 text-[11px] text-text-dim/70">
+                {POINTS_HINTS[points]}
+                {points >= 3000 && (
+                  <span className="ml-1 text-gold-500/60">
+                    — Warlord unlocked
+                  </span>
+                )}
+              </p>
+            )}
           </div>
 
           {/* Create */}

@@ -5,6 +5,7 @@ import { SLOT_FILL_COLORS } from '../../types/index.ts';
 import RosterEntryCard from './RosterEntryCard.tsx';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
 import ForceOrgGrid from './ForceOrgGrid.tsx';
+import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 
 interface Props {
   detachment: RosterDetachment;
@@ -13,6 +14,7 @@ interface Props {
   onRemoveDetachment?: (detachmentId: number) => void;
   onDuplicateEntry?: (detachmentId: number, entry: RosterEntry) => void;
   onSlotClick?: (slotName: string, filled: number, max: number) => void;
+  onReorderEntries?: (detachmentId: number, fromIndex: number, toIndex: number) => void;
   newEntryId?: number | null;
 }
 
@@ -100,6 +102,7 @@ function SlotRow({
       >
         {/* Left: slot name + browse hint + validation badge */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
+          <UnitTypeIcon unitType={baseName} className="h-3.5 w-3.5 shrink-0 text-text-dim/40" />
           <span className={`font-label text-xs font-semibold tracking-wide uppercase ${
             isClickable ? 'text-text-secondary hover:text-gold-400 transition-colors' : 'text-text-secondary'
           }`}>
@@ -178,13 +181,53 @@ export default function DetachmentSection({
   onRemoveDetachment,
   onDuplicateEntry,
   onSlotClick,
+  onReorderEntries,
   newEntryId,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [showAllSlots, setShowAllSlots] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
+  const [dragEntryId, setDragEntryId] = useState<number | null>(null);
+  const [dragOverEntryId, setDragOverEntryId] = useState<number | null>(null);
   const detPoints = detachment.entries.reduce((s, e) => s + e.totalCost, 0);
+
+  // Drag-and-drop handlers for entry reordering
+  const handleDragStart = useCallback((entryId: number, e: React.DragEvent) => {
+    setDragEntryId(entryId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(entryId));
+    // Make the drag image slightly transparent
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  }, []);
+
+  const handleDragOver = useCallback((entryId: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverEntryId(entryId);
+  }, []);
+
+  const handleDragEnd = useCallback((e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+    setDragEntryId(null);
+    setDragOverEntryId(null);
+  }, []);
+
+  const handleDrop = useCallback((targetEntryId: number, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverEntryId(null);
+    if (dragEntryId === null || dragEntryId === targetEntryId || !onReorderEntries) return;
+    const fromIndex = detachment.entries.findIndex((en) => en.id === dragEntryId);
+    const toIndex = detachment.entries.findIndex((en) => en.id === targetEntryId);
+    if (fromIndex !== -1 && toIndex !== -1) {
+      onReorderEntries(detachment.id, fromIndex, toIndex);
+    }
+    setDragEntryId(null);
+  }, [dragEntryId, detachment.entries, detachment.id, onReorderEntries]);
 
   const entriesBySlot = useMemo(() => {
     const map: Record<string, RosterEntry[]> = {};
@@ -304,6 +347,12 @@ export default function DetachmentSection({
                       isNew={entry.id === newEntryId}
                       entryIndex={idx}
                       isDuplicateName={idx > 0 && arr[idx - 1].unitId === entry.unitId}
+                      draggable={!!onReorderEntries && detachment.entries.length > 1}
+                      onDragStart={(e) => handleDragStart(entry.id, e)}
+                      onDragOver={(e) => handleDragOver(entry.id, e)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e) => handleDrop(entry.id, e)}
+                      isDragOver={dragOverEntryId === entry.id && dragEntryId !== entry.id}
                     />
                   </div>
                 ))}
@@ -342,6 +391,12 @@ export default function DetachmentSection({
                         onDuplicate={onDuplicateEntry ? (e) => onDuplicateEntry(detachment.id, e) : undefined}
                         expanded={expandedEntryId === entry.id}
                         onToggleExpand={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
+                        draggable={!!onReorderEntries && detachment.entries.length > 1}
+                        onDragStart={(e) => handleDragStart(entry.id, e)}
+                        onDragOver={(e) => handleDragOver(entry.id, e)}
+                        onDragEnd={handleDragEnd}
+                        onDrop={(e) => handleDrop(entry.id, e)}
+                        isDragOver={dragOverEntryId === entry.id && dragEntryId !== entry.id}
                       />
                     </div>
                   ))}

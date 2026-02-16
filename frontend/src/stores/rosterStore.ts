@@ -57,6 +57,7 @@ interface RosterState {
   removeEntry: (detachmentId: number, entryId: number) => void;
   updateQuantity: (detachmentId: number, entryId: number, quantity: number) => void;
   updateEntry: (detachmentId: number, entryId: number, updates: Partial<Pick<RosterEntry, 'upgrades' | 'upgradeNames' | 'upgradeCost' | 'totalCost' | 'quantity'>>) => void;
+  reorderEntries: (detachmentId: number, fromIndex: number, toIndex: number) => void;
   setComposition: (composition: CompositionStatus) => void;
   setDoctrine: (doctrine: string | null) => void;
   syncFromResponse: (resp: {
@@ -199,6 +200,18 @@ export const useRosterStore = create<RosterState>((set) => ({
           : d,
       );
       return { detachments, totalPoints: calcTotal(detachments) };
+    }),
+
+  reorderEntries: (detachmentId, fromIndex, toIndex) =>
+    set((s) => {
+      const detachments = s.detachments.map((d) => {
+        if (d.id !== detachmentId) return d;
+        const entries = [...d.entries];
+        const [moved] = entries.splice(fromIndex, 1);
+        entries.splice(toIndex, 0, moved);
+        return { ...d, entries };
+      });
+      return { detachments };
     }),
 
   setComposition: (composition) =>

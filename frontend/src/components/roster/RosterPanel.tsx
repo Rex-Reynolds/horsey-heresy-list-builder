@@ -9,6 +9,7 @@ import {
 } from '../../api/rosters.ts';
 import client from '../../api/client.ts';
 import type { Detachment } from '../../types/index.ts';
+import type { UndoAction } from '../../stores/uiStore.ts';
 import { SLOT_DISPLAY_GROUPS } from '../../types/index.ts';
 import PointsBar from '../layout/PointsBar.tsx';
 import type { PointsSegment } from '../layout/PointsBar.tsx';
@@ -55,6 +56,7 @@ export default function RosterPanel() {
     addEntry,
     removeEntry,
     updateQuantity,
+    reorderEntries,
     setValidation,
     clearRoster,
     syncFromResponse,
@@ -72,6 +74,7 @@ export default function RosterPanel() {
   const addToast = useUIStore((s) => s.addToast);
   const setNewEntryId = useUIStore((s) => s.setNewEntryId);
   const setMobileRosterOpen = useUIStore((s) => s.setMobileRosterOpen);
+  const pushUndo = useUIStore((s) => s.pushUndo);
 
   // Map a native slot name to a display group for the unit browser filter
   function handleSlotClick(slotName: string, detachmentName: string, filled: number, max: number) {
@@ -196,6 +199,20 @@ export default function RosterPanel() {
     const entrySnapshot = entry ? { ...entry } : null;
 
     removeEntry(detachmentId, entryId);
+    // Record undo action
+    if (entrySnapshot) {
+      pushUndo({
+        type: 'remove_entry',
+        description: `removed ${entrySnapshot.name}`,
+        payload: {
+          detachmentId,
+          entryId,
+          unitId: entrySnapshot.unitId,
+          quantity: entrySnapshot.quantity,
+          upgrades: entrySnapshot.upgrades,
+        },
+      } as UndoAction);
+    }
     if (rosterId) {
       client.delete(`/api/rosters/${rosterId}/detachments/${detachmentId}/entries/${entryId}`)
         .then(() => {
@@ -257,6 +274,15 @@ export default function RosterPanel() {
   }
 
   function handleUpdateQty(detachmentId: number, entryId: number, qty: number) {
+    const det = detachments.find((d) => d.id === detachmentId);
+    const entry = det?.entries.find((e) => e.id === entryId);
+    if (entry) {
+      pushUndo({
+        type: 'update_quantity',
+        description: `${entry.name} qty ${entry.quantity} → ${qty}`,
+        payload: { detachmentId, entryId, previousQuantity: entry.quantity, newQuantity: qty },
+      } as UndoAction);
+    }
     updateQuantity(detachmentId, entryId, qty);
     if (rosterId) {
       client.patch(
@@ -422,6 +448,7 @@ export default function RosterPanel() {
                   onRemoveDetachment={handleRemoveDetachment}
                   onDuplicateEntry={handleDuplicateEntry}
                   onSlotClick={(slotName, filled, max) => handleSlotClick(slotName, det.name, filled, max)}
+                  onReorderEntries={reorderEntries}
                   newEntryId={newEntryId}
                 />
               </div>

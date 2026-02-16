@@ -3,8 +3,19 @@ import ErrorBoundary from './components/common/ErrorBoundary.tsx'
 import AppHeader from './components/layout/AppHeader.tsx'
 import AppLayout from './components/layout/AppLayout.tsx'
 import ToastContainer from './components/common/ToastContainer.tsx'
+import KeyboardShortcuts from './components/common/KeyboardShortcuts.tsx'
+import GuidedTour from './components/common/GuidedTour.tsx'
 import { useRosterStore } from './stores/rosterStore.ts'
+import { useUndoRedo } from './hooks/useUndoRedo.ts'
 import client from './api/client.ts'
+
+// Apply saved theme on module load (before first render)
+(() => {
+  try {
+    const saved = localStorage.getItem('sa_theme');
+    if (saved === 'parchment') document.documentElement.setAttribute('data-theme', 'parchment');
+  } catch { /* noop */ }
+})()
 
 const UnitBrowser = lazy(() => import('./components/units/UnitBrowser.tsx'))
 const RosterPanel = lazy(() => import('./components/roster/RosterPanel.tsx'))
@@ -44,6 +55,7 @@ function RosterSkeleton() {
 function App() {
   const rosterId = useRosterStore((s) => s.rosterId)
   const syncFromResponse = useRosterStore((s) => s.syncFromResponse)
+  useUndoRedo()
   // Start restoring only if there's actually a saved roster to fetch
   const [restoring, setRestoring] = useState(() => !!localStorage.getItem('sa_roster_id'))
 
@@ -96,6 +108,8 @@ function App() {
         )}
       </div>
       <ToastContainer />
+      <KeyboardShortcuts />
+      <GuidedTour />
     </ErrorBoundary>
   )
 }

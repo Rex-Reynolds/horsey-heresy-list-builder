@@ -5,6 +5,21 @@ const COLUMNS = ['M', 'WS', 'BS', 'S', 'T', 'W', 'I', 'A', 'LD', 'SAV'] as const
 const ROW1_COLS = ['M', 'WS', 'BS', 'S', 'T'] as const;
 const ROW2_COLS = ['W', 'I', 'A', 'LD', 'SAV'] as const;
 
+// Contextual tooltips explaining each stat for newer players
+const STAT_TOOLTIPS: Record<string, (val: string) => string> = {
+  M: (v) => `Movement: ${v}" move per turn`,
+  WS: (v) => `Weapon Skill: melee hit threshold ${v}`,
+  BS: (v) => `Ballistic Skill: ranged hit threshold ${v}`,
+  S: (v) => `Strength ${v}: compared vs Toughness to wound`,
+  T: (v) => `Toughness ${v}: compared vs Strength to resist`,
+  W: (v) => `Wounds: ${v} damage before removal`,
+  I: (v) => `Initiative ${v}: strike order in melee`,
+  A: (v) => `Attacks: ${v} melee strikes per turn`,
+  LD: (v) => `Leadership ${v}: morale & pinning checks`,
+  SAV: (v) => `Armour Save: ${v} to negate wounds`,
+  INV: (v) => `Invulnerable Save: ${v} (ignores AP)`,
+};
+
 // Thresholds for color coding — higher is better for offensive, lower for defensive
 const STAT_THRESHOLDS: Record<string, { high: number; low: number }> = {
   WS: { high: 5, low: 3 },
@@ -43,11 +58,12 @@ interface Props {
 }
 
 export default function StatBlock({ stats }: Props) {
-  const [isNarrow, setIsNarrow] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 480px)').matches
+  );
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 480px)');
-    setIsNarrow(mq.matches);
     const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
@@ -79,7 +95,7 @@ export default function StatBlock({ stats }: Props) {
                   const val = s[col];
                   const cls = getStatClass(col, val);
                   return (
-                    <div key={col} className="text-center">
+                    <div key={col} className="text-center" title={STAT_TOOLTIPS[col]?.(val)}>
                       <div className="font-label text-[8px] font-bold tracking-[0.15em] text-gold-400/70 uppercase">{col}</div>
                       <div className={`font-data text-[15px] font-semibold ${cls}`}>{val}</div>
                     </div>
@@ -91,14 +107,14 @@ export default function StatBlock({ stats }: Props) {
                   const val = s[col];
                   const cls = col === 'SAV' ? getSaveClass(val) : getStatClass(col, val);
                   return (
-                    <div key={col} className="text-center">
+                    <div key={col} className="text-center" title={STAT_TOOLTIPS[col]?.(val)}>
                       <div className="font-label text-[8px] font-bold tracking-[0.15em] text-gold-400/70 uppercase">{col}</div>
                       <div className={`font-data text-[15px] font-semibold ${cls}`}>{val}</div>
                     </div>
                   );
                 })}
                 {showInv && (
-                  <div className="text-center">
+                  <div className="text-center" title={STAT_TOOLTIPS.INV?.(s.INV ?? '-')}>
                     <div className="font-label text-[8px] font-bold tracking-[0.15em] text-gold-400/70 uppercase">INV</div>
                     <div className="font-data text-[15px] font-semibold stat-special">{s.INV ?? '-'}</div>
                   </div>
@@ -138,9 +154,9 @@ export default function StatBlock({ stats }: Props) {
               <tr>
                 <th className="text-left">Unit</th>
                 {COLUMNS.map((col) => (
-                  <th key={col} className="text-center">{col}</th>
+                  <th key={col} className="text-center cursor-help" title={STAT_TOOLTIPS[col]?.('X') ?? col}>{col}</th>
                 ))}
-                {showInv && <th className="text-center stat-inv-header">INV</th>}
+                {showInv && <th className="text-center stat-inv-header cursor-help" title="Invulnerable Save (ignores AP)">INV</th>}
               </tr>
             </thead>
             <tbody>
@@ -150,10 +166,10 @@ export default function StatBlock({ stats }: Props) {
                   {COLUMNS.map((col) => {
                     const val = s[col];
                     const cls = col === 'SAV' ? getSaveClass(val) : getStatClass(col, val);
-                    return <td key={col} className={cls}>{val}</td>;
+                    return <td key={col} className={`${cls} cursor-help`} title={STAT_TOOLTIPS[col]?.(val)}>{val}</td>;
                   })}
                   {showInv && (
-                    <td className="stat-special">{s.INV ?? '-'}</td>
+                    <td className="stat-special cursor-help" title={STAT_TOOLTIPS.INV?.(s.INV ?? '-')}>{s.INV ?? '-'}</td>
                   )}
                 </tr>
               ))}
