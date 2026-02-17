@@ -90,6 +90,11 @@ interface UIState {
   upgradePanelEntry: { entryId: number; detachmentId: number } | null;
   openUpgradePanel: (entryId: number, detachmentId: number) => void;
   closeUpgradePanel: () => void;
+
+  // Favorites — pinned unit IDs (persisted to localStorage)
+  favorites: Set<number>;
+  toggleFavorite: (unitId: number) => void;
+  isFavorite: (unitId: number) => boolean;
 }
 
 let nextToastId = 0;
@@ -177,6 +182,21 @@ export const useUIStore = create<UIState>((set, get) => ({
   upgradePanelEntry: null,
   openUpgradePanel: (entryId, detachmentId) => set({ upgradePanelEntry: { entryId, detachmentId } }),
   closeUpgradePanel: () => set({ upgradePanelEntry: null }),
+
+  favorites: (() => {
+    try {
+      const saved = localStorage.getItem('sa_favorites');
+      if (saved) return new Set(JSON.parse(saved) as number[]);
+    } catch { /* storage unavailable */ }
+    return new Set<number>();
+  })(),
+  toggleFavorite: (unitId) => set((s) => {
+    const next = new Set(s.favorites);
+    if (next.has(unitId)) next.delete(unitId); else next.add(unitId);
+    try { localStorage.setItem('sa_favorites', JSON.stringify([...next])); } catch { /* storage unavailable */ }
+    return { favorites: next };
+  }),
+  isFavorite: (unitId) => get().favorites.has(unitId),
 
   theme: (() => {
     try {

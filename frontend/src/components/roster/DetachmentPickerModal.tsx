@@ -280,15 +280,28 @@ export default function DetachmentPickerModal({
                             </div>
                           )}
                           {visibleSlots.length > 0 && (
-                            <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+                            <div className="mt-2.5">
+                              {/* Summary line */}
+                              <div className="mb-1.5 flex items-center gap-2">
+                                <span className="font-label text-[9px] font-semibold tracking-wider text-text-dim/60 uppercase">
+                                  {finite.length} slot type{finite.length !== 1 ? 's' : ''}
+                                </span>
+                                <span className="h-px flex-1 bg-edge-700/20" />
+                                <span className="font-data text-[9px] tabular-nums text-text-dim/50">
+                                  {finite.reduce((s, [, c]) => s + c.max, 0)} total capacity
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-4 gap-1.5">
                               {visibleSlots.map(([slot, c]) => {
                                 return (
                                 <span
                                   key={slot}
-                                  className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[11px] ${
+                                  className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 text-[11px] transition-all ${
                                     isDisabled
                                       ? 'border-edge-700/15 bg-plate-800/30 text-text-dim/40'
-                                      : 'border-edge-600/25 bg-plate-700/40 text-text-secondary'
+                                      : c.min > 0
+                                        ? 'border-caution/20 bg-caution/5 text-text-secondary'
+                                        : 'border-edge-600/25 bg-plate-700/40 text-text-secondary'
                                   }`}
                                 >
                                   <UnitTypeIcon unitType={slot} className={`h-3 w-3 shrink-0 ${isDisabled ? 'text-text-dim/20' : 'text-text-dim/50'}`} />
@@ -307,6 +320,7 @@ export default function DetachmentPickerModal({
                                   +{remaining} more
                                 </span>
                               )}
+                              </div>
                             </div>
                           )}
                         </div>

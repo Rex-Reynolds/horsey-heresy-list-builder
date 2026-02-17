@@ -20,6 +20,8 @@ import ValidationResults from './ValidationResults.tsx';
 import ExportButton from './ExportButton.tsx';
 import DoctrinePicker from './DoctrinePicker.tsx';
 import CompositionSummary from './CompositionSummary.tsx';
+import CompletenessRing from './CompletenessRing.tsx';
+import ArmySummary from './ArmySummary.tsx';
 import OnboardingHint from './OnboardingHint.tsx';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
 
@@ -318,6 +320,24 @@ export default function RosterPanel() {
   const auxRemaining = composition.auxiliary_budget - composition.auxiliary_used;
   const apexRemaining = composition.apex_budget - composition.apex_used;
 
+  // Compute completeness: how many required slot entries are filled vs needed
+  const { completenessPercent, completenessRemaining } = (() => {
+    let totalRequired = 0;
+    let totalFilled = 0;
+    for (const det of detachments) {
+      for (const status of Object.values(det.slots)) {
+        if (status.min > 0) {
+          totalRequired += status.min;
+          totalFilled += Math.min(status.filled, status.min);
+        }
+      }
+    }
+    return {
+      completenessPercent: totalRequired > 0 ? Math.round((totalFilled / totalRequired) * 100) : 100,
+      completenessRemaining: Math.max(0, totalRequired - totalFilled),
+    };
+  })();
+
   // Build segments for PointsBar
   const pointsSegments: PointsSegment[] = detachments
     .map((d) => ({
@@ -403,11 +423,14 @@ export default function RosterPanel() {
               status={composition.warlord_count > 0 ? 'valid' : 'empty'}
             />
           )}
-          {/* Inline composition summary — detachments only */}
+          {/* Completeness ring + inline composition summary */}
           {detachments.length > 0 && totalEntries > 0 && (
-            <span className="ml-auto font-data text-[10px] tabular-nums text-text-dim">
-              {detachments.length} det · {totalEntries} unit{totalEntries !== 1 ? 's' : ''}
-            </span>
+            <>
+              <CompletenessRing percent={completenessPercent} remaining={completenessRemaining} size={28} />
+              <span className="ml-auto font-data text-[10px] tabular-nums text-text-dim">
+                {detachments.length} det · {totalEntries} unit{totalEntries !== 1 ? 's' : ''}
+              </span>
+            </>
           )}
         </div>
 
@@ -431,6 +454,11 @@ export default function RosterPanel() {
 
       {/* Detachments */}
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
+        {/* Army Summary Dashboard — collapsible overview */}
+        {detachments.length > 0 && totalEntries > 0 && (
+          <ArmySummary detachments={detachments} totalPoints={totalPoints} />
+        )}
+
         {/* Composition Summary — collapsible, in scrollable area */}
         {detachments.length > 0 && totalEntries > 0 && (
           <CompositionSummary detachments={detachments} totalPoints={totalPoints} />

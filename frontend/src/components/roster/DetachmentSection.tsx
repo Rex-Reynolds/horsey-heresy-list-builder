@@ -6,6 +6,7 @@ import RosterEntryCard from './RosterEntryCard.tsx';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
 import ForceOrgGrid from './ForceOrgGrid.tsx';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
+import SlotSuggestions from './SlotSuggestions.tsx';
 import { useTouchReorder } from '../../hooks/useTouchReorder.ts';
 
 interface Props {
@@ -370,6 +371,13 @@ export default function DetachmentSection({
                   status={status}
                   onClick={onSlotClick ? () => onSlotClick(slotName, status.filled, status.max) : undefined}
                 />
+                {/* Contextual unit suggestions for empty required slots */}
+                {status.min > 0 && status.filled === 0 && onSlotClick && (
+                  <SlotSuggestions
+                    slotName={slotName}
+                    onBrowse={() => onSlotClick(slotName, status.filled, status.max)}
+                  />
+                )}
                 {(entriesBySlot[slotName] || []).map((entry, idx, arr) => (
                   <div key={entry.id} className="ml-2">
                     <RosterEntryCard
