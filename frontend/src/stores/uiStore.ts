@@ -95,6 +95,22 @@ interface UIState {
   favorites: Set<number>;
   toggleFavorite: (unitId: number) => void;
   isFavorite: (unitId: number) => boolean;
+
+  // What-If preview — ghost unit shown before adding
+  whatIfPreview: {
+    unitId: number;
+    unitName: string;
+    category: string;
+    baseCost: number;
+    detachmentId: number;
+  } | null;
+  setWhatIfPreview: (preview: {
+    unitId: number;
+    unitName: string;
+    category: string;
+    baseCost: number;
+    detachmentId: number;
+  } | null) => void;
 }
 
 let nextToastId = 0;
@@ -197,6 +213,9 @@ export const useUIStore = create<UIState>((set, get) => ({
     return { favorites: next };
   }),
   isFavorite: (unitId) => get().favorites.has(unitId),
+
+  whatIfPreview: null,
+  setWhatIfPreview: (preview) => set({ whatIfPreview: preview }),
 
   theme: (() => {
     try {

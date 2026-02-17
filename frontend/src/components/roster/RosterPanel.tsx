@@ -22,6 +22,8 @@ import DoctrinePicker from './DoctrinePicker.tsx';
 import CompositionSummary from './CompositionSummary.tsx';
 import CompletenessRing from './CompletenessRing.tsx';
 import ArmySummary from './ArmySummary.tsx';
+import PointsBreakdown from './PointsBreakdown.tsx';
+import ArmyAdvice from './ArmyAdvice.tsx';
 import OnboardingHint from './OnboardingHint.tsx';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
 
@@ -393,6 +395,13 @@ export default function RosterPanel() {
         </div>
         <PointsBar current={totalPoints} limit={pointsLimit} segments={pointsSegments} />
 
+        {/* Points breakdown by slot type */}
+        {detachments.length > 0 && totalEntries > 0 && (
+          <div className="mt-2">
+            <PointsBreakdown detachments={detachments} pointsLimit={pointsLimit} totalPoints={totalPoints} />
+          </div>
+        )}
+
         {/* Budget chips — inline row below points bar */}
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <BudgetChip
@@ -464,6 +473,11 @@ export default function RosterPanel() {
           <CompositionSummary detachments={detachments} totalPoints={totalPoints} />
         )}
 
+        {/* Contextual army advice */}
+        {detachments.length > 0 && totalEntries > 0 && (
+          <ArmyAdvice detachments={detachments} totalPoints={totalPoints} pointsLimit={pointsLimit} />
+        )}
+
         {/* Onboarding hints */}
         {onboardingStep === 1 && (
           <OnboardingHint
@@ -490,6 +504,7 @@ export default function RosterPanel() {
                 {i > 0 && <div className="divider-glow my-2" />}
                 <DetachmentSection
                   detachment={det}
+                  detachmentIndex={i}
                   onRemoveEntry={handleRemoveEntry}
                   onUpdateQty={handleUpdateQty}
                   onRemoveDetachment={handleRemoveDetachment}

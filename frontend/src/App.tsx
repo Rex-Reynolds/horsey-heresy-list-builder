@@ -7,8 +7,12 @@ import KeyboardShortcuts from './components/common/KeyboardShortcuts.tsx'
 import GuidedTour from './components/common/GuidedTour.tsx'
 import RosterDrawer from './components/roster/RosterDrawer.tsx'
 import UpgradePanel from './components/roster/UpgradePanel.tsx'
+import CommandPalette from './components/common/CommandPalette.tsx'
+import MilestoneCelebration from './components/common/MilestoneCelebration.tsx'
+import RosterTabs from './components/roster/RosterTabs.tsx'
 import { useRosterStore } from './stores/rosterStore.ts'
 import { useUndoRedo } from './hooks/useUndoRedo.ts'
+import { useAmbientBackground } from './hooks/useAmbientBackground.ts'
 import client from './api/client.ts'
 
 // Apply saved theme on module load (before first render)
@@ -58,6 +62,7 @@ function App() {
   const rosterId = useRosterStore((s) => s.rosterId)
   const syncFromResponse = useRosterStore((s) => s.syncFromResponse)
   useUndoRedo()
+  useAmbientBackground()
   // Start restoring only if there's actually a saved roster to fetch
   const [restoring, setRestoring] = useState(() => !!localStorage.getItem('sa_roster_id'))
 
@@ -88,6 +93,7 @@ function App() {
     <ErrorBoundary>
       <div className="flex h-screen flex-col">
         <AppHeader />
+        {rosterId && <RosterTabs />}
         {rosterId ? (
           <AppLayout
             left={
@@ -114,6 +120,8 @@ function App() {
       <GuidedTour />
       <RosterDrawer />
       <UpgradePanel />
+      <CommandPalette />
+      <MilestoneCelebration />
     </ErrorBoundary>
   )
 }

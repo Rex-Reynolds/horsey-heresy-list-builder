@@ -9,9 +9,33 @@ import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 import SlotSuggestions from './SlotSuggestions.tsx';
 import { useTouchReorder } from '../../hooks/useTouchReorder.ts';
 import { useMediaQuery } from '../../hooks/useMediaQuery.ts';
+import { useUnits } from '../../api/units.ts';
+import { useUIStore } from '../../stores/uiStore.ts';
+
+/** Extract a compact stat line from unit profiles JSON */
+function getStatLine(profilesRaw: string | null): string | null {
+  if (!profilesRaw) return null;
+  try {
+    const parsed = JSON.parse(profilesRaw);
+    if (!Array.isArray(parsed)) return null;
+    for (const item of parsed) {
+      if (item?.type === 'Profile' && item?.characteristics) {
+        const c = item.characteristics;
+        const stats = ['WS', 'BS', 'S', 'T', 'W', 'I', 'A', 'LD', 'SAV'].filter((k) => c[k] != null);
+        if (stats.length >= 4) {
+          return stats.map((k) => `${k}${c[k]}`).join(' ');
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 interface Props {
   detachment: RosterDetachment;
+  detachmentIndex?: number;
   onRemoveEntry: (detachmentId: number, entryId: number) => void;
   onUpdateQty: (detachmentId: number, entryId: number, qty: number) => void;
   onRemoveDetachment?: (detachmentId: number) => void;
@@ -180,6 +204,7 @@ function SlotRow({
 
 export default function DetachmentSection({
   detachment,
+  detachmentIndex = 0,
   onRemoveEntry,
   onUpdateQty,
   onRemoveDetachment,
@@ -196,6 +221,16 @@ export default function DetachmentSection({
   const [dragEntryId, setDragEntryId] = useState<number | null>(null);
   const [dragOverEntryId, setDragOverEntryId] = useState<number | null>(null);
   const detPoints = detachment.entries.reduce((s, e) => s + e.totalCost, 0);
+
+  // Fetch unit data for stat line preview
+  const { data: allUnits = [] } = useUnits();
+  const statLineMap = useMemo(() => {
+    const map: Record<number, string | null> = {};
+    for (const unit of allUnits) {
+      map[unit.id] = getStatLine(unit.profiles);
+    }
+    return map;
+  }, [allUnits]);
 
   // Touch-based reorder for mobile
   const isMobile = useMediaQuery('(max-width: 1023px)');
@@ -292,7 +327,7 @@ export default function DetachmentSection({
 
   return (
     <>
-      <div className="glow-border overflow-hidden rounded-sm border border-edge-600/15 bg-plate-800/25">
+      <div className={`glow-border det-identity det-accent-${detachmentIndex % 5} overflow-hidden rounded-sm border border-edge-600/15 bg-plate-800/25`}>
         {/* Header — uses div+role to avoid nested-button issues with remove btn */}
         <div
           role="button"
@@ -382,7 +417,7 @@ export default function DetachmentSection({
                   />
                 )}
                 {(entriesBySlot[slotName] || []).map((entry, idx, arr) => (
-                  <div key={entry.id} className="ml-2">
+                  <div key={entry.id} className="ml-2 animate-entry-slide-in">
                     <RosterEntryCard
                       entry={entry}
                       detachmentId={detachment.id}
@@ -398,11 +433,15 @@ export default function DetachmentSection({
                       onDragEnd={handleDragEnd}
                       onDrop={(e) => handleDrop(entry.id, e)}
                       isDragOver={dragOverEntryId === entry.id && dragEntryId !== entry.id}
+                      statLine={statLineMap[entry.unitId]}
                     />
                   </div>
                 ))}
               </div>
             ))}
+
+            {/* What-If ghost preview */}
+            <WhatIfGhost detachmentId={detachment.id} />
 
             {/* Toggle locked slots (max=0 slots that could unlock via Tercios) */}
             {discoverableSlots.length > 0 && (
@@ -440,6 +479,7 @@ export default function DetachmentSection({
                         onDragEnd={handleDragEnd}
                         onDrop={(e) => handleDrop(entry.id, e)}
                         isDragOver={dragOverEntryId === entry.id && dragEntryId !== entry.id}
+                        statLine={statLineMap[entry.unitId]}
                       />
                     </div>
                   ))}
@@ -477,5 +517,33 @@ export default function DetachmentSection({
         onCancel={() => setConfirmClearAll(false)}
       />
     </>
+  );
+}
+
+/** Ghost entry for What-If preview */
+function WhatIfGhost({ detachmentId }: { detachmentId: number }) {
+  const preview = useUIStore((s) => s.whatIfPreview);
+  if (!preview || preview.detachmentId !== detachmentId) return null;
+
+  const stripe = SLOT_FILL_COLORS[preview.category]?.replace('/70', '/30') ?? 'border-l-edge-500';
+
+  return (
+    <div className={`what-if-ghost ml-2 rounded-sm border-l-2 border border-dashed border-gold-600/20 ${stripe} bg-plate-800/15 px-3 py-2 animate-fade-in`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[12px] font-medium text-text-primary/50">{preview.unitName}</p>
+          <p className="font-data text-[10px] tabular-nums text-gold-500/50">+{preview.baseCost} pts</p>
+        </div>
+        <button
+          onClick={() => useUIStore.getState().setWhatIfPreview(null)}
+          className="text-text-dim/40 hover:text-text-dim transition-colors"
+          title="Dismiss preview"
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
   );
 }

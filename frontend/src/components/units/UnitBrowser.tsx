@@ -16,6 +16,7 @@ import EmptyState from '../common/EmptyState.tsx';
 import UnitCard from './UnitCard.tsx';
 import UnitDetail from './UnitDetail.tsx';
 import CompareView from './CompareView.tsx';
+import ScrollProgressRail from '../common/ScrollProgressRail.tsx';
 
 type SortMode = 'name' | 'cost-asc' | 'cost-desc';
 
@@ -252,7 +253,22 @@ export default function UnitBrowser() {
 
   // Keyboard navigation
   const listRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const searchRef = useRef<SearchInputHandle>(null);
+
+  // Find scrollable parent for scroll progress rail
+  useEffect(() => {
+    if (listRef.current) {
+      let el: HTMLElement | null = listRef.current;
+      while (el) {
+        if (el.tagName === 'MAIN' || el.classList.contains('overflow-y-auto')) {
+          mainRef.current = el;
+          break;
+        }
+        el = el.parentElement;
+      }
+    }
+  }, []);
   const flatUnitIds = useMemo(() => displayUnits.map((i) => i.unit.id), [displayUnits]);
 
   // Global Cmd+K / Ctrl+K to focus search
@@ -523,6 +539,17 @@ export default function UnitBrowser() {
               </button>
             ))}
           </div>
+        )}
+
+        {/* Desktop scroll progress rail */}
+        {showGroupHeaders && groupedUnits && (
+          <ScrollProgressRail
+            sections={groupedUnits.map(({ group }) => ({
+              group,
+              elementId: `group-${group}`,
+            }))}
+            containerRef={mainRef}
+          />
         )}
 
         {/* Grouped view with category headers */}

@@ -1644,6 +1644,193 @@ body::before {
   animation: kbdHintPulse 2s ease-in-out 3;
 }
 
+/* ═══════════════════════════════════════════
+   UX/UI ROUND 12 — 12 improvements
+   ═══════════════════════════════════════════ */
+
+/* ── Command Palette ── */
+.command-palette {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme="parchment"] .command-palette {
+  background: rgba(232, 220, 190, 0.98);
+}
+
+/* ── Milestone Celebration ── */
+@keyframes milestoneBannerIn {
+  0% { opacity: 0; transform: scale(0.8); }
+  30% { opacity: 1; transform: scale(1.05); }
+  50% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.95) translateY(-10px); }
+}
+
+.milestone-banner {
+  animation: milestoneBannerIn 3s ease-out forwards;
+  text-align: center;
+  color: var(--color-gold-300);
+  text-shadow: 0 0 20px rgba(200, 160, 72, 0.4);
+}
+
+.milestone-golden {
+  color: var(--color-gold-200);
+  text-shadow: 0 0 30px rgba(200, 160, 72, 0.6), 0 0 60px rgba(200, 160, 72, 0.2);
+}
+
+@keyframes particleBurst {
+  0% { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--distance))); opacity: 0; }
+}
+
+.milestone-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-gold-400);
+  animation: particleBurst 1.2s ease-out forwards;
+  animation-delay: var(--delay);
+}
+
+.milestone-golden .milestone-particle {
+  width: 4px;
+  height: 4px;
+  box-shadow: 0 0 6px rgba(200, 160, 72, 0.6);
+}
+
+/* ── FLIP Layout Animations ── */
+@keyframes entrySlideIn {
+  from { opacity: 0; transform: translateX(-12px) scale(0.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes entrySlideOut {
+  from { opacity: 1; transform: scale(1); max-height: 100px; }
+  to { opacity: 0; transform: scale(0.95); max-height: 0; }
+}
+
+.animate-entry-slide-in {
+  animation: entrySlideIn 0.25s ease-out both;
+}
+
+.entry-list-animated > * {
+  transition: transform 0.3s ease-out, opacity 0.2s ease-out;
+}
+
+/* ── Ambient Background Shifts ── */
+.ambient-building body::after,
+body.ambient-building::after {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(104, 136, 180, 0.04) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      transparent 40%,
+      rgba(10, 13, 18, 0.25) 100%
+    ) !important;
+}
+
+.ambient-warm body::after,
+body.ambient-warm::after {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(200, 160, 72, 0.05) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      transparent 40%,
+      rgba(10, 13, 18, 0.25) 100%
+    ) !important;
+}
+
+.ambient-valid body::after,
+body.ambient-valid::after {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(66, 192, 112, 0.03) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      transparent 40%,
+      rgba(10, 13, 18, 0.25) 100%
+    ) !important;
+}
+
+/* ── Detachment Visual Identity — unique border ornaments per index ── */
+.det-accent-0 { --det-accent: rgba(200, 160, 72, 0.15); }
+.det-accent-1 { --det-accent: rgba(104, 136, 180, 0.15); }
+.det-accent-2 { --det-accent: rgba(152, 120, 208, 0.15); }
+.det-accent-3 { --det-accent: rgba(20, 184, 166, 0.15); }
+.det-accent-4 { --det-accent: rgba(244, 63, 94, 0.15); }
+
+.det-identity {
+  border-top: 2px solid var(--det-accent, rgba(200, 160, 72, 0.15));
+  position: relative;
+}
+
+.det-identity::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(180deg, var(--det-accent, transparent), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Inline Stat Preview ── */
+.stat-inline {
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-inline-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+}
+
+/* ── Unit Silhouette watermark positioning ── */
+.unit-silhouette-watermark {
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── What-If Preview Ghost Entry ── */
+.what-if-ghost {
+  opacity: 0.45;
+  border-style: dashed !important;
+  position: relative;
+}
+
+.what-if-ghost::after {
+  content: 'PREVIEW';
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-family: 'Barlow Condensed', system-ui, sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-gold-500);
+  opacity: 0.7;
+}
+
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

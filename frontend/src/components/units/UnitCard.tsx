@@ -4,7 +4,9 @@ import { SLOT_STRIPE_COLORS, SLOT_CARD_TINTS } from '../../types/index.ts';
 import type { UnitAvailability } from '../../hooks/useUnitAvailability.ts';
 import Badge from '../common/Badge.tsx';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
+import UnitSilhouette from '../common/UnitSilhouette.tsx';
 import { useUIStore } from '../../stores/uiStore.ts';
+import { useUnitAvailability } from '../../hooks/useUnitAvailability.ts';
 
 const DOT_STYLES: Partial<Record<UnitAvailability, { color: string; shape: 'circle' | 'diamond' | 'dash' }>> = {
   addable: { color: 'bg-valid shadow-[0_0_6px_rgba(56,178,96,0.5)]', shape: 'circle' },
@@ -73,6 +75,30 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
   const dimmed = availability === 'no_slot' || availability === 'roster_limit';
   const isFavorite = useUIStore((s) => s.favorites.has(unit.id));
   const toggleFavorite = useUIStore((s) => s.toggleFavorite);
+  const setWhatIfPreview = useUIStore((s) => s.setWhatIfPreview);
+  const getAvailability = useUnitAvailability();
+  const whatIfTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // What-If preview: show ghost on 800ms hover (desktop only)
+  function handleWhatIfEnter() {
+    if (availability !== 'addable' || expanded) return;
+    whatIfTimer.current = setTimeout(() => {
+      const avail = getAvailability(unit.unit_type, unit.name, unit.id, unit.constraints);
+      if (avail.status === 'addable' && avail.openDetachments.length > 0) {
+        setWhatIfPreview({
+          unitId: unit.id,
+          unitName: unit.name,
+          category: unit.unit_type,
+          baseCost: unit.base_cost,
+          detachmentId: avail.openDetachments[0].id,
+        });
+      }
+    }, 800);
+  }
+  function handleWhatIfLeave() {
+    clearTimeout(whatIfTimer.current);
+    setWhatIfPreview(null);
+  }
 
   // Scroll expanded card into view
   useEffect(() => {
@@ -174,17 +200,26 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
   return (
     <div
       ref={cardRef}
-      className={`group rounded-sm transition-all duration-200 ${
+      className={`group relative rounded-sm transition-all duration-200 ${
         tier === 'flagship' ? 'border-l-4 unit-tier-elite' : tier === 'elite' ? 'border-l-4' : 'border-l-3'
       } ${stripe} ${
         expanded
           ? 'glow-border-active bg-plate-800'
           : `glow-border unit-card-hover bg-plate-900/80 hover:bg-plate-800/70 ${tint}`
       } ${dimmed ? 'opacity-35' : ''} ${tier === 'flagship' && !expanded && !dimmed ? 'ring-1 ring-gold-700/15' : ''}`}
+      onMouseEnter={handleWhatIfEnter}
+      onMouseLeave={handleWhatIfLeave}
     >
+      {/* Silhouette watermark */}
+      {!expanded && (
+        <div className="unit-silhouette-watermark h-16 w-16 opacity-50">
+          <UnitSilhouette unitType={unit.unit_type} className="h-full w-full text-text-dim" />
+        </div>
+      )}
+
       <button
         onClick={onClick}
-        className="flex w-full items-start gap-3 px-4 py-3.5 text-left"
+        className="flex w-full items-start gap-3 px-4 py-3.5 text-left relative z-[1]"
       >
         {/* Status indicator — shape varies for color-blind accessibility */}
         {dotStyle && (
