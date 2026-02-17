@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useUIStore } from '../../stores/uiStore.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 import { useRosters, useDeleteRoster } from '../../api/rosters.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
-import { useState } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap.ts';
 import client from '../../api/client.ts';
 
 export default function RosterDrawer() {
@@ -22,6 +22,7 @@ export default function RosterDrawer() {
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const rosterToDelete = rosters.find((r) => r.id === confirmDeleteId);
+  const trapRef = useFocusTrap(open);
 
   // Refetch when drawer opens
   useEffect(() => {
@@ -64,6 +65,17 @@ export default function RosterDrawer() {
     });
   }
 
+  function handleDuplicate(id: number, name: string) {
+    client.post(`/api/rosters/${id}/duplicate`).then(({ data }) => {
+      queryClient.invalidateQueries({ queryKey: ['rosters'] });
+      syncFromResponse(data);
+      setOpen(false);
+      addToast(`Duplicated "${name}"`);
+    }).catch(() => {
+      addToast('Failed to duplicate roster', 'error');
+    });
+  }
+
   function handleNewRoster() {
     clearRoster();
     setOpen(false);
@@ -81,7 +93,13 @@ export default function RosterDrawer() {
 
       {/* Drawer — slide from right on desktop, sheet from bottom on mobile */}
       <div className="fixed z-[81] lg:right-0 lg:top-0 lg:bottom-0 lg:w-[380px] lg:animate-drawer-slide-in inset-x-0 bottom-0 top-[20vh] max-lg:animate-drawer-slide-up">
-        <div className="flex h-full flex-col bg-plate-900 border-l border-edge-700/30 max-lg:rounded-t-lg max-lg:border-t max-lg:border-l-0">
+        <div
+          ref={trapRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="My rosters"
+          className="flex h-full flex-col bg-plate-900 border-l border-edge-700/30 max-lg:rounded-t-lg max-lg:border-t max-lg:border-l-0"
+        >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-edge-700/30 px-5 py-4">
             <h3 className="font-display text-sm font-semibold tracking-[0.1em] text-ivory uppercase">
@@ -89,9 +107,10 @@ export default function RosterDrawer() {
             </h3>
             <button
               onClick={() => setOpen(false)}
+              aria-label="Close"
               className="flex h-7 w-7 items-center justify-center rounded-sm text-text-dim transition-colors hover:text-text-secondary"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -170,19 +189,35 @@ export default function RosterDrawer() {
                         </div>
                       </button>
 
-                      {/* Delete button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteId(roster.id);
-                        }}
-                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-sm text-text-dim/40 opacity-0 transition-all hover:text-danger group-hover:opacity-100"
-                        title="Delete roster"
-                      >
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {/* Action buttons */}
+                      <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-all group-hover:opacity-100">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicate(roster.id, roster.name);
+                          }}
+                          className="flex h-6 w-6 items-center justify-center rounded-sm text-text-dim/40 transition-all hover:text-steel"
+                          aria-label="Duplicate roster"
+                          title="Duplicate roster"
+                        >
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteId(roster.id);
+                          }}
+                          className="flex h-6 w-6 items-center justify-center rounded-sm text-text-dim/40 transition-all hover:text-danger"
+                          aria-label="Delete roster"
+                          title="Delete roster"
+                        >
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

@@ -5,6 +5,7 @@
 import { useEffect, useRef } from 'react';
 import type { RosterDetachment } from '../../stores/rosterStore.ts';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
+import { useFocusTrap } from '../../hooks/useFocusTrap.ts';
 
 interface Props {
   open: boolean;
@@ -32,6 +33,7 @@ export default function ExportPreviewModal({
   onPrint,
 }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const trapRef = useFocusTrap(open);
 
   useEffect(() => {
     if (!open) return;
@@ -53,6 +55,10 @@ export default function ExportPreviewModal({
   return (
     <div className="modal-overlay fixed inset-0 z-[90] flex items-center justify-center p-4" onClick={onClose}>
       <div
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Army sheet preview"
         className="animate-modal-in flex w-full max-w-2xl max-h-[85vh] flex-col rounded-sm bg-plate-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -63,9 +69,10 @@ export default function ExportPreviewModal({
           </span>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="flex h-7 w-7 items-center justify-center rounded-sm text-text-dim transition-colors hover:text-text-secondary"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

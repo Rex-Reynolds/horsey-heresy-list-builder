@@ -613,6 +613,58 @@ async def delete_roster(request: Request, roster_id: int):
     return {"ok": True}
 
 
+@app.post("/api/rosters/{roster_id}/duplicate")
+@limiter.limit("5/minute")
+async def duplicate_roster(request: Request, roster_id: int):
+    """Duplicate a roster with all its detachments and entries."""
+    try:
+        original = Roster.get_by_id(roster_id)
+    except Roster.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Roster not found")
+
+    # 1. Copy the roster
+    new_roster = Roster.create(
+        name=f"{original.name} (Copy)",
+        points_limit=original.points_limit,
+        doctrine=original.doctrine,
+    )
+
+    # 2. Copy all detachments and their entries
+    for rd in (
+        RosterDetachment
+        .select()
+        .where(RosterDetachment.roster == original)
+        .order_by(RosterDetachment.sort_order)
+    ):
+        new_rd = RosterDetachment.create(
+            roster=new_roster,
+            detachment=rd.detachment_id,
+            detachment_name=rd.detachment_name,
+            detachment_type=rd.detachment_type,
+            sort_order=rd.sort_order,
+        )
+
+        # 3. Copy all entries within this detachment
+        for entry in RosterEntry.select().where(
+            RosterEntry.roster_detachment == rd
+        ):
+            RosterEntry.create(
+                roster_detachment=new_rd,
+                unit=entry.unit_id,
+                unit_name=entry.unit_name,
+                quantity=entry.quantity,
+                upgrades=entry.upgrades,
+                total_cost=entry.total_cost,
+                category=entry.category,
+            )
+
+    # Recalculate total points for the new roster
+    new_roster.calculate_total_points()
+
+    # 4. Return full roster response
+    return _build_roster_response(new_roster)
+
+
 # ===== ROSTER DETACHMENTS =====
 
 @app.post("/api/rosters/{roster_id}/detachments")

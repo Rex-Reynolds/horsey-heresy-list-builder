@@ -6,6 +6,7 @@ import { useUpdateEntry } from '../../api/rosters.ts';
 import type { Upgrade } from '../../types/index.ts';
 import UpgradeList from '../units/UpgradeList.tsx';
 import client from '../../api/client.ts';
+import { useFocusTrap } from '../../hooks/useFocusTrap.ts';
 
 export default function UpgradePanel() {
   const panelEntry = useUIStore((s) => s.upgradePanelEntry);
@@ -57,6 +58,8 @@ export default function UpgradePanel() {
   useEffect(() => {
     setSelectedUpgrades(initialSelected);
   }, [initialSelected]);
+
+  const trapRef = useFocusTrap(!!panelEntry);
 
   const detachmentId = panelEntry?.detachmentId ?? 0;
   const updateMutation = useUpdateEntry(rosterId, detachmentId);
@@ -175,7 +178,13 @@ export default function UpgradePanel() {
 
       {/* Panel */}
       <div className="animate-upgrade-panel-in fixed z-[71] lg:right-0 lg:top-0 lg:bottom-0 lg:w-full lg:max-w-md inset-0 max-lg:top-0">
-        <div className="flex h-full flex-col bg-plate-900 border-l border-edge-700/30">
+        <div
+          ref={trapRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Upgrades for ${entry.name}`}
+          className="flex h-full flex-col bg-plate-900 border-l border-edge-700/30"
+        >
           {/* Sticky header */}
           <div className="border-b border-edge-700/30 px-5 py-4">
             <div className="flex items-center justify-between gap-3">
@@ -201,9 +210,10 @@ export default function UpgradePanel() {
               </div>
               <button
                 onClick={closePanel}
+                aria-label="Close"
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-text-dim transition-colors hover:text-text-secondary"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>

@@ -1,18 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap.ts';
 
-const SHORTCUTS = [
-  { keys: ['⌘', 'K'], description: 'Focus search' },
-  { keys: ['⌘', 'Z'], description: 'Undo last action' },
-  { keys: ['⌘', '⇧', 'Z'], description: 'Redo' },
-  { keys: ['↑', '↓'], description: 'Navigate units' },
-  { keys: ['J', 'K'], description: 'Navigate units (vim)' },
-  { keys: ['Enter'], description: 'Quick-add single result' },
-  { keys: ['Esc'], description: 'Collapse expanded card' },
-  { keys: ['?'], description: 'Toggle this overlay' },
-];
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+const MOD = isMac ? '⌘' : 'Ctrl';
+const SHIFT = isMac ? '⇧' : 'Shift';
 
 export default function KeyboardShortcuts() {
   const [open, setOpen] = useState(false);
+  const trapRef = useFocusTrap(open);
+
+  const shortcuts = useMemo(() => [
+    { keys: [MOD, 'K'], description: 'Focus search' },
+    { keys: [MOD, 'Z'], description: 'Undo last action' },
+    { keys: [MOD, SHIFT, 'Z'], description: 'Redo' },
+    { keys: ['↑', '↓'], description: 'Navigate units' },
+    { keys: ['J', 'K'], description: 'Navigate units (vim)' },
+    { keys: ['Enter'], description: 'Quick-add single result' },
+    { keys: ['Esc'], description: 'Collapse expanded card' },
+    { keys: ['?'], description: 'Toggle this overlay' },
+  ], []);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -46,11 +52,18 @@ export default function KeyboardShortcuts() {
         onClick={() => setOpen(false)}
       />
       <div className="fixed inset-0 z-[9001] flex items-center justify-center pointer-events-none">
-        <div className="pointer-events-auto animate-modal-in w-80 rounded-sm border border-edge-600/40 bg-plate-900/98 shadow-xl">
+        <div
+          ref={trapRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Keyboard shortcuts"
+          className="pointer-events-auto animate-modal-in w-80 rounded-sm border border-edge-600/40 bg-plate-900/98 shadow-xl"
+        >
           <div className="flex items-center justify-between border-b border-edge-700/30 px-5 py-3.5">
             <h3 className="text-imperial text-sm tracking-[0.12em]">Keyboard Shortcuts</h3>
             <button
               onClick={() => setOpen(false)}
+              aria-label="Close"
               className="text-text-dim transition-colors hover:text-text-primary"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -59,7 +72,7 @@ export default function KeyboardShortcuts() {
             </button>
           </div>
           <div className="px-5 py-4 space-y-3">
-            {SHORTCUTS.map(({ keys, description }) => (
+            {shortcuts.map(({ keys, description }) => (
               <div key={description} className="flex items-center justify-between gap-4">
                 <span className="text-[13px] text-text-secondary">{description}</span>
                 <div className="flex items-center gap-1">

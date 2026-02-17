@@ -9,7 +9,7 @@ export default function ValidationResults({ isValid, errors, onErrorClick }: Pro
 
   if (isValid) {
     return (
-      <div className="flex items-center gap-2.5 rounded-sm border border-valid/25 bg-valid/6 px-3 py-2.5 shadow-[0_0_12px_rgba(56,178,96,0.06)]">
+      <div aria-live="polite" className="flex items-center gap-2.5 rounded-sm border border-valid/25 bg-valid/6 px-3 py-2.5 shadow-[0_0_12px_rgba(56,178,96,0.06)]">
         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-valid/15">
           <svg className="h-3 w-3 text-valid" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -23,7 +23,7 @@ export default function ValidationResults({ isValid, errors, onErrorClick }: Pro
   }
 
   return (
-    <div className="rounded-sm border border-danger/25 bg-danger/6 shadow-[0_0_12px_rgba(196,64,64,0.06)]">
+    <div role="alert" aria-live="assertive" className="rounded-sm border border-danger/25 bg-danger/6 shadow-[0_0_12px_rgba(196,64,64,0.06)]">
       {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-danger/15 px-3 py-2">
         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-danger/15">

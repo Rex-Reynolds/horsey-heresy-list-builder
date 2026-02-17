@@ -8,6 +8,7 @@ import ForceOrgGrid from './ForceOrgGrid.tsx';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 import SlotSuggestions from './SlotSuggestions.tsx';
 import { useTouchReorder } from '../../hooks/useTouchReorder.ts';
+import { useMediaQuery } from '../../hooks/useMediaQuery.ts';
 
 interface Props {
   detachment: RosterDetachment;
@@ -197,7 +198,7 @@ export default function DetachmentSection({
   const detPoints = detachment.entries.reduce((s, e) => s + e.totalCost, 0);
 
   // Touch-based reorder for mobile
-  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
+  const isMobile = useMediaQuery('(max-width: 1023px)');
   const handleTouchReorder = useCallback((fromId: number, toId: number) => {
     if (!onReorderEntries) return;
     const fromIndex = detachment.entries.findIndex((e) => e.id === fromId);
@@ -327,6 +328,7 @@ export default function DetachmentSection({
                 }}
                 className="text-text-dim/50 transition-colors hover:text-caution"
                 title="Clear all units"
+                aria-label={`Clear all units from ${detachment.name}`}
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -341,6 +343,7 @@ export default function DetachmentSection({
                 }}
                 className="text-text-dim transition-colors hover:text-danger"
                 title="Remove detachment"
+                aria-label={`Remove ${detachment.name} detachment`}
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

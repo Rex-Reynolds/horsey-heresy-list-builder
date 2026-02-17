@@ -38,7 +38,7 @@ export default function CompletenessRing({ percent, remaining, size = 32 }: Prop
       : `${remaining} required slot${remaining !== 1 ? 's' : ''} unfilled`;
 
   return (
-    <div className="relative shrink-0" title={label}>
+    <div className="relative shrink-0" title={label} role="progressbar" aria-valuenow={Math.round(percent)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
       <svg width={size} height={size} className="completeness-ring -rotate-90">
         {/* Background track */}
         <circle

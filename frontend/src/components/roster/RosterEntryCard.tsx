@@ -4,6 +4,7 @@ import { SLOT_STRIPE_COLORS } from '../../types/index.ts';
 import { useUIStore } from '../../stores/uiStore.ts';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 import { useSwipeActions } from '../../hooks/useSwipeActions.ts';
+import { useMediaQuery } from '../../hooks/useMediaQuery.ts';
 
 interface Props {
   entry: RosterEntry;
@@ -32,7 +33,7 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
   const [showPreview, setShowPreview] = useState(false);
 
   // Mobile swipe actions
-  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
+  const isMobile = useMediaQuery('(max-width: 1023px)');
   const { revealedSide, offset, dismiss, touchHandlers } = useSwipeActions({
     enabled: isMobile && !draggable,
   });
@@ -112,7 +113,7 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
       >
         {/* Drag handle */}
         {draggable && (
-          <span className="cursor-grab text-text-dim/30 transition-colors hover:text-text-dim/60 active:cursor-grabbing shrink-0 touch-none" title="Drag to reorder">
+          <span className="cursor-grab text-text-dim/30 transition-colors hover:text-text-dim/60 active:cursor-grabbing shrink-0 touch-none" title="Drag to reorder" aria-label="Drag to reorder">
             <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
               <circle cx="9" cy="6" r="1.5" />
               <circle cx="15" cy="6" r="1.5" />
@@ -236,6 +237,7 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
             onClick={() => onDuplicate(entry)}
             className="flex h-5 w-5 items-center justify-center text-text-dim opacity-0 transition-all hover:text-gold-400 group-hover:opacity-100 max-lg:h-11 max-lg:w-11 max-lg:opacity-60"
             title="Duplicate"
+            aria-label={`Duplicate ${entry.name}`}
           >
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -248,6 +250,7 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
           onClick={() => onRemove(entry.id)}
           className="flex h-5 w-5 items-center justify-center text-text-dim opacity-0 transition-all hover:text-danger group-hover:opacity-100 max-lg:h-11 max-lg:w-11 max-lg:opacity-60"
           title="Remove"
+          aria-label={`Remove ${entry.name}`}
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

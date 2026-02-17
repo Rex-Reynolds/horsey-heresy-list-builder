@@ -91,7 +91,7 @@ export default function PointsBar({ current, limit, segments }: Props) {
       </div>
 
       {/* Track */}
-      <div className={`relative h-5 overflow-hidden rounded-sm border transition-all ${
+      <div role="progressbar" aria-valuenow={current} aria-valuemin={0} aria-valuemax={limit} aria-label={`${current} of ${limit} points used`} className={`relative h-5 overflow-hidden rounded-sm border transition-all ${
         over
           ? `border-danger/40 animate-overage-pulse`
           : nearLimit

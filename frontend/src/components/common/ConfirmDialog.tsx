@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap.ts';
 
 interface Props {
   open: boolean;
@@ -22,6 +23,7 @@ export default function ConfirmDialog({
   onCancel,
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const trapRef = useFocusTrap(open);
 
   useEffect(() => {
     if (open) {
@@ -47,6 +49,10 @@ export default function ConfirmDialog({
   return (
     <div className="confirm-overlay fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onCancel}>
       <div
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className="animate-modal-in glow-border-active w-full max-w-sm rounded-sm bg-plate-800 p-5 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >

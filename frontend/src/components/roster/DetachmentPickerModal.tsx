@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { Detachment, CompositionStatus } from '../../types/index.ts';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
+import { useFocusTrap } from '../../hooks/useFocusTrap.ts';
 
 const TYPE_ORDER = ['Primary', 'Auxiliary', 'Apex', 'Lord of War', 'Allied', 'Other'];
 
@@ -105,6 +106,7 @@ export default function DetachmentPickerModal({
   onClose,
 }: Props) {
   const [search, setSearch] = useState('');
+  const trapRef = useFocusTrap(open);
 
   useEffect(() => {
     if (open) setSearch(''); // eslint-disable-line react-hooks/set-state-in-effect -- reset on open
@@ -145,6 +147,10 @@ export default function DetachmentPickerModal({
   return (
     <div className="modal-overlay fixed inset-0 z-[90] flex items-center justify-center p-4" onClick={onClose}>
       <div
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add detachment"
         className="animate-modal-in glow-border-active flex w-full max-w-lg max-h-[80vh] flex-col rounded-sm bg-plate-900"
         onClick={(e) => e.stopPropagation()}
       >
@@ -158,9 +164,10 @@ export default function DetachmentPickerModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="flex h-7 w-7 items-center justify-center rounded-sm text-text-dim transition-colors hover:text-text-secondary"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

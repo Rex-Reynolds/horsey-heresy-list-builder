@@ -303,7 +303,7 @@ export default function UnitBrowser() {
         onQuickAdd={hasDetachments && availability?.status === 'addable' && (!unit.has_required_upgrades || unit.default_upgrades) ? handleQuickAdd : undefined}
         onCompareToggle={(u) => setCompareIds((prev) => {
           const next = new Set(prev);
-          if (next.has(u.id)) next.delete(u.id); else if (next.size < 4) next.add(u.id);
+          if (next.has(u.id)) { next.delete(u.id); } else if (next.size < 4) { next.add(u.id); } else { addToast('Compare limited to 4 units', 'info'); }
           return next;
         })}
         isComparing={compareIds.has(unit.id)}

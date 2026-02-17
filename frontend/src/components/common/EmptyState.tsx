@@ -2,13 +2,34 @@ import type { ReactNode } from 'react';
 
 type EmptyVariant = 'search' | 'empty-slot' | 'empty-roster' | 'no-detachments' | 'default';
 
-const FLAVOR_TEXT: Record<EmptyVariant, string> = {
-  search: 'No units match your query, Strategos.',
-  'empty-slot': 'This position awaits reinforcement, Commander.',
-  'empty-roster': 'The Cohort awaits your command, Legate.',
-  'no-detachments': 'Initialize a detachment to marshal your forces.',
-  default: 'Nothing to display at this time.',
+const FLAVOR_TEXT: Record<EmptyVariant, string[]> = {
+  search: [
+    'No units match your query, Strategos.',
+    'The muster rolls yield no result, Commander.',
+    'Your search finds only silence in the ranks.',
+  ],
+  'empty-slot': [
+    'This position awaits reinforcement, Commander.',
+    'The formation has gaps — fill them with purpose.',
+    'An empty berth in the order of battle.',
+  ],
+  'empty-roster': [
+    'The Cohort awaits your command, Legate.',
+    'The muster fields lie empty, Strategos.',
+    'No legionaries report for duty — yet.',
+  ],
+  'no-detachments': [
+    'Initialize a detachment to marshal your forces.',
+    'Your army needs structure — begin with a detachment.',
+    'The chain of command requires a detachment first.',
+  ],
+  default: ['Nothing to display at this time.'],
 };
+
+function pickFlavor(variant: EmptyVariant): string {
+  const options = FLAVOR_TEXT[variant];
+  return options[Math.floor(Math.random() * options.length)];
+}
 
 const ICONS: Record<string, ReactNode> = {
   search: (
@@ -46,7 +67,7 @@ export default function EmptyState({
   flavorText?: string;
 }) {
   const svgIcon = ICONS[icon] ?? ICONS.default;
-  const flavor = flavorText ?? FLAVOR_TEXT[variant];
+  const flavor = flavorText ?? pickFlavor(variant);
 
   return (
     <div className="relative flex flex-col items-center justify-center py-14 text-text-dim overflow-hidden">
