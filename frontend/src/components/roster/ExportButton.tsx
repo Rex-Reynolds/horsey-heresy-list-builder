@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 import { useUIStore } from '../../stores/uiStore.ts';
+import { useDoctrines } from '../../api/rosters.ts';
 import { generateRosterText, downloadRosterText } from '../../utils/exportRoster.ts';
 import ExportPreviewModal from './ExportPreviewModal.tsx';
 
 export default function ExportButton() {
   const { rosterName, pointsLimit, detachments, totalPoints, doctrine } = useRosterStore();
+  const { data: doctrines = [] } = useDoctrines();
   const addToast = useUIStore((s) => s.addToast);
   const [showPreview, setShowPreview] = useState(false);
+  const doctrineName = doctrine ? doctrines.find((d) => d.id === doctrine)?.name ?? null : null;
 
   const totalEntries = detachments.reduce((s, d) => s + d.entries.length, 0);
 
@@ -49,7 +52,7 @@ export default function ExportButton() {
         pointsLimit={pointsLimit}
         totalPoints={totalPoints}
         detachments={detachments}
-        doctrine={doctrine}
+        doctrine={doctrineName}
         onClose={() => setShowPreview(false)}
         onCopy={handleCopy}
         onDownload={handleDownload}

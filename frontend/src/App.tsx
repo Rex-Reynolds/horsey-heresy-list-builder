@@ -8,7 +8,6 @@ import GuidedTour from './components/common/GuidedTour.tsx'
 import RosterDrawer from './components/roster/RosterDrawer.tsx'
 import UpgradePanel from './components/roster/UpgradePanel.tsx'
 import CommandPalette from './components/common/CommandPalette.tsx'
-import MilestoneCelebration from './components/common/MilestoneCelebration.tsx'
 import RosterTabs from './components/roster/RosterTabs.tsx'
 import { useRosterStore } from './stores/rosterStore.ts'
 import { useUndoRedo } from './hooks/useUndoRedo.ts'
@@ -121,7 +120,6 @@ function App() {
       <RosterDrawer />
       <UpgradePanel />
       <CommandPalette />
-      <MilestoneCelebration />
     </ErrorBoundary>
   )
 }

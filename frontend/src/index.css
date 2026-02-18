@@ -1659,48 +1659,6 @@ body::before {
   background: rgba(232, 220, 190, 0.98);
 }
 
-/* ── Milestone Celebration ── */
-@keyframes milestoneBannerIn {
-  0% { opacity: 0; transform: scale(0.8); }
-  30% { opacity: 1; transform: scale(1.05); }
-  50% { transform: scale(1); }
-  80% { opacity: 1; }
-  100% { opacity: 0; transform: scale(0.95) translateY(-10px); }
-}
-
-.milestone-banner {
-  animation: milestoneBannerIn 3s ease-out forwards;
-  text-align: center;
-  color: var(--color-gold-300);
-  text-shadow: 0 0 20px rgba(200, 160, 72, 0.4);
-}
-
-.milestone-golden {
-  color: var(--color-gold-200);
-  text-shadow: 0 0 30px rgba(200, 160, 72, 0.6), 0 0 60px rgba(200, 160, 72, 0.2);
-}
-
-@keyframes particleBurst {
-  0% { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0); opacity: 1; }
-  100% { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--distance))); opacity: 0; }
-}
-
-.milestone-particle {
-  position: absolute;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--color-gold-400);
-  animation: particleBurst 1.2s ease-out forwards;
-  animation-delay: var(--delay);
-}
-
-.milestone-golden .milestone-particle {
-  width: 4px;
-  height: 4px;
-  box-shadow: 0 0 6px rgba(200, 160, 72, 0.6);
-}
-
 /* ── FLIP Layout Animations ── */
 @keyframes entrySlideIn {
   from { opacity: 0; transform: translateX(-12px) scale(0.97); }
