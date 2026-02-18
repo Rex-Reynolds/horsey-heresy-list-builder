@@ -9,29 +9,7 @@ import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 import SlotSuggestions from './SlotSuggestions.tsx';
 import { useTouchReorder } from '../../hooks/useTouchReorder.ts';
 import { useMediaQuery } from '../../hooks/useMediaQuery.ts';
-import { useUnits } from '../../api/units.ts';
 import { useUIStore } from '../../stores/uiStore.ts';
-
-/** Extract a compact stat line from unit profiles JSON */
-function getStatLine(profilesRaw: string | null): string | null {
-  if (!profilesRaw) return null;
-  try {
-    const parsed = JSON.parse(profilesRaw);
-    if (!Array.isArray(parsed)) return null;
-    for (const item of parsed) {
-      if (item?.type === 'Profile' && item?.characteristics) {
-        const c = item.characteristics;
-        const stats = ['WS', 'BS', 'S', 'T', 'W', 'I', 'A', 'LD', 'SAV'].filter((k) => c[k] != null);
-        if (stats.length >= 4) {
-          return stats.map((k) => `${k}${c[k]}`).join(' ');
-        }
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 interface Props {
   detachment: RosterDetachment;
@@ -117,7 +95,7 @@ function SlotRow({
   const isRequired = status.min > 0 && isEmpty;
 
   return (
-    <div className={`py-1.5 ${validationClass} ${isClickable && isEmpty ? 'slot-row-empty px-2 -mx-1 my-0.5' : ''} ${isRequired ? 'animate-pulse-glow' : ''}`}>
+    <div className={`py-1.5 ${validationClass} ${isClickable && isEmpty ? 'slot-row-empty px-2 -mx-1 my-0.5' : ''}`}>
       <button
         type="button"
         onClick={isClickable ? onClick : undefined}
@@ -221,16 +199,6 @@ export default function DetachmentSection({
   const [dragEntryId, setDragEntryId] = useState<number | null>(null);
   const [dragOverEntryId, setDragOverEntryId] = useState<number | null>(null);
   const detPoints = detachment.entries.reduce((s, e) => s + e.totalCost, 0);
-
-  // Fetch unit data for stat line preview
-  const { data: allUnits = [] } = useUnits();
-  const statLineMap = useMemo(() => {
-    const map: Record<number, string | null> = {};
-    for (const unit of allUnits) {
-      map[unit.id] = getStatLine(unit.profiles);
-    }
-    return map;
-  }, [allUnits]);
 
   // Touch-based reorder for mobile
   const isMobile = useMediaQuery('(max-width: 1023px)');
@@ -381,7 +349,7 @@ export default function DetachmentSection({
                 aria-label={`Remove ${detachment.name} detachment`}
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
             )}
@@ -433,7 +401,6 @@ export default function DetachmentSection({
                       onDragEnd={handleDragEnd}
                       onDrop={(e) => handleDrop(entry.id, e)}
                       isDragOver={dragOverEntryId === entry.id && dragEntryId !== entry.id}
-                      statLine={statLineMap[entry.unitId]}
                     />
                   </div>
                 ))}
@@ -451,7 +418,7 @@ export default function DetachmentSection({
               >
                 <span className="h-px flex-1 bg-edge-700/20" />
                 <span className="font-label shrink-0 tracking-wider uppercase">
-                  {showAllSlots ? 'Hide locked slots' : `${discoverableSlots.length} locked slot${discoverableSlots.length !== 1 ? 's' : ''}`}
+                  {showAllSlots ? 'Hide extra slots' : `${discoverableSlots.length} more slot${discoverableSlots.length !== 1 ? 's' : ''} (via Tercio)`}
                 </span>
                 <span className="h-px flex-1 bg-edge-700/20" />
               </button>
@@ -479,8 +446,7 @@ export default function DetachmentSection({
                         onDragEnd={handleDragEnd}
                         onDrop={(e) => handleDrop(entry.id, e)}
                         isDragOver={dragOverEntryId === entry.id && dragEntryId !== entry.id}
-                        statLine={statLineMap[entry.unitId]}
-                      />
+                        />
                     </div>
                   ))}
                 </div>

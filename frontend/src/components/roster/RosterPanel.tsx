@@ -19,9 +19,7 @@ import DetachmentPickerModal from './DetachmentPickerModal.tsx';
 import ValidationResults from './ValidationResults.tsx';
 import ExportButton from './ExportButton.tsx';
 import DoctrinePicker from './DoctrinePicker.tsx';
-import CompositionSummary from './CompositionSummary.tsx';
 import CompletenessRing from './CompletenessRing.tsx';
-import ArmySummary from './ArmySummary.tsx';
 import PointsBreakdown from './PointsBreakdown.tsx';
 import ArmyAdvice from './ArmyAdvice.tsx';
 import OnboardingHint from './OnboardingHint.tsx';
@@ -463,17 +461,7 @@ export default function RosterPanel() {
 
       {/* Detachments */}
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
-        {/* Army Summary Dashboard — collapsible overview */}
-        {detachments.length > 0 && totalEntries > 0 && (
-          <ArmySummary detachments={detachments} totalPoints={totalPoints} />
-        )}
-
-        {/* Composition Summary — collapsible, in scrollable area */}
-        {detachments.length > 0 && totalEntries > 0 && (
-          <CompositionSummary detachments={detachments} totalPoints={totalPoints} />
-        )}
-
-        {/* Contextual army advice */}
+        {/* Contextual army advice — only warnings/suggestions, no dashboard clutter */}
         {detachments.length > 0 && totalEntries > 0 && (
           <ArmyAdvice detachments={detachments} totalPoints={totalPoints} pointsLimit={pointsLimit} />
         )}

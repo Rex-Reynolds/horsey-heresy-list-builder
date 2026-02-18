@@ -120,18 +120,21 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-label text-sm font-semibold tracking-wider text-gold-400 uppercase">
-              Roster
+          <div className="flex items-center gap-0 rounded-sm border border-gold-600/30 overflow-hidden">
+            <span className="font-label bg-plate-800/60 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-text-dim uppercase border-r border-gold-600/30">
+              Browse
             </span>
-            {totalEntries > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-600/20 px-1.5 font-data text-[10px] font-bold tabular-nums text-gold-400">
-                {totalEntries}
-              </span>
-            )}
-            <svg className="h-4 w-4 text-gold-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-            </svg>
+            <span className="font-label bg-gold-900/30 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gold-400 uppercase flex items-center gap-1.5">
+              Roster
+              {totalEntries > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-gold-600/25 px-1 font-data text-[9px] font-bold tabular-nums text-gold-300">
+                  {totalEntries}
+                </span>
+              )}
+              <svg className="h-3 w-3 text-gold-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+              </svg>
+            </span>
           </div>
         </div>
       </button>

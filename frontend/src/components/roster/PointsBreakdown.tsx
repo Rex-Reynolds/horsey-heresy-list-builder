@@ -84,25 +84,21 @@ export default function PointsBreakdown({ detachments, pointsLimit, totalPoints 
         )}
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1">
-        {breakdown.map(({ group, points, count }) => {
+      {/* Compact legend — single line with dots + abbreviations */}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        {breakdown.map(({ group, points }) => {
           const dotColor = SLOT_GROUP_COLORS[group] ?? 'bg-edge-400';
           const textColor = SLOT_GROUP_TEXT[group] ?? 'text-text-dim';
-          const pct = pointsLimit > 0 ? Math.round((points / pointsLimit) * 100) : 0;
           return (
-            <div key={group} className="flex items-center gap-1.5">
+            <span key={group} className="flex items-center gap-1" title={`${group}: ${points} pts`}>
               <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
-              <span className={`font-label text-[10px] tracking-wider uppercase ${textColor}`}>
+              <span className={`font-label text-[9px] tracking-wider uppercase ${textColor}`}>
                 {group}
               </span>
-              <span className="font-data text-[10px] tabular-nums text-text-dim">
-                {points}<span className="text-text-dim/40">({pct}%)</span>
+              <span className="font-data text-[9px] tabular-nums text-text-dim">
+                {points}
               </span>
-              <span className="font-data text-[9px] tabular-nums text-text-dim/40">
-                {count}u
-              </span>
-            </div>
+            </span>
           );
         })}
       </div>

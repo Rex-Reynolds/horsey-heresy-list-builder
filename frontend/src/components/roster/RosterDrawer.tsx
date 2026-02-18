@@ -195,7 +195,7 @@ export default function RosterDrawer() {
                           </div>
                         </div>
                         {roster.detachments && roster.detachments.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap gap-1">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
                             {roster.detachments.map((d: { id: number; type: string; name: string }) => (
                               <span
                                 key={d.id}
@@ -207,9 +207,12 @@ export default function RosterDrawer() {
                                       : 'border-royal-dim/25 bg-royal/8 text-royal/80'
                                 }`}
                               >
-                                {d.type}
+                                {d.name.length > 20 ? d.name.slice(0, 18) + '\u2026' : d.name}
                               </span>
                             ))}
+                            <span className="font-data text-[9px] tabular-nums text-text-dim/50 ml-auto">
+                              {roster.detachments.reduce((s, d) => s + d.entries.length, 0)} units
+                            </span>
                           </div>
                         )}
                       </button>

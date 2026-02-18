@@ -187,10 +187,6 @@ export default function AppHeader() {
               </svg>
             )}
           </button>
-          <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-valid/60 shadow-[0_0_4px_rgba(56,178,96,0.4)]" />
-            <span className="font-label text-[9px] font-semibold tracking-[0.2em] text-text-dim/60 uppercase">Online</span>
-          </div>
           {!hasRoster && (
             <span className="font-data text-[10px] tabular-nums text-text-dim/40">HH3.SA</span>
           )}

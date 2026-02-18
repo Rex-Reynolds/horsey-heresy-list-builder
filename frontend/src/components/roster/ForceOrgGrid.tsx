@@ -11,23 +11,6 @@ interface Props {
 
 const HINT_STORAGE_KEY = 'forceOrgHintDismissed';
 
-/** Intentional abbreviations for slot names — never truncate with ellipsis */
-const SLOT_ABBREVIATIONS: Record<string, string> = {
-  'High Command': 'HC',
-  'Command': 'CMD',
-  'Troops': 'TRP',
-  'Elites': 'ELT',
-  'Fast Attack': 'FA',
-  'Heavy Support': 'HS',
-  'Dedicated Transport': 'DT',
-  'Heavy Transport': 'HT',
-  'Lord of War': 'LoW',
-  'Fortification': 'FORT',
-  'Retinue': 'RET',
-  'Transport': 'TRS',
-  'Primarch': 'PRM',
-};
-
 export default function ForceOrgGrid({ slots, onSlotClick, entryNames }: Props) {
   // Track previous fill counts to detect increases
   const prevFills = useRef<Record<string, number>>({});
@@ -64,48 +47,8 @@ export default function ForceOrgGrid({ slots, onSlotClick, entryNames }: Props) 
 
   if (slots.length === 0) return null;
 
-  // Compact visual summary: classic FOC circles
-  const compactSlots = slots.filter(([, s]) => s.max > 0 && s.max < 999);
-
   return (
     <div>
-      {/* Classic force org summary bar */}
-      {compactSlots.length > 0 && (
-        <div className="flex items-center gap-3 px-3.5 py-2 border-t border-edge-700/15 bg-plate-950/30 overflow-x-auto scrollbar-hide">
-          {compactSlots.map(([name, status]) => {
-            const baseName = name.includes(' - ') ? name.split(' - ', 1)[0].trim() : name;
-            const slotColor = SLOT_FILL_COLORS[baseName] ?? 'bg-edge-400/70';
-            const isFull = status.filled >= status.max;
-            const isOver = status.filled > status.max;
-            const isRequired = status.min > 0 && status.filled < status.min;
-            return (
-              <div key={name} className="flex items-center gap-1.5 shrink-0" title={`${baseName}: ${status.filled}/${status.max}`}>
-                <span className={`font-label text-[8px] font-bold tracking-wider uppercase ${
-                  isRequired ? 'text-caution/70' : isFull ? 'text-valid/60' : 'text-text-dim/50'
-                }`}>
-                  {SLOT_ABBREVIATIONS[baseName] ?? baseName.slice(0, 3).toUpperCase()}
-                </span>
-                <div className="flex gap-0.5">
-                  {Array.from({ length: Math.min(status.max, 8) }, (_, i) => (
-                    <div
-                      key={i}
-                      className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
-                        i < status.filled
-                          ? isOver ? 'bg-danger' : isFull ? 'bg-valid/80' : slotColor.replace('/70', '')
-                          : isRequired ? 'border border-caution/40 bg-transparent' : 'bg-edge-600/25'
-                      }`}
-                    />
-                  ))}
-                  {status.max > 8 && (
-                    <span className="font-data text-[7px] text-text-dim/40 ml-0.5">+{status.max - 8}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       <div className="force-org-grid grid grid-cols-2 gap-1.5 px-3.5 py-2.5 border-t border-edge-700/15">
         {slots.map(([name, status]) => {
           const isFull = status.filled >= status.max;
@@ -150,9 +93,7 @@ export default function ForceOrgGrid({ slots, onSlotClick, entryNames }: Props) 
                 isClickable
                   ? 'cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)] hover:border-gold-600/25 hover:bg-plate-700/20'
                   : ''
-              } ${isEmpty && isClickable ? 'bg-transparent' : 'bg-plate-800/15'} ${
-                isRequired ? 'animate-pulse-glow' : ''
-              }`}
+              } ${isEmpty && isClickable ? 'bg-transparent' : 'bg-plate-800/15'}`}
             >
               {/* Fill bar background */}
               {hasFiniteMax && (

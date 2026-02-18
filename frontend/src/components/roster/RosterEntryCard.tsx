@@ -23,10 +23,9 @@ interface Props {
   onDragEnd?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent) => void;
   isDragOver?: boolean;
-  statLine?: string | null;
 }
 
-export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, isNew, entryIndex, isDuplicateName, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragOver, statLine }: Props) {
+export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, isNew, entryIndex, isDuplicateName, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragOver }: Props) {
   const openUpgradePanel = useUIStore((s) => s.openUpgradePanel);
   const cardRef = useRef<HTMLDivElement>(null);
   const prevQtyRef = useRef(entry.quantity);
@@ -173,12 +172,6 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
               <div className="mt-1.5 font-data text-[12px] font-semibold tabular-nums text-gold-400">
                 Total: {entry.totalCost} pts
               </div>
-            </div>
-          )}
-          {/* Inline stat preview */}
-          {statLine && (
-            <div className="font-data text-[9px] tabular-nums text-text-dim/50 mt-0.5 truncate">
-              {statLine}
             </div>
           )}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
