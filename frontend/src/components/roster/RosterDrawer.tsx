@@ -145,10 +145,19 @@ export default function RosterDrawer() {
                   const isActive = roster.id === activeRosterId;
                   const pts = roster.total_points ?? 0;
                   const limit = roster.points_limit ?? 0;
+                  const fillPct = limit > 0 ? Math.min((pts / limit) * 100, 100) : 0;
+                  const over = pts > limit;
+                  const completeness = fillPct === 0 ? 'empty' : over ? 'over' : fillPct >= 80 ? 'near' : 'building';
+                  const borderLeftColor = {
+                    empty: 'border-l-edge-600/30',
+                    building: 'border-l-gold-500/40',
+                    near: 'border-l-caution/50',
+                    over: 'border-l-danger/50',
+                  }[completeness];
                   return (
                     <div
                       key={roster.id}
-                      className={`group relative rounded-sm border transition-all ${
+                      className={`group relative rounded-sm border-l-2 border border-l-solid transition-all ${borderLeftColor} ${
                         isActive
                           ? 'border-gold-500/30 bg-gold-900/15 shadow-[0_0_12px_rgba(200,160,72,0.08)]'
                           : 'border-edge-600/20 bg-plate-800/30 hover:border-edge-500/30 hover:bg-plate-800/50'
@@ -170,23 +179,39 @@ export default function RosterDrawer() {
                             </span>
                           )}
                         </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="font-data text-xs tabular-nums text-text-dim">
-                            {pts}/{limit} pts
+                        {/* Points bar + detachment badges */}
+                        <div className="mt-1.5 flex items-center gap-2.5">
+                          <span className={`font-data text-xs tabular-nums ${over ? 'text-danger' : 'text-text-dim'}`}>
+                            {pts}/{limit}
                           </span>
-                          {roster.detachments && roster.detachments.length > 0 && (
-                            <div className="flex gap-1">
-                              {roster.detachments.map((d: { id: number; type: string; name: string }) => (
-                                <span
-                                  key={d.id}
-                                  className="rounded-sm border border-edge-600/20 bg-plate-700/30 px-1.5 py-px font-label text-[9px] tracking-wider text-text-dim uppercase"
-                                >
-                                  {d.type}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          {/* Mini fill bar */}
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-edge-700/20">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                over ? 'bg-danger' : fillPct >= 80 ? 'bg-caution/80' : fillPct > 0 ? 'bg-gold-500/60' : 'bg-transparent'
+                              }`}
+                              style={{ width: `${fillPct}%` }}
+                            />
+                          </div>
                         </div>
+                        {roster.detachments && roster.detachments.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {roster.detachments.map((d: { id: number; type: string; name: string }) => (
+                              <span
+                                key={d.id}
+                                className={`rounded-sm border px-1.5 py-px font-label text-[9px] tracking-wider uppercase ${
+                                  d.type === 'Primary'
+                                    ? 'border-gold-600/25 bg-gold-900/20 text-gold-400/80'
+                                    : d.type === 'Auxiliary'
+                                      ? 'border-steel-dim/25 bg-steel/8 text-steel/80'
+                                      : 'border-royal-dim/25 bg-royal/8 text-royal/80'
+                                }`}
+                              >
+                                {d.type}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </button>
 
                       {/* Action buttons */}

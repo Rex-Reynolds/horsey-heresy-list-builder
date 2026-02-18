@@ -557,12 +557,13 @@ export default function UnitBrowser() {
           <div className="space-y-1">
             {groupedUnits.map(({ group, dotColor, items }) => (
               <div key={group}>
-                <div id={`group-${group}`} className="category-group-header mb-1.5 mt-3 first:mt-0">
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-                  <span className="font-label text-[11px] font-bold tracking-[0.12em] text-text-secondary uppercase">
+                <div id={`group-${group}`} className="category-group-header mb-2 mt-4 first:mt-0">
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} />
+                  <span className="font-label text-xs font-bold tracking-[0.14em] text-text-secondary uppercase">
                     {group}
                   </span>
                   <span className="font-data text-[10px] tabular-nums text-text-dim">{items.length}</span>
+                  <span className="h-px flex-1 bg-edge-700/25" />
                 </div>
                 <div className={viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 xl:grid-cols-2'}>
                   {items.map(renderUnitCard)}

@@ -11,6 +11,23 @@ interface Props {
 
 const HINT_STORAGE_KEY = 'forceOrgHintDismissed';
 
+/** Intentional abbreviations for slot names — never truncate with ellipsis */
+const SLOT_ABBREVIATIONS: Record<string, string> = {
+  'High Command': 'HC',
+  'Command': 'CMD',
+  'Troops': 'TRP',
+  'Elites': 'ELT',
+  'Fast Attack': 'FA',
+  'Heavy Support': 'HS',
+  'Dedicated Transport': 'DT',
+  'Heavy Transport': 'HT',
+  'Lord of War': 'LoW',
+  'Fortification': 'FORT',
+  'Retinue': 'RET',
+  'Transport': 'TRS',
+  'Primarch': 'PRM',
+};
+
 export default function ForceOrgGrid({ slots, onSlotClick, entryNames }: Props) {
   // Track previous fill counts to detect increases
   const prevFills = useRef<Record<string, number>>({});
@@ -66,7 +83,7 @@ export default function ForceOrgGrid({ slots, onSlotClick, entryNames }: Props) 
                 <span className={`font-label text-[8px] font-bold tracking-wider uppercase ${
                   isRequired ? 'text-caution/70' : isFull ? 'text-valid/60' : 'text-text-dim/50'
                 }`}>
-                  {baseName.slice(0, 3)}
+                  {SLOT_ABBREVIATIONS[baseName] ?? baseName.slice(0, 3).toUpperCase()}
                 </span>
                 <div className="flex gap-0.5">
                   {Array.from({ length: Math.min(status.max, 8) }, (_, i) => (

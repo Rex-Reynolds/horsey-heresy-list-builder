@@ -15,7 +15,7 @@ export interface SlotFilterContext {
 }
 
 // Resizable panel constants
-export const PANEL_MIN = 360;
+export const PANEL_MIN = 400;
 export const PANEL_MAX = 720;
 export const PANEL_DEFAULT = 500;
 

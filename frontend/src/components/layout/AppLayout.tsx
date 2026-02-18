@@ -209,24 +209,7 @@ export default function AppLayout({ left, right }: Props) {
         {/* Unit browser — dimmed when no detachments */}
         <main className="relative flex-1 overflow-y-auto bg-void p-4 pb-20 lg:p-6 lg:pb-6" style={{ scrollPaddingTop: '200px' }}>
           {hasNoDetachments && (
-            <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-l from-plate-950/60 via-transparent to-transparent" />
-          )}
-          {hasNoDetachments && (
-            <div className="pointer-events-none absolute right-6 top-1/2 z-20 hidden -translate-y-1/2 lg:block">
-              <div className="flex items-center gap-3 rounded-sm border border-gold-600/15 bg-plate-900/80 px-5 py-3.5 shadow-lg backdrop-blur-sm">
-                <div>
-                  <p className="font-display text-[13px] font-semibold tracking-[0.1em] text-gold-400 uppercase">
-                    Add a detachment
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-text-dim">
-                    Use the roster panel to begin
-                  </p>
-                </div>
-                <svg className="h-4 w-4 animate-pulse text-gold-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-            </div>
+            <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-l from-plate-950/40 via-transparent to-transparent" />
           )}
           {left}
         </main>

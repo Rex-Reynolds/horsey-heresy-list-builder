@@ -25,28 +25,6 @@ const POINTS_HINTS: Record<number, string> = {
   5000: 'Full regimental deployment',
 };
 
-function AnimatedAquila() {
-  return (
-    <svg
-      viewBox="0 0 64 28"
-      className="aquila-draw aquila-fill mx-auto mb-4 w-28 text-gold-500/50"
-      fill="currentColor"
-      stroke="currentColor"
-      strokeWidth="0.5"
-    >
-      {/* Left wing */}
-      <path d="M28 14 L6 5 L12 11 L3 9 L14 14 L3 19 L12 17 L6 23 Z" />
-      {/* Right wing */}
-      <path d="M36 14 L58 5 L52 11 L61 9 L50 14 L61 19 L52 17 L58 23 Z" />
-      {/* Center star */}
-      <path d="M32 4 L34 12 L40 8 L35 14 L42 14 L35 16 L40 20 L34 16 L32 24 L30 16 L24 20 L29 16 L22 14 L29 14 L24 8 L30 12 Z" />
-      {/* Inner ring */}
-      <circle cx="32" cy="14" r="3.5" />
-      <circle cx="32" cy="14" r="2" fill="none" strokeWidth="0.5" />
-    </svg>
-  );
-}
-
 export default function RosterSetup() {
   const createMutation = useCreateRoster();
   const syncFromResponse = useRosterStore((s) => s.syncFromResponse);
@@ -95,24 +73,38 @@ export default function RosterSetup() {
         }} />
       </div>
 
-      <div className="imperial-frame imperial-frame-animated relative w-full max-w-sm bg-plate-900/80 p-8 shadow-[0_0_80px_rgba(130,102,36,0.06)]">
+      <div className="imperial-frame imperial-frame-animated relative w-full max-w-sm bg-plate-900/80 p-6 shadow-[0_0_80px_rgba(130,102,36,0.06)]">
         {/* Inner corner ornaments */}
         <div className="imperial-frame-inner imperial-frame-inner-animated pointer-events-none absolute inset-0" />
 
         {/* Staggered content reveal */}
-        <div className="setup-stagger space-y-6">
-          {/* Emblem */}
-          <div className="text-center">
-            <AnimatedAquila />
-            <h2 className="text-imperial text-lg tracking-[0.14em]">New Roster</h2>
-            <p className="mt-1.5 text-xs text-text-dim animate-text-reveal" style={{ animationDelay: '2.0s' }}>Configure your force allocation</p>
+        <div className="setup-stagger space-y-4">
+          {/* Emblem — compact */}
+          <div className="flex items-center justify-center gap-3">
+            <svg
+              viewBox="0 0 64 28"
+              className="aquila-draw aquila-fill w-16 text-gold-500/50"
+              fill="currentColor"
+              stroke="currentColor"
+              strokeWidth="0.5"
+            >
+              <path d="M28 14 L6 5 L12 11 L3 9 L14 14 L3 19 L12 17 L6 23 Z" />
+              <path d="M36 14 L58 5 L52 11 L61 9 L50 14 L61 19 L52 17 L58 23 Z" />
+              <path d="M32 4 L34 12 L40 8 L35 14 L42 14 L35 16 L40 20 L34 16 L32 24 L30 16 L24 20 L29 16 L22 14 L29 14 L24 8 L30 12 Z" />
+              <circle cx="32" cy="14" r="3.5" />
+              <circle cx="32" cy="14" r="2" fill="none" strokeWidth="0.5" />
+            </svg>
+            <div>
+              <h2 className="text-imperial text-base tracking-[0.14em]">New Roster</h2>
+              <p className="text-[11px] text-text-dim animate-text-reveal" style={{ animationDelay: '2.0s' }}>Configure your force allocation</p>
+            </div>
           </div>
 
           <div className="divider-imperial" />
 
           {/* Name */}
           <div>
-            <label className="font-label mb-2 block text-[11px] font-semibold tracking-[0.15em] text-text-dim uppercase">
+            <label className="font-label mb-1.5 block text-[11px] font-semibold tracking-[0.15em] text-text-dim uppercase">
               Designation
             </label>
             <input
@@ -123,22 +115,51 @@ export default function RosterSetup() {
             />
           </div>
 
-          {/* Points */}
+          {/* Points — tier quick-select buttons */}
           <div>
-            <label className="font-label mb-2 block text-[11px] font-semibold tracking-[0.15em] text-text-dim uppercase">
+            <label className="font-label mb-1.5 block text-[11px] font-semibold tracking-[0.15em] text-text-dim uppercase">
               Points Allocation
             </label>
-            <select
-              value={points}
-              onChange={(e) => setPoints(Number(e.target.value))}
-              className="input-imperial w-full rounded-sm px-3.5 py-2.5 text-sm text-text-primary outline-none"
-            >
-              {POINTS_OPTIONS.map((p) => (
-                <option key={p} value={p}>
-                  {p.toLocaleString()} pts — {POINTS_LABELS[p] ?? ''}
-                </option>
+            <div className="grid grid-cols-4 gap-1.5 mb-2">
+              {POINTS_OPTIONS.slice(0, 4).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPoints(p)}
+                  className={`rounded-sm border px-1.5 py-2 text-center transition-all ${
+                    points === p
+                      ? 'border-gold-500/40 bg-gold-900/30 shadow-[0_0_8px_rgba(130,102,36,0.1)]'
+                      : 'border-edge-600/25 bg-plate-800/20 hover:border-gold-600/25 hover:bg-plate-800/40'
+                  }`}
+                >
+                  <span className={`font-data text-[13px] font-semibold tabular-nums block ${points === p ? 'text-gold-400' : 'text-text-primary'}`}>
+                    {(p / 1000).toFixed(p % 1000 === 0 ? 0 : 1)}k
+                  </span>
+                  <span className={`font-label text-[8px] tracking-wider uppercase block mt-0.5 ${points === p ? 'text-gold-500/70' : 'text-text-dim/60'}`}>
+                    {POINTS_LABELS[p]}
+                  </span>
+                </button>
               ))}
-            </select>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {POINTS_OPTIONS.slice(4).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPoints(p)}
+                  className={`rounded-sm border px-1.5 py-2 text-center transition-all ${
+                    points === p
+                      ? 'border-gold-500/40 bg-gold-900/30 shadow-[0_0_8px_rgba(130,102,36,0.1)]'
+                      : 'border-edge-600/25 bg-plate-800/20 hover:border-gold-600/25 hover:bg-plate-800/40'
+                  }`}
+                >
+                  <span className={`font-data text-[13px] font-semibold tabular-nums block ${points === p ? 'text-gold-400' : 'text-text-primary'}`}>
+                    {(p / 1000).toFixed(0)}k
+                  </span>
+                  <span className={`font-label text-[8px] tracking-wider uppercase block mt-0.5 ${points === p ? 'text-gold-500/70' : 'text-text-dim/60'}`}>
+                    {POINTS_LABELS[p]}
+                  </span>
+                </button>
+              ))}
+            </div>
             {POINTS_HINTS[points] && (
               <p className="mt-1.5 text-[11px] text-text-dim/70">
                 {POINTS_HINTS[points]}
@@ -162,14 +183,11 @@ export default function RosterSetup() {
 
           <p className="text-center text-[11px] leading-relaxed text-text-dim">
             Add detachments after creation to build your force.
-          </p>
-
-          <p className="text-center">
             <button
               onClick={() => useUIStore.getState().setShowRosterDrawer(true)}
-              className="text-[11px] text-gold-500/60 underline underline-offset-2 transition-colors hover:text-gold-400"
+              className="ml-1 text-gold-500/60 underline underline-offset-2 transition-colors hover:text-gold-400"
             >
-              or load an existing roster
+              Load existing
             </button>
           </p>
         </div>

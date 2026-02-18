@@ -12,7 +12,7 @@ export interface SearchInputHandle {
 }
 
 const SearchInput = forwardRef<SearchInputHandle, Props>(function SearchInput(
-  { value, onChange, placeholder = 'Search units...', showKbdHint },
+  { value, onChange, placeholder = 'Search by name, weapon, or role...', showKbdHint },
   ref,
 ) {
   const [local, setLocal] = useState(value);
