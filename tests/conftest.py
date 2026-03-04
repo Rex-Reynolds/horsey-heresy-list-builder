@@ -18,15 +18,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ["ENVIRONMENT"] = "development"
 
 from src.models.database import db
-from src.models.catalogue import Unit, Weapon, Upgrade, UnitUpgrade, Detachment
-from src.models.roster import Roster, RosterDetachment, RosterEntry
+from src.models.catalogue import Unit, Weapon, Upgrade, UnitUpgrade, Detachment, UnitKeyword
+from src.models.roster import Roster, RosterDetachment, RosterEntry, LeaderAttachment
 from src.models.tournament import Tournament, ArmyList, UnitEntry
 from src.models.collection import Collection, CollectionItem
 
 ALL_MODELS = [
     Tournament, ArmyList, UnitEntry,
-    Unit, Weapon, Upgrade, UnitUpgrade, Detachment,
-    Roster, RosterDetachment, RosterEntry,
+    Unit, Weapon, Upgrade, UnitUpgrade, Detachment, UnitKeyword,
+    Roster, RosterDetachment, RosterEntry, LeaderAttachment,
     Collection, CollectionItem,
 ]
 
