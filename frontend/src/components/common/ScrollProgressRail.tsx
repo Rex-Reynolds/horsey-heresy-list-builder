@@ -76,7 +76,7 @@ export default function ScrollProgressRail({ sections, containerRef }: Props) {
   if (sections.length <= 1) return null;
 
   return (
-    <div className="fixed right-2 top-1/2 z-20 hidden -translate-y-1/2 lg:flex flex-col items-center gap-0">
+    <div className="fixed right-2 top-1/2 z-20 hidden -translate-y-1/2 md:flex flex-col items-center gap-0">
       {/* Overall progress line */}
       <div className="absolute inset-y-0 w-px bg-edge-700/20">
         <div

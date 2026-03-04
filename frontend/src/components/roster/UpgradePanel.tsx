@@ -177,7 +177,7 @@ export default function UpgradePanel() {
       />
 
       {/* Panel */}
-      <div className="animate-upgrade-panel-in fixed z-[71] lg:right-0 lg:top-0 lg:bottom-0 lg:w-full lg:max-w-md inset-0 max-lg:top-0">
+      <div className="animate-upgrade-panel-in fixed z-[71] md:right-0 md:top-0 md:bottom-0 md:w-full md:max-w-md inset-0 max-md:top-0">
         <div
           ref={trapRef}
           role="dialog"

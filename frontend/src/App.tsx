@@ -31,13 +31,13 @@ function SkeletonCard({ width = 'w-full' }: { width?: string }) {
 
 function BrowserSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-6 xl:max-w-5xl">
+    <div className="mx-auto max-w-3xl space-y-4 p-6 md:max-w-5xl">
       <div className="h-6 w-48 animate-pulse rounded-sm bg-plate-800/40" />
       <div className="flex gap-2">
         {[1,2,3,4,5].map(i => <div key={i} className="h-8 w-20 animate-pulse rounded-sm bg-plate-800/30" />)}
       </div>
       <div className="h-9 animate-pulse rounded-sm bg-plate-800/30" />
-      <div className="grid grid-cols-1 gap-1.5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
         {[1,2,3,4,5,6].map(i => <SkeletonCard key={i} />)}
       </div>
     </div>

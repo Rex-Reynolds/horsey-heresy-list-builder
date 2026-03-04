@@ -15,7 +15,7 @@ export default function ToastContainer() {
     <div
       aria-live="polite"
       aria-label="Notifications"
-      className="fixed bottom-5 right-5 z-[10000] flex flex-col gap-2.5 pointer-events-none max-lg:bottom-20 max-lg:right-3 max-lg:left-3"
+      className="fixed bottom-5 right-5 z-[10000] flex flex-col gap-2.5 pointer-events-none max-md:bottom-20 max-md:right-3 max-md:left-3"
     >
       {toasts.map((toast) => (
         <div

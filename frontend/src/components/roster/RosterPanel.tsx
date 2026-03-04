@@ -92,7 +92,7 @@ export default function RosterPanel() {
     setSlotFilterContext({ slotName, detachmentName, filled, max });
 
     // On mobile, close the roster drawer so user sees the browser
-    if (window.innerWidth < 1024) {
+    if (window.innerWidth < 768) {
       setMobileRosterOpen(false);
     }
   }
@@ -447,7 +447,7 @@ export default function RosterPanel() {
           if (!hint || detachments.length > 1) return null;
           return (
             <button
-              onClick={hint.type === 'add-detachment' ? () => { setShowDetPicker(true); setAddError(null); } : hint.type === 'browse' ? () => { if (window.innerWidth < 1024) setMobileRosterOpen(false); } : undefined}
+              onClick={hint.type === 'add-detachment' ? () => { setShowDetPicker(true); setAddError(null); } : hint.type === 'browse' ? () => { if (window.innerWidth < 768) setMobileRosterOpen(false); } : undefined}
               className="mt-2 flex items-center gap-2 rounded-sm border border-gold-600/15 bg-gold-900/6 px-3 py-1.5 text-left transition-all hover:border-gold-500/20 hover:bg-gold-900/10 w-full"
             >
               <svg className="h-3 w-3 shrink-0 text-gold-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -478,7 +478,7 @@ export default function RosterPanel() {
           <OnboardingHint
             step={2}
             onAction={() => {
-              if (window.innerWidth < 1024) {
+              if (window.innerWidth < 768) {
                 setMobileRosterOpen(false);
               }
             }}

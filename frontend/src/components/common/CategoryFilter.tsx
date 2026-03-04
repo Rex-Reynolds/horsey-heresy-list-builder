@@ -11,7 +11,7 @@ interface Props {
 export default function CategoryFilter({ selected, onChange, counts, slotCounts, requiredSlots }: Props) {
   const categories = ['All', ...DISPLAY_GROUP_ORDER];
   return (
-    <div className="category-filter-scroll category-filter-mobile scrollbar-hide -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:flex-nowrap">
+    <div className="category-filter-scroll scrollbar-hide -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 snap-x md:flex-nowrap md:overflow-visible md:snap-none">
       {categories.map((cat) => {
         const value = cat === 'All' ? null : cat;
         const active = selected === value;
@@ -23,7 +23,7 @@ export default function CategoryFilter({ selected, onChange, counts, slotCounts,
           <button
             key={cat}
             onClick={() => onChange(value)}
-            className={`font-label relative flex shrink-0 items-center gap-1.5 rounded-sm border px-3.5 py-2.5 text-[12px] font-semibold tracking-wider uppercase transition-all min-h-[38px] ${
+            className={`font-label relative flex shrink-0 items-center gap-1.5 rounded-sm border px-3.5 py-2.5 text-[12px] font-semibold tracking-wider uppercase transition-all min-h-[44px] snap-start md:min-h-[38px] ${
               active
                 ? colors.active
                 : `border-transparent bg-transparent text-text-dim ${colors.inactive}`

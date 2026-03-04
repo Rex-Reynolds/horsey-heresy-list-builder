@@ -92,7 +92,7 @@ export default function AppHeader() {
       {/* Top accent — ornate bronze line */}
       <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-500/50 to-transparent" />
 
-      <div className={`flex items-center justify-between px-5 lg:px-7 ${hasRoster ? 'py-2 lg:py-2' : 'py-3 lg:py-3.5'}`}>
+      <div className={`flex items-center justify-between px-5 md:px-7 ${hasRoster ? 'py-2 md:py-2' : 'py-3 md:py-3.5'}`}>
         <div className="flex items-center gap-3.5">
           <div className={`relative flex items-center justify-center rounded-sm border border-gold-600/25 bg-gold-900/15 ${hasRoster ? 'h-7 w-7 sm:h-8 sm:w-8' : 'h-9 w-9 sm:h-10 sm:w-10'}`}>
             <AquilaEmblem className={`text-gold-500/60 ${hasRoster ? 'w-5 sm:w-6' : 'w-7 sm:w-8'}`} />
@@ -103,10 +103,10 @@ export default function AppHeader() {
               <>
                 {/* Contextual breadcrumb mode */}
                 <div className="flex items-baseline gap-1.5">
-                  <span className="hidden sm:inline text-imperial text-[11px] leading-tight tracking-[0.12em]">
+                  <span className="hidden md:inline text-imperial text-[11px] leading-tight tracking-[0.12em]">
                     Solar Auxilia
                   </span>
-                  <span className="hidden sm:inline text-text-dim/30 text-[11px]">&rsaquo;</span>
+                  <span className="hidden md:inline text-text-dim/30 text-[11px]">&rsaquo;</span>
                   <span className="font-display text-[13px] font-semibold tracking-[0.08em] text-gold-400 uppercase leading-tight truncate max-w-[180px] sm:max-w-[240px]">
                     {rosterName}
                   </span>
@@ -115,7 +115,7 @@ export default function AppHeader() {
             ) : (
               <>
                 {/* Full title mode */}
-                <h1 className="text-imperial text-base leading-tight tracking-[0.14em] lg:text-[17px]">
+                <h1 className="text-imperial text-base leading-tight tracking-[0.14em] md:text-[17px]">
                   Solar Auxilia
                 </h1>
                 <p className="font-label mt-0.5 text-[10px] font-medium tracking-[0.3em] text-gold-600/60 uppercase">
@@ -127,7 +127,7 @@ export default function AppHeader() {
         </div>
 
         {/* Right side */}
-        <div className="hidden items-center gap-3 sm:flex">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* Points ticker — shown when roster active */}
           {hasRoster && (
             <span className={`font-data text-sm tabular-nums font-medium ${totalPoints > pointsLimit ? 'text-danger' : 'text-gold-300/80'}`}>
@@ -136,7 +136,7 @@ export default function AppHeader() {
           )}
           {/* Undo hint — desktop only, when undo stack is non-empty */}
           {hasRoster && undoStack.length > 0 && (
-            <span className="kbd-hint text-[9px]">
+            <span className="kbd-hint text-[9px] hidden md:inline">
               {navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl+'}Z undo
             </span>
           )}
@@ -149,22 +149,22 @@ export default function AppHeader() {
               )}
             </div>
           )}
-          {/* Roster drawer button */}
+          {/* Roster drawer button — hidden on phone (accessible from bottom bar) */}
           {hasRoster && (
             <button
               onClick={() => setShowRosterDrawer(true)}
-              className="flex h-6 w-6 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400"
+              className="hidden md:flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400"
               title="My Rosters"
             >
-              <svg className="h-3.5 w-3.5 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-4 w-4 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
               </svg>
             </button>
           )}
-          {/* Keyboard shortcuts hint */}
+          {/* Keyboard shortcuts hint — hidden on phone */}
           <button
             onClick={handleKbdHintClick}
-            className={`flex h-6 w-6 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400 ${
+            className={`hidden md:flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400 ${
               !kbdHintSeen ? 'kbd-hint-pulse' : ''
             }`}
             title="Keyboard shortcuts"
@@ -174,15 +174,15 @@ export default function AppHeader() {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="flex h-6 w-6 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400"
+            className="flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-sm border border-edge-600/30 transition-all hover:border-gold-600/30 hover:text-gold-400"
             title={theme === 'dataslate' ? 'Switch to parchment (light) theme' : 'Switch to dataslate (dark) theme'}
           >
             {theme === 'dataslate' ? (
-              <svg className="h-3.5 w-3.5 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-4 w-4 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             ) : (
-              <svg className="h-3.5 w-3.5 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-4 w-4 text-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
               </svg>
             )}
@@ -192,14 +192,7 @@ export default function AppHeader() {
           )}
         </div>
 
-        {/* Mobile points ticker */}
-        {hasRoster && (
-          <div className="flex items-center gap-2 sm:hidden">
-            <span className={`font-data text-sm tabular-nums font-medium ${totalPoints > pointsLimit ? 'text-danger' : 'text-gold-300/80'}`}>
-              {totalPoints}/{pointsLimit}
-            </span>
-          </div>
-        )}
+        {/* Mobile points ticker removed — visible in bottom bar */}
       </div>
 
       {/* Bottom ornate rule */}

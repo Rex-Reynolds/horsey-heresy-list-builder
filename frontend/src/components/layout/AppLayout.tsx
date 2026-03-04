@@ -46,7 +46,7 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
         : null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 md:hidden">
       {/* Inline confirmation toast — slides up when a unit is added */}
       {lastAddedInfo && (
         <div className="animate-toast-in mx-4 mb-1 rounded-sm border border-valid/20 bg-valid/8 px-3.5 py-2 backdrop-blur-sm">
@@ -67,11 +67,11 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
 
       <button
         onClick={onOpen}
-        className="mobile-bottom-bar flex w-full flex-col px-5 pb-5 pt-3"
+        className="mobile-bottom-bar flex w-full flex-col px-5 pb-6 pt-3.5"
       >
         {/* Drag handle affordance */}
         <div className="mb-2.5 flex w-full justify-center">
-          <div className="h-1 w-10 rounded-full bg-gold-500/30" />
+          <div className="h-1.5 w-12 rounded-full bg-gold-500/30" />
         </div>
 
         {/* Slot fill progress bar */}
@@ -88,21 +88,21 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
             <div className="flex items-baseline gap-1.5">
               <AnimatedNumber
                 value={totalPoints}
-                className={`font-data text-lg font-semibold tabular-nums ${over ? 'text-danger' : 'text-gold-400'}`}
+                className={`font-data text-xl font-semibold tabular-nums ${over ? 'text-danger' : 'text-gold-400'}`}
               />
-              <span className="font-data text-xs text-text-dim">/</span>
-              <span className="font-data text-xs tabular-nums text-text-secondary">{pointsLimit}</span>
-              <span className="font-label text-[10px] tracking-wider text-text-dim uppercase">pts</span>
+              <span className="font-data text-sm text-text-dim">/</span>
+              <span className="font-data text-sm tabular-nums text-text-secondary">{pointsLimit}</span>
+              <span className="font-label text-xs tracking-wider text-text-dim uppercase">pts</span>
             </div>
             {/* Actionable status instead of raw numbers */}
             {statusMsg ? (
-              <span className={`font-label text-[11px] font-semibold tracking-wide ${
+              <span className={`font-label text-xs font-semibold tracking-wide ${
                 requiredUnfilled > 0 ? 'text-caution/80' : 'text-danger/80'
               }`}>
                 {statusMsg}
               </span>
             ) : totalEntries > 0 ? (
-              <span className="font-label rounded-sm border border-edge-600/25 bg-plate-700/40 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-text-secondary">
+              <span className="font-label rounded-sm border border-edge-600/25 bg-plate-700/40 px-2 py-0.5 text-xs font-semibold tracking-wider text-text-secondary">
                 {totalEntries} unit{totalEntries !== 1 ? 's' : ''}
               </span>
             ) : null}
@@ -121,10 +121,10 @@ function MobileBottomBar({ onOpen }: { onOpen: () => void }) {
             )}
           </div>
           <div className="flex items-center gap-0 rounded-sm border border-gold-600/30 overflow-hidden">
-            <span className="font-label bg-plate-800/60 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-text-dim uppercase border-r border-gold-600/30">
+            <span className="font-label bg-plate-800/60 px-3 py-2 text-xs font-semibold tracking-wider text-text-dim uppercase border-r border-gold-600/30">
               Browse
             </span>
-            <span className="font-label bg-gold-900/30 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gold-400 uppercase flex items-center gap-1.5">
+            <span className="font-label bg-gold-700/40 px-3 py-2 text-xs font-semibold tracking-wider text-gold-400 uppercase flex items-center gap-1.5">
               Roster
               {totalEntries > 0 && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-gold-600/25 px-1 font-data text-[9px] font-bold tabular-nums text-gold-300">
@@ -210,7 +210,7 @@ export default function AppLayout({ left, right }: Props) {
     <>
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Unit browser — dimmed when no detachments */}
-        <main className="relative flex-1 overflow-y-auto bg-void p-4 pb-20 lg:p-6 lg:pb-6" style={{ scrollPaddingTop: '200px' }}>
+        <main className="relative flex-1 overflow-y-auto bg-void p-4 pb-20 md:p-6 md:pb-6" style={{ scrollPaddingTop: '200px' }}>
           {hasNoDetachments && (
             <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-l from-plate-950/40 via-transparent to-transparent" />
           )}
@@ -219,7 +219,7 @@ export default function AppLayout({ left, right }: Props) {
 
         {/* Desktop resize handle — decorative divider rail */}
         <div
-          className="resize-divider panel-divider-depth group relative hidden w-[10px] cursor-col-resize lg:block"
+          className="resize-divider panel-divider-depth group relative hidden w-[10px] cursor-col-resize md:block"
           onPointerDown={handlePointerDown}
           onDoubleClick={handleDoubleClick}
           title="Drag to resize — double-click to reset"
@@ -250,7 +250,7 @@ export default function AppLayout({ left, right }: Props) {
 
         {/* Desktop roster panel — resizable width */}
         <aside
-          className="hidden overflow-y-auto bg-plate-950 lg:block"
+          className="hidden overflow-y-auto bg-plate-950 md:block"
           style={{ width: panelWidth }}
         >
           {right}
@@ -259,7 +259,7 @@ export default function AppLayout({ left, right }: Props) {
 
       {/* Mobile roster backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-void/80 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+        className={`fixed inset-0 z-40 bg-void/80 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
           mobileRosterOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setMobileRosterOpen(false)}
@@ -267,20 +267,20 @@ export default function AppLayout({ left, right }: Props) {
 
       {/* Mobile roster sheet */}
       <div
-        className={`fixed inset-x-0 bottom-0 top-[57px] z-50 flex flex-col overflow-hidden bg-plate-950 transition-transform duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 top-[57px] z-50 flex flex-col overflow-hidden bg-plate-950 transition-transform duration-300 ease-out md:hidden ${
           mobileRosterOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={swipeOffset > 0 ? { transform: `translateY(${swipeOffset}px)`, transition: 'none' } : undefined}
       >
         {/* Sheet handle — swipe down to close */}
         <div
-          className="flex flex-col items-center border-b border-edge-700/40 px-4 py-2.5"
+          className="flex flex-col items-center border-b border-edge-700/40 px-4 py-3"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           {/* Swipe indicator pill */}
-          <div className="mb-2 h-1 w-8 rounded-full bg-edge-500/40" />
+          <div className="mb-2 h-1.5 w-10 rounded-full bg-edge-500/40" />
           <div className="flex w-full items-center justify-between">
           <span className="font-label text-[11px] font-bold tracking-[0.15em] text-text-secondary uppercase">
             Roster
