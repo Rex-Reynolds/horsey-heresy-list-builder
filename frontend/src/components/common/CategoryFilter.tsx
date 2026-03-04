@@ -1,4 +1,4 @@
-import { DISPLAY_GROUP_ORDER, FILTER_COLORS } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 
 interface Props {
   selected: string | null;
@@ -9,13 +9,14 @@ interface Props {
 }
 
 export default function CategoryFilter({ selected, onChange, counts, slotCounts, requiredSlots }: Props) {
-  const categories = ['All', ...DISPLAY_GROUP_ORDER];
+  const { displayGroupOrder, filterColors } = useGameConfig();
+  const categories = ['All', ...displayGroupOrder];
   return (
     <div className="category-filter-scroll scrollbar-hide -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 snap-x md:flex-nowrap md:overflow-visible md:snap-none">
       {categories.map((cat) => {
         const value = cat === 'All' ? null : cat;
         const active = selected === value;
-        const colors = FILTER_COLORS[cat] ?? FILTER_COLORS['All'];
+        const colors = filterColors[cat] ?? filterColors['All'];
         const count = counts?.[cat];
         const slotInfo = cat !== 'All' ? slotCounts?.[cat] : undefined;
         const isRequired = !!(requiredSlots && cat !== 'All' && requiredSlots.has(cat));

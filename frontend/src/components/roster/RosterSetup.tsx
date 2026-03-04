@@ -2,35 +2,15 @@ import { useState } from 'react';
 import { useCreateRoster } from '../../api/rosters.ts';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 import { useUIStore } from '../../stores/uiStore.ts';
-
-const POINTS_OPTIONS = [1000, 1500, 2000, 2500, 3000, 4000, 5000];
-
-const POINTS_LABELS: Record<number, string> = {
-  1000: 'Skirmish',
-  1500: 'Patrol',
-  2000: 'Strike Force',
-  2500: 'Escalation',
-  3000: 'Standard',
-  4000: 'Grand Battle',
-  5000: 'Apocalypse',
-};
-
-const POINTS_HINTS: Record<number, string> = {
-  1000: '1 Primary detachment, small engagement',
-  1500: '1 Primary + 1 Auxiliary detachment',
-  2000: 'Core game size with varied builds',
-  2500: 'Room for Apex detachments',
-  3000: 'Warlord detachment unlocked at this tier',
-  4000: 'Multiple Auxiliary detachments available',
-  5000: 'Full regimental deployment',
-};
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 
 export default function RosterSetup() {
   const createMutation = useCreateRoster();
   const syncFromResponse = useRosterStore((s) => s.syncFromResponse);
+  const { pointsOptions, defaultPointsLimit, factionLabel } = useGameConfig();
 
-  const [name, setName] = useState('My Solar Auxilia List');
-  const [points, setPoints] = useState(3000);
+  const [name, setName] = useState(() => `My ${factionLabel} List`);
+  const [points, setPoints] = useState(defaultPointsLimit);
 
   const trimmedName = name.trim();
   const nameValid = trimmedName.length > 0;
@@ -120,56 +100,26 @@ export default function RosterSetup() {
             <label className="font-label mb-1.5 block text-[11px] font-semibold tracking-[0.15em] text-text-dim uppercase">
               Points Allocation
             </label>
-            <div className="grid grid-cols-4 gap-1.5 mb-2">
-              {POINTS_OPTIONS.slice(0, 4).map((p) => (
+            <div className={`grid gap-1.5 ${pointsOptions.length <= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-4'}`}>
+              {pointsOptions.map((opt) => (
                 <button
-                  key={p}
-                  onClick={() => setPoints(p)}
+                  key={opt.value}
+                  onClick={() => setPoints(opt.value)}
                   className={`rounded-sm border px-1.5 py-2 text-center transition-all ${
-                    points === p
+                    points === opt.value
                       ? 'border-gold-500/40 bg-gold-900/30 shadow-[0_0_8px_rgba(130,102,36,0.1)]'
                       : 'border-edge-600/25 bg-plate-800/20 hover:border-gold-600/25 hover:bg-plate-800/40'
                   }`}
                 >
-                  <span className={`font-data text-[13px] font-semibold tabular-nums block ${points === p ? 'text-gold-400' : 'text-text-primary'}`}>
-                    {(p / 1000).toFixed(p % 1000 === 0 ? 0 : 1)}k
+                  <span className={`font-data text-[13px] font-semibold tabular-nums block ${points === opt.value ? 'text-gold-400' : 'text-text-primary'}`}>
+                    {opt.value >= 1000 ? `${(opt.value / 1000).toFixed(opt.value % 1000 === 0 ? 0 : 1)}k` : opt.value}
                   </span>
-                  <span className={`font-label text-[8px] tracking-wider uppercase block mt-0.5 ${points === p ? 'text-gold-500/70' : 'text-text-dim/60'}`}>
-                    {POINTS_LABELS[p]}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {POINTS_OPTIONS.slice(4).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPoints(p)}
-                  className={`rounded-sm border px-1.5 py-2 text-center transition-all ${
-                    points === p
-                      ? 'border-gold-500/40 bg-gold-900/30 shadow-[0_0_8px_rgba(130,102,36,0.1)]'
-                      : 'border-edge-600/25 bg-plate-800/20 hover:border-gold-600/25 hover:bg-plate-800/40'
-                  }`}
-                >
-                  <span className={`font-data text-[13px] font-semibold tabular-nums block ${points === p ? 'text-gold-400' : 'text-text-primary'}`}>
-                    {(p / 1000).toFixed(0)}k
-                  </span>
-                  <span className={`font-label text-[8px] tracking-wider uppercase block mt-0.5 ${points === p ? 'text-gold-500/70' : 'text-text-dim/60'}`}>
-                    {POINTS_LABELS[p]}
+                  <span className={`font-label text-[8px] tracking-wider uppercase block mt-0.5 ${points === opt.value ? 'text-gold-500/70' : 'text-text-dim/60'}`}>
+                    {opt.label.replace(/\s*\([\d,]+\)/, '')}
                   </span>
                 </button>
               ))}
             </div>
-            {POINTS_HINTS[points] && (
-              <p className="mt-1.5 text-[11px] text-text-dim/70">
-                {POINTS_HINTS[points]}
-                {points >= 3000 && (
-                  <span className="ml-1 text-gold-500/60">
-                    — Warlord unlocked
-                  </span>
-                )}
-              </p>
-            )}
           </div>
 
           {/* Create */}

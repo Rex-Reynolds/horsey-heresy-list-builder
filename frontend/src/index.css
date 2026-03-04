@@ -1897,3 +1897,307 @@ body.ambient-valid::after {
     color: #999;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   GOTHIC ADMINISTRATUM THEME
+   Warhammer 40,000 — 10th Edition
+   Gothic cathedral tones, stained-glass category colors,
+   wrought-iron edges, candlelight warmth.
+   ═══════════════════════════════════════════════════════ */
+
+[data-theme="gothic"] {
+  /* Warm dark browns — cathedral stone */
+  --color-void: #1a1410;
+  --color-plate-950: #1e1812;
+  --color-plate-900: #26201a;
+  --color-plate-800: #302822;
+  --color-plate-700: #3e3428;
+  --color-plate-600: #50443a;
+  --color-plate-500: #6a5a3e;
+
+  /* Wrought iron edges */
+  --color-edge-700: #2c2820;
+  --color-edge-600: #3a342c;
+  --color-edge-500: #4e463c;
+  --color-edge-400: #625848;
+  --color-edge-300: #726858;
+
+  /* Tarnished gold / liturgical gold */
+  --color-gold-50: #faf0d8;
+  --color-gold-100: #f0ddb0;
+  --color-gold-200: #e0c880;
+  --color-gold-300: #d0b060;
+  --color-gold-400: #c09840;
+  --color-gold-500: #a48030;
+  --color-gold-600: #846820;
+  --color-gold-700: #604c18;
+  --color-gold-800: #3c3010;
+  --color-gold-900: #241c0a;
+
+  /* Vellum tones */
+  --color-ivory: #d8c8a0;
+
+  /* Ecclesiarchy crimson */
+  --color-crimson: #8b1a1a;
+
+  /* Sanguine / Imperium red glow */
+  --color-amber-glow: #c22830;
+
+  /* Status — warm tones */
+  --color-valid: #48b858;
+  --color-valid-dim: #2e7a38;
+  --color-danger: #c83838;
+  --color-danger-dim: #8c2828;
+  --color-caution: #c8a020;
+  --color-caution-dim: #887018;
+
+  /* Steel → wrought iron */
+  --color-steel: #6878a0;
+  --color-steel-dim: #4a5878;
+
+  /* Liturgical purple */
+  --color-royal: #6e5a8a;
+  --color-royal-dim: #4e3e68;
+
+  /* Text — warm ivory on dark surfaces */
+  --color-text-primary: #d8ccb4;
+  --color-text-secondary: #9a8e78;
+  --color-text-dim: #78706060;
+}
+
+[data-theme="gothic"] body {
+  background: var(--color-void);
+  color: var(--color-text-primary);
+}
+
+/* Gothic atmospheric layers */
+[data-theme="gothic"] body::after {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(194, 40, 48, 0.04) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      transparent 40%,
+      rgba(26, 20, 16, 0.30) 100%
+    );
+}
+
+/* Vellum grain texture — parchment-fiber SVG */
+[data-theme="gothic"] body::before {
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+[data-theme="gothic"] ::-webkit-scrollbar-track {
+  background: rgba(26, 20, 16, 0.5);
+}
+
+[data-theme="gothic"] ::-webkit-scrollbar-thumb {
+  background: rgba(164, 128, 48, 0.3);
+}
+
+/* Gothic card borders — wrought-iron feel */
+[data-theme="gothic"] .glow-border {
+  border-color: rgba(98, 88, 72, 0.25);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(208, 176, 96, 0.04);
+}
+
+[data-theme="gothic"] .glow-border:hover {
+  border-color: rgba(192, 152, 64, 0.20);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.30),
+    0 0 8px rgba(194, 40, 48, 0.06),
+    inset 0 1px 0 rgba(208, 176, 96, 0.06);
+}
+
+[data-theme="gothic"] .glow-border-active {
+  border-color: rgba(192, 152, 64, 0.30);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    0 0 12px rgba(194, 40, 48, 0.08),
+    inset 0 1px 0 rgba(208, 176, 96, 0.08);
+}
+
+/* Gothic buttons */
+[data-theme="gothic"] .btn-imperial {
+  border-color: rgba(192, 152, 64, 0.25);
+  background: linear-gradient(180deg, rgba(60, 48, 16, 0.4), rgba(36, 28, 10, 0.5));
+}
+
+[data-theme="gothic"] .input-imperial {
+  border-color: rgba(98, 88, 72, 0.3);
+  background: rgba(30, 24, 18, 0.6);
+}
+
+/* Gothic stat/data tables */
+[data-theme="gothic"] .data-readout th {
+  color: var(--color-gold-400);
+  border-bottom-color: rgba(192, 152, 64, 0.20);
+  background: rgba(36, 28, 10, 0.3);
+}
+
+[data-theme="gothic"] .data-readout td {
+  border-bottom-color: rgba(98, 88, 72, 0.15);
+}
+
+[data-theme="gothic"] .stat-block-frame {
+  border-color: rgba(192, 152, 64, 0.18);
+}
+
+[data-theme="gothic"] .stat-inner-panel {
+  background: rgba(26, 20, 16, 0.5);
+  border-color: rgba(98, 88, 72, 0.12);
+}
+
+/* Gothic card tints — stained glass category washes */
+[data-theme="gothic"] .card-tint-gold { background-image: linear-gradient(90deg, rgba(192, 152, 64, 0.10) 0%, transparent 35%); }
+[data-theme="gothic"] .card-tint-amber { background-image: linear-gradient(90deg, rgba(251, 191, 36, 0.08) 0%, transparent 35%); }
+[data-theme="gothic"] .card-tint-emerald { background-image: linear-gradient(90deg, rgba(52, 211, 153, 0.08) 0%, transparent 35%); }
+[data-theme="gothic"] .card-tint-blue { background-image: linear-gradient(90deg, rgba(96, 165, 250, 0.08) 0%, transparent 35%); }
+[data-theme="gothic"] .card-tint-orange { background-image: linear-gradient(90deg, rgba(251, 146, 60, 0.08) 0%, transparent 35%); }
+[data-theme="gothic"] .card-tint-rose { background-image: linear-gradient(90deg, rgba(251, 113, 133, 0.08) 0%, transparent 35%); }
+[data-theme="gothic"] .card-tint-purple { background-image: linear-gradient(90deg, rgba(192, 132, 252, 0.08) 0%, transparent 35%); }
+[data-theme="gothic"] .card-tint-teal { background-image: linear-gradient(90deg, rgba(45, 212, 191, 0.08) 0%, transparent 35%); }
+[data-theme="gothic"] .card-tint-red { background-image: linear-gradient(90deg, rgba(220, 38, 38, 0.08) 0%, transparent 35%); }
+
+/* Gothic overlay textures */
+[data-theme="gothic"] .scan-lines::before {
+  background: none;
+}
+
+[data-theme="gothic"] .setup-bg {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(194, 40, 48, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 100%, rgba(36, 28, 10, 0.4) 0%, transparent 60%),
+    var(--color-void);
+}
+
+[data-theme="gothic"] .setup-scanlines {
+  background: none;
+}
+
+[data-theme="gothic"] ::selection {
+  background: rgba(194, 40, 48, 0.30);
+  color: var(--color-gold-100);
+}
+
+/* Crimson dividers instead of gold */
+[data-theme="gothic"] .divider-glow {
+  background: linear-gradient(90deg, transparent, rgba(194, 40, 48, 0.35), transparent);
+}
+
+/* Gothic toolbar / header areas */
+[data-theme="gothic"] .sticky-toolbar {
+  background: rgba(26, 20, 16, 0.95);
+  border-bottom-color: rgba(98, 88, 72, 0.20);
+}
+
+[data-theme="gothic"] .sticky-roster-header {
+  background: linear-gradient(180deg, rgba(26, 20, 16, 0.98), rgba(26, 20, 16, 0.92));
+}
+
+[data-theme="gothic"] .mobile-bottom-bar {
+  background: rgba(26, 20, 16, 0.95);
+  border-top: 1px solid rgba(192, 152, 64, 0.12);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* Gothic modal overlays */
+[data-theme="gothic"] .confirm-overlay,
+[data-theme="gothic"] .modal-overlay {
+  background: rgba(10, 8, 6, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+/* Gothic fill bars */
+[data-theme="gothic"] .slot-fill-bar {
+  background: rgba(62, 52, 40, 0.5);
+}
+
+/* Gothic force org grid */
+[data-theme="gothic"] .force-org-grid {
+  background: rgba(30, 24, 18, 0.25);
+}
+
+/* Drawer / panel overlays */
+[data-theme="gothic"] .roster-drawer-overlay {
+  background: rgba(10, 8, 6, 0.6);
+}
+
+[data-theme="gothic"] .upgrade-panel-overlay {
+  background: rgba(10, 8, 6, 0.5);
+}
+
+/* Entry preview tooltip */
+[data-theme="gothic"] .entry-preview-tooltip {
+  background: rgba(30, 24, 18, 0.98);
+  border-color: rgba(192, 152, 64, 0.15);
+}
+
+/* Panel dividers — iron cross center */
+[data-theme="gothic"] .panel-divider-line {
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(192, 152, 64, 0.18) 20%,
+    rgba(194, 40, 48, 0.30) 50%,
+    rgba(192, 152, 64, 0.18) 80%,
+    transparent
+  );
+}
+
+/* Gothic command palette */
+[data-theme="gothic"] .command-palette {
+  background: rgba(30, 24, 18, 0.98);
+  border: 1px solid rgba(192, 152, 64, 0.15);
+}
+
+/* ── Gothic Animations ── */
+
+/* Crimson entry flash (replaces gold flash) */
+@keyframes gothic-entry-flash {
+  0% { background-color: rgba(194, 40, 48, 0.25); }
+  100% { background-color: transparent; }
+}
+
+[data-theme="gothic"] .animate-entry-flash {
+  animation: gothic-entry-flash 1.2s ease-out;
+}
+
+/* Censer sway — slow pendulum for ambient glow */
+@keyframes censerSway {
+  0%, 100% { transform: translateX(-3px); opacity: 0.7; }
+  50% { transform: translateX(3px); opacity: 1; }
+}
+
+/* Candlelight flicker — warm amber ambient */
+@keyframes candleFlicker {
+  0%, 100% { opacity: 0.03; }
+  25% { opacity: 0.05; }
+  50% { opacity: 0.02; }
+  75% { opacity: 0.04; }
+}
+
+/* Skull manifest — fade-in with inner glow */
+@keyframes skullManifest {
+  0% { opacity: 0; filter: blur(4px) brightness(1.5); }
+  100% { opacity: 1; filter: blur(0) brightness(1); }
+}
+
+/* Scroll unfurl — clip from center outward */
+@keyframes scrollUnfurl {
+  0% { clip-path: inset(50% 0); opacity: 0; }
+  100% { clip-path: inset(0 0); opacity: 1; }
+}
+
+[data-theme="gothic"] .animate-skull-manifest {
+  animation: skullManifest 0.8s ease-out;
+}
+
+[data-theme="gothic"] .animate-scroll-unfurl {
+  animation: scrollUnfurl 0.5s ease-out;
+}

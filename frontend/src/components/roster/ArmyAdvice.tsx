@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { RosterDetachment } from '../../stores/rosterStore.ts';
-import { NATIVE_TO_DISPLAY_GROUP } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 
 interface Props {
   detachments: RosterDetachment[];
@@ -15,6 +15,7 @@ interface Advice {
 }
 
 export default function ArmyAdvice({ detachments, totalPoints, pointsLimit }: Props) {
+  const { nativeToDisplayGroup } = useGameConfig();
   const [dismissed, setDismissed] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem('sa_dismissed_advice');
@@ -29,7 +30,7 @@ export default function ArmyAdvice({ detachments, totalPoints, pointsLimit }: Pr
 
     for (const det of detachments) {
       for (const entry of det.entries) {
-        const group = NATIVE_TO_DISPLAY_GROUP[entry.category] ?? 'Other';
+        const group = nativeToDisplayGroup[entry.category] ?? 'Other';
         groups[group] = (groups[group] ?? 0) + 1;
         totalUnits++;
       }
@@ -96,7 +97,7 @@ export default function ArmyAdvice({ detachments, totalPoints, pointsLimit }: Pr
     }
 
     return tips;
-  }, [detachments, totalPoints, pointsLimit]);
+  }, [detachments, totalPoints, pointsLimit, nativeToDisplayGroup]);
 
   const visible = advice.filter((a) => !dismissed.has(a.id));
 

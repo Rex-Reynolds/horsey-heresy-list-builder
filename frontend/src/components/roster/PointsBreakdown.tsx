@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { RosterDetachment } from '../../stores/rosterStore.ts';
-import { NATIVE_TO_DISPLAY_GROUP } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 
 interface Props {
   detachments: RosterDetachment[];
@@ -35,12 +35,13 @@ interface SlotBreakdown {
 }
 
 export default function PointsBreakdown({ detachments, pointsLimit, totalPoints }: Props) {
+  const { nativeToDisplayGroup } = useGameConfig();
   const breakdown = useMemo(() => {
     const byGroup: Record<string, { points: number; count: number }> = {};
 
     for (const det of detachments) {
       for (const entry of det.entries) {
-        const group = NATIVE_TO_DISPLAY_GROUP[entry.category] ?? 'Other';
+        const group = nativeToDisplayGroup[entry.category] ?? 'Other';
         if (!byGroup[group]) byGroup[group] = { points: 0, count: 0 };
         byGroup[group].points += entry.totalCost;
         byGroup[group].count += 1;
@@ -52,7 +53,7 @@ export default function PointsBreakdown({ detachments, pointsLimit, totalPoints 
       .sort((a, b) => b.points - a.points);
 
     return result;
-  }, [detachments]);
+  }, [detachments, nativeToDisplayGroup]);
 
   if (breakdown.length === 0) return null;
 

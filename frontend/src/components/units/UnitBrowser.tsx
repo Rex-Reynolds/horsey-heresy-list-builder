@@ -6,7 +6,7 @@ import { useUIStore } from '../../stores/uiStore.ts';
 import { useUnitAvailability } from '../../hooks/useUnitAvailability.ts';
 import client from '../../api/client.ts';
 import type { Unit } from '../../types/index.ts';
-import { NATIVE_TO_DISPLAY_GROUP, DISPLAY_GROUP_ORDER, FILTER_COLORS, SLOT_DISPLAY_GROUPS } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 import { useUIStore as useUIStoreView } from '../../stores/uiStore.ts';
 import CategoryFilter from '../common/CategoryFilter.tsx';
 import SearchInput from '../common/SearchInput.tsx';
@@ -27,6 +27,7 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
 ];
 
 export default function UnitBrowser() {
+  const { nativeToDisplayGroup, displayGroupOrder, filterColors, displayGroups } = useGameConfig();
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -75,11 +76,11 @@ export default function UnitBrowser() {
   const unitCounts = useMemo(() => {
     const counts: Record<string, number> = { All: allUnits.length };
     for (const u of allUnits) {
-      const group = NATIVE_TO_DISPLAY_GROUP[u.unit_type];
+      const group = nativeToDisplayGroup[u.unit_type];
       if (group) counts[group] = (counts[group] ?? 0) + 1;
     }
     return counts;
-  }, [allUnits]);
+  }, [allUnits, nativeToDisplayGroup]);
 
   const hasDetachments = !!rosterId && detachments.length > 0;
 
@@ -87,7 +88,7 @@ export default function UnitBrowser() {
   const slotCounts = useMemo(() => {
     if (!hasDetachments) return undefined;
     const counts: Record<string, { open: number; total: number }> = {};
-    for (const [group, nativeSlots] of Object.entries(SLOT_DISPLAY_GROUPS)) {
+    for (const [group, nativeSlots] of Object.entries(displayGroups)) {
       let open = 0;
       let total = 0;
       for (const det of detachments) {
@@ -102,7 +103,7 @@ export default function UnitBrowser() {
       if (total > 0) counts[group] = { open, total };
     }
     return counts;
-  }, [hasDetachments, detachments]);
+  }, [hasDetachments, detachments, displayGroups]);
 
   // Compute which display groups have required-but-empty slots
   const requiredSlots = useMemo(() => {
@@ -112,7 +113,7 @@ export default function UnitBrowser() {
       for (const [slotKey, status] of Object.entries(det.slots)) {
         if (status.min > 0 && status.filled < status.min) {
           const baseName = slotKey.includes(' - ') ? slotKey.split(' - ', 1)[0].trim() : slotKey;
-          for (const [group, nativeSlots] of Object.entries(SLOT_DISPLAY_GROUPS)) {
+          for (const [group, nativeSlots] of Object.entries(displayGroups)) {
             if ((nativeSlots as readonly string[]).includes(baseName)) {
               required.add(group);
             }
@@ -121,7 +122,7 @@ export default function UnitBrowser() {
       }
     }
     return required.size > 0 ? required : undefined;
-  }, [hasDetachments, detachments]);
+  }, [hasDetachments, detachments, displayGroups]);
 
   const displayUnits = useMemo(() => {
     const items = !hasDetachments
@@ -153,28 +154,28 @@ export default function UnitBrowser() {
     const byGroup = new Map<string, typeof displayUnits>();
 
     for (const item of displayUnits) {
-      const group = NATIVE_TO_DISPLAY_GROUP[item.unit.unit_type] ?? 'Other';
+      const group = nativeToDisplayGroup[item.unit.unit_type] ?? 'Other';
       if (!byGroup.has(group)) byGroup.set(group, []);
       byGroup.get(group)!.push(item);
     }
 
-    for (const group of DISPLAY_GROUP_ORDER) {
+    for (const group of displayGroupOrder) {
       const items = byGroup.get(group);
       if (items && items.length > 0) {
-        const dotColor = FILTER_COLORS[group]?.dot ?? 'bg-edge-400';
+        const dotColor = filterColors[group]?.dot ?? 'bg-edge-400';
         groups.push({ group, dotColor, items });
       }
     }
 
     // Any remaining
     for (const [group, items] of byGroup) {
-      if (!(DISPLAY_GROUP_ORDER as readonly string[]).includes(group) && items.length > 0) {
+      if (!(displayGroupOrder as readonly string[]).includes(group) && items.length > 0) {
         groups.push({ group, dotColor: 'bg-edge-400', items });
       }
     }
 
     return groups;
-  }, [displayUnits, showGroupHeaders]);
+  }, [displayUnits, showGroupHeaders, nativeToDisplayGroup, displayGroupOrder, filterColors]);
 
   // Quick-add mutation
   const quickAddMutation = useMutation({

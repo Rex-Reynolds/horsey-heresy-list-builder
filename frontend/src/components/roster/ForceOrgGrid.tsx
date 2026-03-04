@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import type { SlotStatus } from '../../types/index.ts';
-import { SLOT_FILL_COLORS } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
 const HINT_STORAGE_KEY = 'forceOrgHintDismissed';
 
 export default function ForceOrgGrid({ slots, onSlotClick, entryNames }: Props) {
+  const { slotFillColors } = useGameConfig();
   // Track previous fill counts to detect increases
   const prevFills = useRef<Record<string, number>>({});
   const [recentlyFilled, setRecentlyFilled] = useState<Set<string>>(new Set());
@@ -64,7 +65,7 @@ export default function ForceOrgGrid({ slots, onSlotClick, entryNames }: Props) 
             : 0;
 
           const baseName = name.includes(' - ') ? name.split(' - ', 1)[0].trim() : name;
-          const slotColor = SLOT_FILL_COLORS[baseName] ?? 'bg-edge-400/70';
+          const slotColor = slotFillColors[baseName] ?? 'bg-edge-400/70';
           const unitNames = entryNames?.[name];
           const tooltipText = unitNames && unitNames.length > 0
             ? `${baseName}: ${unitNames.join(', ')}`

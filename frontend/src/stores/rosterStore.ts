@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import type { SelectedUpgrade, SlotStatus, RosterDetachmentResponse, RosterEntryResponse, CompositionStatus } from '../types/index.ts';
+import type { GameSystemId } from '../config/gameConfig.ts';
 
 export interface RosterEntry {
   id: number;
   unitId: number;
   name: string;
-  category: string; // Native HH3 slot name
+  category: string; // Native slot name (HH3 or 40k)
   baseCost: number;
   costPerModel: number;
   upgrades: SelectedUpgrade[];
@@ -15,6 +16,8 @@ export interface RosterEntry {
   totalCost: number;
   modelMin: number;
   modelMax: number | null;
+  attachedLeaderId?: number | null; // 40k leader attachment
+  pointsBrackets?: { models: number; cost: number }[] | null; // 40k discrete size options
 }
 
 export interface RosterDetachment {
@@ -40,12 +43,14 @@ const DEFAULT_COMPOSITION: CompositionStatus = {
 interface RosterState {
   rosterId: number | null;
   rosterName: string;
+  gameSystem: GameSystemId;
   pointsLimit: number;
   detachments: RosterDetachment[];
   composition: CompositionStatus;
   validationErrors: string[];
   isValid: boolean | null;
-  doctrine: string | null; // Selected Cohort Doctrine category ID
+  doctrine: string | null; // Selected Cohort Doctrine category ID (HH3)
+  detachmentRule: string | null; // Selected detachment rule (40k)
 
   totalPoints: number;
 
@@ -60,13 +65,16 @@ interface RosterState {
   reorderEntries: (detachmentId: number, fromIndex: number, toIndex: number) => void;
   setComposition: (composition: CompositionStatus) => void;
   setDoctrine: (doctrine: string | null) => void;
+  setDetachmentRule: (rule: string | null) => void;
   syncFromResponse: (resp: {
     id: number;
     name: string;
+    game_system?: string;
     points_limit: number;
     detachments: RosterDetachmentResponse[];
     composition?: CompositionStatus;
     doctrine?: string | null;
+    detachment_rule?: string | null;
   }) => void;
   setValidation: (isValid: boolean, errors: string[]) => void;
   clearRoster: () => void;
@@ -105,18 +113,22 @@ function mapResponseEntry(e: RosterEntryResponse): RosterEntry {
     totalCost: e.total_cost,
     modelMin: e.model_min ?? 1,
     modelMax: e.model_max ?? null,
+    attachedLeaderId: e.attached_leader_id ?? null,
+    pointsBrackets: e.points_brackets ?? null,
   };
 }
 
 export const useRosterStore = create<RosterState>((set) => ({
   rosterId: null,
   rosterName: '',
+  gameSystem: 'hh3',
   pointsLimit: 3000,
   detachments: [],
   composition: DEFAULT_COMPOSITION,
   validationErrors: [],
   isValid: null,
   doctrine: null,
+  detachmentRule: null,
   totalPoints: 0,
 
   setRoster: (id, name, limit, detachments) =>
@@ -220,6 +232,9 @@ export const useRosterStore = create<RosterState>((set) => ({
   setDoctrine: (doctrine) =>
     set({ doctrine }),
 
+  setDetachmentRule: (rule) =>
+    set({ detachmentRule: rule }),
+
   syncFromResponse: (resp) =>
     set(() => {
       const detachments = mapResponseDetachments(resp.detachments);
@@ -228,11 +243,13 @@ export const useRosterStore = create<RosterState>((set) => ({
       return {
         rosterId: resp.id,
         rosterName: resp.name,
+        gameSystem: (resp.game_system === '40k10e' ? '40k10e' : 'hh3') as GameSystemId,
         pointsLimit: resp.points_limit,
         detachments,
         totalPoints: calcTotal(detachments),
         composition: resp.composition ?? DEFAULT_COMPOSITION,
         doctrine: resp.doctrine ?? null,
+        detachmentRule: resp.detachment_rule ?? null,
         isValid: null,
         validationErrors: [],
       };
@@ -250,6 +267,7 @@ export const useRosterStore = create<RosterState>((set) => ({
       detachments: [],
       composition: DEFAULT_COMPOSITION,
       doctrine: null,
+      detachmentRule: null,
       totalPoints: 0,
       isValid: null,
       validationErrors: [],

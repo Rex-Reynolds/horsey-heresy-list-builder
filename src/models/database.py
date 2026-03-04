@@ -30,8 +30,8 @@ class BaseModel(Model):
 def initialize_database():
     """Initialize the database and create all tables."""
     from src.models.tournament import Tournament, ArmyList, UnitEntry
-    from src.models.catalogue import Unit, Weapon, Upgrade, UnitUpgrade, Detachment
-    from src.models.roster import Roster, RosterDetachment, RosterEntry
+    from src.models.catalogue import Unit, Weapon, Upgrade, UnitUpgrade, Detachment, UnitKeyword
+    from src.models.roster import Roster, RosterDetachment, RosterEntry, LeaderAttachment
     from src.models.collection import Collection, CollectionItem
 
     db.connect()
@@ -44,9 +44,11 @@ def initialize_database():
         Upgrade,
         UnitUpgrade,
         Detachment,
+        UnitKeyword,
         Roster,
         RosterDetachment,
         RosterEntry,
+        LeaderAttachment,
         Collection,
         CollectionItem,
     ], safe=True)
@@ -73,6 +75,17 @@ def _migrate_add_columns(database):
         ("unit", "tercio_categories", "TEXT"),
         ("roster", "doctrine", "VARCHAR(255)"),
         ("unit", "cost_per_model", "INTEGER DEFAULT 0"),
+        # Multi-game system columns
+        ("unit", "game_system", "VARCHAR(32) DEFAULT 'hh3'"),
+        ("weapon", "game_system", "VARCHAR(32) DEFAULT 'hh3'"),
+        ("upgrade", "game_system", "VARCHAR(32) DEFAULT 'hh3'"),
+        ("detachment", "game_system", "VARCHAR(32) DEFAULT 'hh3'"),
+        ("roster", "game_system", "VARCHAR(32) DEFAULT 'hh3'"),
+        ("roster", "faction", "VARCHAR(255)"),
+        ("roster", "detachment_rule", "VARCHAR(255)"),
+        ("unit", "points_brackets", "TEXT"),
+        ("unit", "leader_targets", "TEXT"),
+        ("detachment", "abilities", "TEXT"),
     ]
 
     for table, column, col_type in migrations:

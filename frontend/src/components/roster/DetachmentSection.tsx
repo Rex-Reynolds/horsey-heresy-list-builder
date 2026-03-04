@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { RosterDetachment, RosterEntry } from '../../stores/rosterStore.ts';
 import type { SlotStatus } from '../../types/index.ts';
-import { SLOT_FILL_COLORS } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 import RosterEntryCard from './RosterEntryCard.tsx';
 import ConfirmDialog from '../common/ConfirmDialog.tsx';
 import ForceOrgGrid from './ForceOrgGrid.tsx';
@@ -62,6 +62,7 @@ function SlotRow({
   status: SlotStatus;
   onClick?: () => void;
 }) {
+  const { slotFillColors } = useGameConfig();
   const isFull = status.filled >= status.max;
   const isOverfilled = status.filled > status.max;
   const isUnderMin = status.filled < status.min;
@@ -76,7 +77,7 @@ function SlotRow({
 
   // Determine fill bar color based on state
   const baseName = name.includes(' - ') ? name.split(' - ', 1)[0].trim() : name;
-  const slotColor = SLOT_FILL_COLORS[baseName] ?? 'bg-edge-400/70';
+  const slotColor = slotFillColors[baseName] ?? 'bg-edge-400/70';
   const barColor = isOverfilled
     ? 'bg-danger'
     : isFull
@@ -488,10 +489,11 @@ export default function DetachmentSection({
 
 /** Ghost entry for What-If preview */
 function WhatIfGhost({ detachmentId }: { detachmentId: number }) {
+  const { slotFillColors } = useGameConfig();
   const preview = useUIStore((s) => s.whatIfPreview);
   if (!preview || preview.detachmentId !== detachmentId) return null;
 
-  const stripe = SLOT_FILL_COLORS[preview.category]?.replace('/70', '/30') ?? 'border-l-edge-500';
+  const stripe = slotFillColors[preview.category]?.replace('/70', '/30') ?? 'border-l-edge-500';
 
   return (
     <div className={`what-if-ghost ml-2 rounded-sm border-l-2 border border-dashed border-gold-600/20 ${stripe} bg-plate-800/15 px-3 py-2 animate-fade-in`}>

@@ -1,8 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
 import type { RosterEntry } from '../../stores/rosterStore.ts';
-import { SLOT_STRIPE_COLORS } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 import { useUIStore } from '../../stores/uiStore.ts';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
+import PointsBracketSelector from './PointsBracketSelector.tsx';
 import { useSwipeActions } from '../../hooks/useSwipeActions.ts';
 import { useMediaQuery } from '../../hooks/useMediaQuery.ts';
 
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdateQty, onDuplicate, isNew, entryIndex, isDuplicateName, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragOver }: Props) {
+  const { slotStripeColors } = useGameConfig();
   const openUpgradePanel = useUIStore((s) => s.openUpgradePanel);
   const cardRef = useRef<HTMLDivElement>(null);
   const prevQtyRef = useRef(entry.quantity);
@@ -64,8 +66,9 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
   const atMax = modelMax !== null && entry.quantity >= modelMax;
   const isFixed = modelMax !== null && modelMin === modelMax;
   const perModel = entry.costPerModel;
+  const hasBrackets = entry.pointsBrackets && entry.pointsBrackets.length > 1;
 
-  const stripe = SLOT_STRIPE_COLORS[entry.category] ?? 'border-l-edge-500';
+  const stripe = slotStripeColors[entry.category] ?? 'border-l-edge-500';
 
   return (
     <div
@@ -197,8 +200,14 @@ export default function RosterEntryCard({ entry, detachmentId, onRemove, onUpdat
           )}
         </div>
 
-        {/* Quantity — models stepper */}
-        {isFixed ? (
+        {/* Quantity — brackets dropdown (40k) or models stepper (HH3) */}
+        {hasBrackets ? (
+          <PointsBracketSelector
+            brackets={entry.pointsBrackets!}
+            currentModels={entry.quantity}
+            onSelect={(models) => onUpdateQty(entry.id, models)}
+          />
+        ) : isFixed ? (
           <span className="font-data text-xs tabular-nums text-text-dim" title={`${entry.quantity} models (fixed)`}>
             {entry.quantity}
           </span>

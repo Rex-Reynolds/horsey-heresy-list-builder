@@ -17,7 +17,10 @@ class Roster(BaseModel):
     total_points = IntegerField(default=0)
     is_valid = IntegerField(default=0)  # Boolean: FOC validation status
     validation_errors = TextField(null=True)  # JSON: list of validation errors
-    doctrine = CharField(null=True)  # Selected Cohort Doctrine category ID
+    doctrine = CharField(null=True)  # Selected Cohort Doctrine category ID (HH3)
+    game_system = CharField(index=True, default="hh3")  # "hh3" or "40k10e"
+    faction = CharField(null=True)  # "Solar Auxilia", "Genestealer Cults", etc.
+    detachment_rule = CharField(null=True)  # Selected 40k detachment rule name
 
     def calculate_total_points(self):
         """Calculate and update total_points from all detachments' entries."""
@@ -171,9 +174,16 @@ class RosterEntry(BaseModel):
     quantity = IntegerField(default=1)
     upgrades = TextField(null=True)  # JSON: selected upgrades
     total_cost = IntegerField()
-    category = CharField()  # Native HH3 slot name (e.g., "Armour", "Recon")
+    category = CharField()  # Native slot name (e.g., "Armour"/"Recon" for HH3, "Character"/"Battleline" for 40k)
 
     class Meta:
         indexes = (
             (('roster_detachment', 'unit_name'), False),
         )
+
+
+class LeaderAttachment(BaseModel):
+    """Tracks 40k leader → bodyguard binding (1:1)."""
+
+    leader = ForeignKeyField(RosterEntry, backref='leading', on_delete='CASCADE', unique=True)
+    bodyguard = ForeignKeyField(RosterEntry, backref='led_by', on_delete='CASCADE')
