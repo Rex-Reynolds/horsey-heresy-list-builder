@@ -202,7 +202,7 @@ export default function DetachmentSection({
   const detPoints = detachment.entries.reduce((s, e) => s + e.totalCost, 0);
 
   // Touch-based reorder for mobile
-  const isMobile = useMediaQuery('(max-width: 1023px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const handleTouchReorder = useCallback((fromId: number, toId: number) => {
     if (!onReorderEntries) return;
     const fromIndex = detachment.entries.findIndex((e) => e.id === fromId);

@@ -333,11 +333,11 @@ export default function UnitBrowser() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl xl:max-w-5xl">
+    <div className="mx-auto max-w-3xl md:max-w-5xl">
       {/* Sticky toolbar */}
       <div className="sticky-toolbar space-y-3">
-        {/* Header */}
-        <div className="flex items-baseline justify-between">
+        {/* Header — hidden on phone (info available in header + bottom bar) */}
+        <div className="hidden md:flex items-baseline justify-between">
           <h2 className="text-imperial heading-imperial text-sm">Unit Compendium</h2>
           <div className="flex items-center gap-3">
             {rosterId && (
@@ -352,7 +352,7 @@ export default function UnitBrowser() {
                 {displayUnits.length} {(category || search) ? (displayUnits.length === 1 ? 'match' : 'matches') : (displayUnits.length === 1 ? 'unit' : 'units')}
               </span>
             )}
-            {/* Grid/List toggle */}
+            {/* Grid/List toggle — desktop */}
             <div className="flex rounded-sm border border-edge-600/30 overflow-hidden">
               <button
                 onClick={() => setViewMode('grid')}
@@ -415,6 +415,32 @@ export default function UnitBrowser() {
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <SearchInput ref={searchRef} value={search} onChange={setSearch} showKbdHint />
+          </div>
+
+          {/* Grid/List toggle — phone only (inline with search) */}
+          <div className="flex rounded-sm border border-edge-600/30 overflow-hidden md:hidden">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex h-[36px] w-[36px] items-center justify-center transition-colors ${
+                viewMode === 'grid' ? 'bg-gold-600/15 text-gold-400' : 'text-text-dim hover:text-text-secondary'
+              }`}
+              title="Grid view"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex h-[36px] w-[36px] items-center justify-center border-l border-edge-600/30 transition-colors ${
+                viewMode === 'list' ? 'bg-gold-600/15 text-gold-400' : 'text-text-dim hover:text-text-secondary'
+              }`}
+              title="List view"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
           </div>
 
           {/* Sort dropdown */}
@@ -483,7 +509,7 @@ export default function UnitBrowser() {
             </span>
             <span className="font-data text-[10px] tabular-nums text-text-dim">{favorites.size}</span>
           </div>
-          <div className={viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 xl:grid-cols-2'}>
+          <div className={viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 md:grid-cols-2'}>
             {allUnits
               .filter((u) => favorites.has(u.id))
               .map((unit) => {
@@ -526,7 +552,7 @@ export default function UnitBrowser() {
 
         {/* Mobile category jump bar — hidden when roster drawer is open */}
         {showGroupHeaders && groupedUnits && !mobileRosterOpen && (
-          <div className="fixed right-1 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 lg:hidden">
+          <div className="fixed right-1 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 md:hidden">
             {groupedUnits.map(({ group, dotColor }) => (
               <button
                 key={group}
@@ -566,14 +592,14 @@ export default function UnitBrowser() {
                   <span className="font-data text-[10px] tabular-nums text-text-dim">{items.length}</span>
                   <span className="h-px flex-1 bg-edge-700/25" />
                 </div>
-                <div className={viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 xl:grid-cols-2'}>
+                <div className={viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 md:grid-cols-2'}>
                   {items.map(renderUnitCard)}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className={`stagger-list ${viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 xl:grid-cols-2'}`}>
+          <div className={`stagger-list ${viewMode === 'list' ? 'space-y-1' : 'grid grid-cols-1 gap-2 md:grid-cols-2'}`}>
             {displayUnits.map(renderUnitCard)}
           </div>
         )}

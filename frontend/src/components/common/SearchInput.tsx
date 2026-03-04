@@ -57,7 +57,7 @@ const SearchInput = forwardRef<SearchInputHandle, Props>(function SearchInput(
       />
       {/* Keyboard shortcut hint */}
       {showKbdHint && !local && !focused && (
-        <span className="kbd-hint pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden lg:inline">
+        <span className="kbd-hint pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline">
           {navigator.platform?.includes('Mac') ? '\u2318K' : 'Ctrl+K'}
         </span>
       )}

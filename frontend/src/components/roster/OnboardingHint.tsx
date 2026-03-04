@@ -47,7 +47,7 @@ export default function OnboardingHint({ step, onAction }: Props) {
       {/* Mobile: show browse button that closes the drawer */}
       <button
         onClick={onAction}
-        className="mt-2 font-label rounded-sm border border-gold-600/25 bg-gold-900/10 px-4 py-1.5 text-[11px] font-semibold tracking-wider text-gold-400 uppercase transition-all hover:border-gold-500/30 hover:bg-gold-900/20 lg:hidden"
+        className="mt-2 font-label rounded-sm border border-gold-600/25 bg-gold-900/10 px-4 py-1.5 text-[11px] font-semibold tracking-wider text-gold-400 uppercase transition-all hover:border-gold-500/30 hover:bg-gold-900/20 md:hidden"
       >
         Browse Units
       </button>

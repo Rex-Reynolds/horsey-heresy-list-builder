@@ -92,13 +92,13 @@ export default function RosterDrawer() {
       />
 
       {/* Drawer — slide from right on desktop, sheet from bottom on mobile */}
-      <div className="fixed z-[81] lg:right-0 lg:top-0 lg:bottom-0 lg:w-[380px] lg:animate-drawer-slide-in inset-x-0 bottom-0 top-[20vh] max-lg:animate-drawer-slide-up">
+      <div className="fixed z-[81] md:right-0 md:top-0 md:bottom-0 md:w-[380px] md:animate-drawer-slide-in inset-x-0 bottom-0 top-[20vh] max-md:animate-drawer-slide-up">
         <div
           ref={trapRef}
           role="dialog"
           aria-modal="true"
           aria-label="My rosters"
-          className="flex h-full flex-col bg-plate-900 border-l border-edge-700/30 max-lg:rounded-t-lg max-lg:border-t max-lg:border-l-0"
+          className="flex h-full flex-col bg-plate-900 border-l border-edge-700/30 max-md:rounded-t-lg max-md:border-t max-md:border-l-0"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-edge-700/30 px-5 py-4">

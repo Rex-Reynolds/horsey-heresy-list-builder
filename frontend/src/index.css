@@ -666,7 +666,7 @@ body::before {
 .quick-add-btn:focus-visible {
   opacity: 1;
 }
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .quick-add-btn {
     opacity: 1;
   }
@@ -972,7 +972,7 @@ body::before {
   mask-image: linear-gradient(to right, black 85%, transparent 100%);
 }
 /* Remove fade when scrolled to end or not overflowing */
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .category-filter-scroll {
     -webkit-mask-image: none;
     mask-image: none;
@@ -1202,22 +1202,7 @@ body::before {
   }
 }
 
-/* ── Mobile category filter 2-row ── */
-@media (max-width: 1023px) {
-  .category-filter-mobile {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    overflow-x: visible;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-  .category-filter-mobile > button {
-    min-height: 38px;
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-}
+/* Category filter mobile — now handled inline via Tailwind snap classes */
 
 /* ═══════════════════════════════════════════
    PARCHMENT THEME — Light mode variant
