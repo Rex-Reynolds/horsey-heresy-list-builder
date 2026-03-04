@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FILTER_COLORS } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 
 interface CategorySection {
   group: string;
@@ -12,6 +12,7 @@ interface Props {
 }
 
 export default function ScrollProgressRail({ sections, containerRef }: Props) {
+  const { filterColors } = useGameConfig();
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -87,7 +88,7 @@ export default function ScrollProgressRail({ sections, containerRef }: Props) {
 
       {sections.map((section, i) => {
         const isActive = i === activeIndex;
-        const dotColor = FILTER_COLORS[section.group]?.dot ?? 'bg-edge-400';
+        const dotColor = filterColors[section.group]?.dot ?? 'bg-edge-400';
         return (
           <button
             key={section.elementId}

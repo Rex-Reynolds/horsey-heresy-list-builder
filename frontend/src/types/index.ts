@@ -4,11 +4,21 @@ export interface UnitConstraint {
   scope: string;
 }
 
+export interface PointsBracket {
+  models: number;
+  cost: number;
+}
+
+export interface UnitKeywordInfo {
+  keyword: string;
+  type: string;
+}
+
 export interface Unit {
   id: number;
   bs_id: string;
   name: string;
-  unit_type: string; // Native HH3 slot name (e.g., "Armour", "Recon")
+  unit_type: string; // Native slot name (e.g., "Armour", "Character")
   bsdata_category: string | null;
   base_cost: number;
   cost_per_model: number;
@@ -20,6 +30,10 @@ export interface Unit {
   is_legacy: boolean;
   has_required_upgrades: boolean;
   default_upgrades?: SelectedUpgrade[] | null;
+  // 40k-specific
+  points_brackets?: PointsBracket[] | null;
+  leader_targets?: string[] | null;
+  keywords?: UnitKeywordInfo[] | null;
 }
 
 export interface Upgrade {
@@ -42,6 +56,23 @@ export interface UnitUpgradesResponse {
   ungrouped: Upgrade[];
 }
 
+export interface DetachmentEnhancement {
+  name: string;
+  cost: number;
+  bs_id: string;
+  description: string;
+}
+
+export interface DetachmentRule {
+  name: string;
+  description: string;
+}
+
+export interface DetachmentAbilities {
+  enhancements?: DetachmentEnhancement[];
+  rules?: DetachmentRule[];
+}
+
 export interface Detachment {
   id: number;
   bs_id: string;
@@ -51,6 +82,9 @@ export interface Detachment {
   constraints: Record<string, { min: number; max: number }>;
   unit_restrictions: Record<string, string>;
   costs: { auxiliary?: number; apex?: number };
+  // 40k-specific
+  abilities?: DetachmentAbilities | null;
+  game_system?: string;
 }
 
 export interface SlotStatus {
@@ -100,11 +134,14 @@ export interface RosterEntryResponse {
   upgrade_names?: string[];
   upgrade_cost?: number;
   total_cost: number;
-  category: string; // Native HH3 slot name
+  category: string; // Native slot name
   model_min: number;
   model_max: number | null;
   cost_per_model: number;
   base_cost: number;
+  // 40k-specific
+  attached_leader_id?: number | null;
+  points_brackets?: PointsBracket[] | null;
 }
 
 export interface SelectedUpgrade {

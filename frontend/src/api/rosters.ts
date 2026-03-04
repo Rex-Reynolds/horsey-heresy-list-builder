@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import client from './client.ts';
+import client, { gsPath } from './client.ts';
+import { useGameConfig } from '../config/GameConfigContext.tsx';
 import type { RosterResponse, RosterDetachmentResponse, ValidationResponse, SelectedUpgrade } from '../types/index.ts';
 
 export function useRosters() {
@@ -21,9 +22,10 @@ export function useDeleteRoster() {
 }
 
 export function useCreateRoster() {
+  const { id: gameSystem } = useGameConfig();
   return useMutation<RosterResponse, Error, { name: string; points_limit: number }>({
     mutationFn: async (body) => {
-      const { data } = await client.post('/api/rosters', body);
+      const { data } = await client.post(gsPath(gameSystem, '/rosters'), body);
       return data;
     },
   });
@@ -130,6 +132,34 @@ export function useDoctrines() {
     queryKey: ['doctrines'],
     queryFn: async () => {
       const { data } = await client.get('/api/doctrines');
+      return data;
+    },
+  });
+}
+
+// 40k leader attachment
+export function useAttachLeader(rosterId: number | null, detachmentId: number | null) {
+  return useMutation<
+    { id: number; leader_id: number; bodyguard_id: number },
+    Error,
+    { entryId: number; bodyguard_entry_id: number }
+  >({
+    mutationFn: async ({ entryId, bodyguard_entry_id }) => {
+      const { data } = await client.post(
+        `/api/40k10e/rosters/${rosterId}/detachments/${detachmentId}/entries/${entryId}/attach`,
+        { bodyguard_entry_id },
+      );
+      return data;
+    },
+  });
+}
+
+export function useDetachLeader(rosterId: number | null, detachmentId: number | null) {
+  return useMutation<{ ok: boolean }, Error, number>({
+    mutationFn: async (entryId) => {
+      const { data } = await client.delete(
+        `/api/40k10e/rosters/${rosterId}/detachments/${detachmentId}/entries/${entryId}/detach`,
+      );
       return data;
     },
   });

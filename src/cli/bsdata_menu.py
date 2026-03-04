@@ -8,12 +8,13 @@ from src.bsdata.repository import (
     clone_or_update_repo,
     list_available_catalogues,
     check_for_updates,
-    get_catalogue_path
+    get_catalogue_path,
+    get_bsdata_dir,
 )
 from src.bsdata.catalogue_loader import SolarAuxiliaCatalogue
 from src.bsdata.detachment_loader import DetachmentLoader
 from src.models import Unit, Weapon, Upgrade, UnitUpgrade, Detachment
-from src.config import BSDATA_DIR
+from src.config import BSDATA_DIR, VALID_GAME_SYSTEMS
 
 console = Console()
 
@@ -25,25 +26,21 @@ def bsdata():
 
 
 @bsdata.command()
-def update():
-    """Clone or update the BSData repository."""
-    console.print("[yellow]Updating BSData repository...[/yellow]\n")
+@click.option('--game-system', '-g', default="hh3",
+              type=click.Choice(sorted(VALID_GAME_SYSTEMS)),
+              help='Game system to update (default: hh3)')
+def update(game_system):
+    """Clone or update a BSData repository."""
+    console.print(f"[yellow]Updating BSData repository for {game_system}...[/yellow]\n")
 
     with console.status("[bold green]Cloning/updating repository..."):
-        success = clone_or_update_repo()
+        success = clone_or_update_repo(game_system)
 
     if success:
         console.print("[green]✓ Repository updated successfully![/green]")
 
-        # Show available catalogues
-        catalogues = list_available_catalogues()
+        catalogues = list_available_catalogues(game_system)
         console.print(f"\n[cyan]Found {len(catalogues)} catalogues[/cyan]")
-
-        if "Solar Auxilia" in catalogues:
-            console.print("[green]✓ Solar Auxilia catalogue available[/green]")
-        else:
-            console.print("[yellow]⚠ Solar Auxilia catalogue not found[/yellow]")
-
     else:
         console.print("[red]✗ Failed to update repository[/red]")
 
@@ -65,8 +62,24 @@ def list_catalogues():
 
 
 @bsdata.command()
-def load():
-    """Load Solar Auxilia catalogue into database."""
+@click.option('--game-system', '-g', default="hh3",
+              type=click.Choice(sorted(VALID_GAME_SYSTEMS)),
+              help='Game system to load (default: hh3)')
+@click.option('--faction', '-f', default=None,
+              help='Faction to load (required for 40k, default for HH3: Solar Auxilia)')
+def load(game_system, faction):
+    """Load a catalogue into the database."""
+    if game_system == "hh3":
+        _load_hh3()
+    else:
+        if not faction:
+            console.print("[red]--faction is required for 40k. E.g.: --faction 'Genestealer Cults'[/red]")
+            return
+        _load_40k(game_system, faction)
+
+
+def _load_hh3():
+    """Load HH3 Solar Auxilia catalogue (existing flow)."""
     console.print("[yellow]Loading Solar Auxilia catalogue...[/yellow]\n")
 
     try:
@@ -75,30 +88,51 @@ def load():
 
         console.print(f"[green]✓ Catalogue loaded (revision {catalogue.catalogue_info['revision']})[/green]")
 
-        # Show unit count
         units = catalogue.load_all_units()
         console.print(f"[cyan]Found {len(units)} units in catalogue[/cyan]\n")
 
-        # Populate database
         with console.status("[bold green]Populating database..."):
             catalogue.populate_database()
 
         console.print("[green]✓ Database populated successfully![/green]")
 
-        # Show breakdown by category
         console.print("\n[bold cyan]Units by Category:[/bold cyan]")
-
         categories = {}
         for unit in units:
             cat = unit['unit_type']
             categories[cat] = categories.get(cat, 0) + 1
-
         for cat, count in sorted(categories.items()):
             console.print(f"  {cat}: {count} units")
 
     except FileNotFoundError:
         console.print("[red]✗ Solar Auxilia catalogue not found.[/red]")
         console.print("[yellow]Run 'auxilia bsdata update' first.[/yellow]")
+    except Exception as e:
+        console.print(f"[red]✗ Error loading catalogue: {e}[/red]")
+        import traceback
+        traceback.print_exc()
+
+
+def _load_40k(game_system: str, faction: str):
+    """Load a 40k faction catalogue."""
+    console.print(f"[yellow]Loading {faction} catalogue ({game_system})...[/yellow]\n")
+
+    try:
+        from src.gamesystems import get_loader
+        loader = get_loader(game_system)
+
+        with console.status(f"[bold green]Parsing {faction} catalogue..."):
+            counts = loader.populate_database(faction=faction)
+
+        console.print(f"[green]✓ Database populated:[/green]")
+        for key, count in counts.items():
+            console.print(f"  {key}: {count}")
+
+    except FileNotFoundError as e:
+        console.print(f"[red]✗ {e}[/red]")
+        console.print(f"[yellow]Run 'auxilia bsdata update --game-system {game_system}' first.[/yellow]")
+    except NotImplementedError as e:
+        console.print(f"[yellow]⚠ {e}[/yellow]")
     except Exception as e:
         console.print(f"[red]✗ Error loading catalogue: {e}[/red]")
         import traceback
@@ -186,38 +220,34 @@ def category(category):
 
 @bsdata.command()
 def status():
-    """Show BSData repository status."""
-    if not BSDATA_DIR.exists():
-        console.print("[yellow]BSData repository not cloned.[/yellow]")
-        console.print("\nRun: [cyan]auxilia bsdata update[/cyan]")
-        return
+    """Show BSData repository status for all game systems."""
+    from src.config import BSDATA_REPOS
 
-    console.print("[green]✓ Repository cloned[/green]")
+    for gs_id, config in BSDATA_REPOS.items():
+        bsdata_dir = config["directory"]
+        console.print(f"\n[bold cyan]{gs_id}[/bold cyan] ({config['gst_name']})")
 
-    # Check for updates
-    update_info = check_for_updates()
+        if not bsdata_dir.exists():
+            console.print(f"  [yellow]Repository not cloned[/yellow]")
+            console.print(f"  Run: [cyan]auxilia bsdata update --game-system {gs_id}[/cyan]")
+            continue
 
-    if update_info['has_updates']:
-        console.print(f"[yellow]⚠ {update_info['commits_behind']} updates available[/yellow]")
-        console.print("\nRun: [cyan]auxilia bsdata update[/cyan]")
-    else:
-        console.print("[green]✓ Repository up to date[/green]")
+        console.print(f"  [green]✓ Repository cloned[/green]")
 
-    # Check if catalogue is loaded in database
-    unit_count = Unit.select().count()
-    weapon_count = Weapon.select().count()
-    upgrade_count = Upgrade.select().count()
-    unit_upgrade_count = UnitUpgrade.select().count()
+        update_info = check_for_updates(gs_id)
+        if update_info['has_updates']:
+            console.print(f"  [yellow]⚠ {update_info['commits_behind']} updates available[/yellow]")
 
-    if unit_count > 0:
-        console.print(f"[green]✓ Database populated:[/green]")
-        console.print(f"  - {unit_count} units")
-        console.print(f"  - {weapon_count} weapons")
-        console.print(f"  - {upgrade_count} upgrades")
-        console.print(f"  - {unit_upgrade_count} unit-upgrade links")
-    else:
-        console.print("[yellow]⚠ Database empty[/yellow]")
-        console.print("\nRun: [cyan]auxilia bsdata load[/cyan]")
+        # DB counts for this game system
+        unit_count = Unit.select().where(Unit.game_system == gs_id).count()
+        weapon_count = Weapon.select().where(Weapon.game_system == gs_id).count()
+        upgrade_count = Upgrade.select().where(Upgrade.game_system == gs_id).count()
+
+        if unit_count > 0:
+            console.print(f"  [green]✓ {unit_count} units, {weapon_count} weapons, {upgrade_count} upgrades[/green]")
+        else:
+            console.print(f"  [yellow]⚠ No data loaded[/yellow]")
+            console.print(f"  Run: [cyan]auxilia bsdata load --game-system {gs_id}[/cyan]")
 
 
 @bsdata.command()

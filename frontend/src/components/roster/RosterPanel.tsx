@@ -10,7 +10,7 @@ import {
 import client from '../../api/client.ts';
 import type { Detachment } from '../../types/index.ts';
 import type { UndoAction } from '../../stores/uiStore.ts';
-import { SLOT_DISPLAY_GROUPS } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 import PointsBar from '../layout/PointsBar.tsx';
 import type { PointsSegment } from '../layout/PointsBar.tsx';
 import RosterSetup from './RosterSetup.tsx';
@@ -19,6 +19,7 @@ import DetachmentPickerModal from './DetachmentPickerModal.tsx';
 import ValidationResults from './ValidationResults.tsx';
 import ExportButton from './ExportButton.tsx';
 import DoctrinePicker from './DoctrinePicker.tsx';
+import DetachmentRulePicker from './DetachmentRulePicker.tsx';
 import CompletenessRing from './CompletenessRing.tsx';
 import PointsBreakdown from './PointsBreakdown.tsx';
 import ArmyAdvice from './ArmyAdvice.tsx';
@@ -44,6 +45,7 @@ function getNextActionHint(
 }
 
 export default function RosterPanel() {
+  const { displayGroups, hasDoctrine, hasDetachmentRule } = useGameConfig();
   const {
     rosterId,
     rosterName,
@@ -82,7 +84,7 @@ export default function RosterPanel() {
   function handleSlotClick(slotName: string, detachmentName: string, filled: number, max: number) {
     const baseName = slotName.includes(' - ') ? slotName.split(' - ', 1)[0].trim() : slotName;
     let displayGroup = baseName;
-    for (const [group, slots] of Object.entries(SLOT_DISPLAY_GROUPS)) {
+    for (const [group, slots] of Object.entries(displayGroups)) {
       if ((slots as readonly string[]).includes(baseName)) {
         displayGroup = group;
         break;
@@ -507,8 +509,9 @@ export default function RosterPanel() {
           </div>
         )}
 
-        {/* Cohort Doctrine */}
-        {detachments.length > 0 && <DoctrinePicker />}
+        {/* Cohort Doctrine (HH3) / Detachment Rule (40k) */}
+        {detachments.length > 0 && hasDoctrine && <DoctrinePicker />}
+        {detachments.length > 0 && hasDetachmentRule && <DetachmentRulePicker />}
 
         {/* Always-on validation — shown when entries exist */}
         {totalEntries > 0 && (

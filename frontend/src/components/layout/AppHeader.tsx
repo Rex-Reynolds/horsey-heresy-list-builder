@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useRosterStore } from '../../stores/rosterStore.ts';
 import { useUIStore } from '../../stores/uiStore.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
+import { GAME_CONFIGS, type GameSystemId } from '../../config/gameConfig.ts';
 import AnimatedNumber from '../common/AnimatedNumber.tsx';
 
 function AquilaEmblem({ className = '' }: { className?: string }) {
@@ -60,12 +62,18 @@ export default function AppHeader() {
   const totalPoints = useRosterStore((s) => s.totalPoints);
   const pointsLimit = useRosterStore((s) => s.pointsLimit);
   const detachments = useRosterStore((s) => s.detachments);
+  const clearRoster = useRosterStore((s) => s.clearRoster);
 
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const gameSystem = useUIStore((s) => s.gameSystem);
+  const setGameSystem = useUIStore((s) => s.setGameSystem);
+  const setTheme = useUIStore((s) => s.setTheme);
   const setShowRosterDrawer = useUIStore((s) => s.setShowRosterDrawer);
   const undoStack = useUIStore((s) => s.undoStack);
   const hasRoster = !!rosterId;
+  const config = useGameConfig();
+  const [showGameMenu, setShowGameMenu] = useState(false);
 
   // Compute readiness level
   const readiness: ReadinessLevel = !hasRoster || detachments.length === 0
@@ -87,6 +95,15 @@ export default function AppHeader() {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
   }
 
+  function handleGameSwitch(gs: GameSystemId) {
+    setShowGameMenu(false);
+    if (gs === gameSystem) return;
+    clearRoster();
+    setGameSystem(gs);
+    const newConfig = GAME_CONFIGS[gs];
+    setTheme(newConfig.defaultTheme);
+  }
+
   return (
     <header className="relative z-10 bg-plate-900">
       {/* Top accent — ornate bronze line */}
@@ -103,9 +120,15 @@ export default function AppHeader() {
               <>
                 {/* Contextual breadcrumb mode */}
                 <div className="flex items-baseline gap-1.5">
-                  <span className="hidden sm:inline text-imperial text-[11px] leading-tight tracking-[0.12em]">
-                    Solar Auxilia
-                  </span>
+                  <button
+                    onClick={() => setShowGameMenu(!showGameMenu)}
+                    className="hidden sm:inline text-imperial text-[11px] leading-tight tracking-[0.12em] hover:text-gold-400 transition-colors"
+                  >
+                    {config.factionLabel}
+                    <svg className="inline ml-1 h-2.5 w-2.5 text-text-dim/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
                   <span className="hidden sm:inline text-text-dim/30 text-[11px]">&rsaquo;</span>
                   <span className="font-display text-[13px] font-semibold tracking-[0.08em] text-gold-400 uppercase leading-tight truncate max-w-[180px] sm:max-w-[240px]">
                     {rosterName}
@@ -115,13 +138,44 @@ export default function AppHeader() {
             ) : (
               <>
                 {/* Full title mode */}
-                <h1 className="text-imperial text-base leading-tight tracking-[0.14em] lg:text-[17px]">
-                  Solar Auxilia
-                </h1>
-                <p className="font-label mt-0.5 text-[10px] font-medium tracking-[0.3em] text-gold-600/60 uppercase">
-                  Regimental Dataslate
-                </p>
+                <button
+                  onClick={() => setShowGameMenu(!showGameMenu)}
+                  className="text-left"
+                >
+                  <h1 className="text-imperial text-base leading-tight tracking-[0.14em] lg:text-[17px] hover:text-gold-400 transition-colors">
+                    {config.factionLabel}
+                  </h1>
+                  <p className="font-label mt-0.5 text-[10px] font-medium tracking-[0.3em] text-gold-600/60 uppercase">
+                    {config.shortName}
+                  </p>
+                </button>
               </>
+            )}
+            {/* Game system dropdown */}
+            {showGameMenu && (
+              <div className="absolute top-full left-0 z-50 mt-1 w-64 rounded-sm border border-edge-600/30 bg-plate-900/98 shadow-lg backdrop-blur-sm">
+                {Object.values(GAME_CONFIGS).map((gc) => (
+                  <button
+                    key={gc.id}
+                    onClick={() => handleGameSwitch(gc.id)}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-plate-800/50 ${
+                      gc.id === gameSystem ? 'bg-gold-900/20 border-l-2 border-l-gold-500' : ''
+                    }`}
+                  >
+                    <div>
+                      <p className="font-display text-[12px] font-semibold tracking-[0.08em] uppercase text-text-primary">
+                        {gc.factionLabel}
+                      </p>
+                      <p className="text-[10px] text-text-dim">{gc.shortName}</p>
+                    </div>
+                    {gc.id === gameSystem && (
+                      <svg className="ml-auto h-3.5 w-3.5 text-gold-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -188,7 +242,9 @@ export default function AppHeader() {
             )}
           </button>
           {!hasRoster && (
-            <span className="font-data text-[10px] tabular-nums text-text-dim/40">HH3.SA</span>
+            <span className="font-data text-[10px] tabular-nums text-text-dim/40">
+              {gameSystem === 'hh3' ? 'HH3.SA' : '40K.10E'}
+            </span>
           )}
         </div>
 

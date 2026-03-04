@@ -9,7 +9,10 @@ import RosterDrawer from './components/roster/RosterDrawer.tsx'
 import UpgradePanel from './components/roster/UpgradePanel.tsx'
 import CommandPalette from './components/common/CommandPalette.tsx'
 import RosterTabs from './components/roster/RosterTabs.tsx'
+import GameSelector from './components/common/GameSelector.tsx'
+import { GameConfigProvider } from './config/GameConfigContext.tsx'
 import { useRosterStore } from './stores/rosterStore.ts'
+import { useUIStore } from './stores/uiStore.ts'
 import { useUndoRedo } from './hooks/useUndoRedo.ts'
 import { useAmbientBackground } from './hooks/useAmbientBackground.ts'
 import client from './api/client.ts'
@@ -18,7 +21,7 @@ import client from './api/client.ts'
 (() => {
   try {
     const saved = localStorage.getItem('sa_theme');
-    if (saved === 'parchment') document.documentElement.setAttribute('data-theme', 'parchment');
+    if (saved && saved !== 'dataslate') document.documentElement.setAttribute('data-theme', saved);
   } catch { /* noop */ }
 })()
 
@@ -60,6 +63,7 @@ function RosterSkeleton() {
 function App() {
   const rosterId = useRosterStore((s) => s.rosterId)
   const syncFromResponse = useRosterStore((s) => s.syncFromResponse)
+  const gameSystem = useUIStore((s) => s.gameSystem)
   useUndoRedo()
   useAmbientBackground()
   // Start restoring only if there's actually a saved roster to fetch
@@ -78,49 +82,64 @@ function App() {
 
   if (restoring) {
     return (
-      <div className="flex h-screen flex-col">
-        <AppHeader />
-        <AppLayout
-          left={<BrowserSkeleton />}
-          right={<RosterSkeleton />}
-        />
-      </div>
+      <GameConfigProvider gameSystem={gameSystem ?? 'hh3'}>
+        <div className="flex h-screen flex-col">
+          <AppHeader />
+          <AppLayout
+            left={<BrowserSkeleton />}
+            right={<RosterSkeleton />}
+          />
+        </div>
+      </GameConfigProvider>
+    )
+  }
+
+  // First visit — show game system selector
+  if (!gameSystem) {
+    return (
+      <ErrorBoundary>
+        <div className="flex h-screen flex-col bg-plate-900">
+          <GameSelector onSelect={() => {/* gameSystem updates via uiStore */}} />
+        </div>
+      </ErrorBoundary>
     )
   }
 
   return (
-    <ErrorBoundary>
-      <div className="flex h-screen flex-col">
-        <AppHeader />
-        {rosterId && <RosterTabs />}
-        {rosterId ? (
-          <AppLayout
-            left={
-              <Suspense fallback={<BrowserSkeleton />}>
-                <UnitBrowser />
-              </Suspense>
-            }
-            right={
+    <GameConfigProvider gameSystem={gameSystem}>
+      <ErrorBoundary>
+        <div className="flex h-screen flex-col">
+          <AppHeader />
+          {rosterId && <RosterTabs />}
+          {rosterId ? (
+            <AppLayout
+              left={
+                <Suspense fallback={<BrowserSkeleton />}>
+                  <UnitBrowser />
+                </Suspense>
+              }
+              right={
+                <Suspense fallback={<RosterSkeleton />}>
+                  <RosterPanel />
+                </Suspense>
+              }
+            />
+          ) : (
+            <div className="setup-bg flex flex-1 items-center justify-center overflow-hidden">
               <Suspense fallback={<RosterSkeleton />}>
                 <RosterPanel />
               </Suspense>
-            }
-          />
-        ) : (
-          <div className="setup-bg flex flex-1 items-center justify-center overflow-hidden">
-            <Suspense fallback={<RosterSkeleton />}>
-              <RosterPanel />
-            </Suspense>
-          </div>
-        )}
-      </div>
-      <ToastContainer />
-      <KeyboardShortcuts />
-      <GuidedTour />
-      <RosterDrawer />
-      <UpgradePanel />
-      <CommandPalette />
-    </ErrorBoundary>
+            </div>
+          )}
+        </div>
+        <ToastContainer />
+        <KeyboardShortcuts />
+        <GuidedTour />
+        <RosterDrawer />
+        <UpgradePanel />
+        <CommandPalette />
+      </ErrorBoundary>
+    </GameConfigProvider>
   )
 }
 

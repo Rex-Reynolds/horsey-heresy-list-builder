@@ -1,6 +1,7 @@
 """
-Solar Auxilia List Builder - FastAPI Backend
+List Builder - FastAPI Backend
 REST API for army list building with validation and meta analysis.
+Supports multiple game systems (HH3, 40k 10e).
 """
 import logging
 import os
@@ -22,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from peewee import prefetch
-from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Detachment, Roster, RosterDetachment, RosterEntry
+from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Detachment, UnitKeyword, Roster, RosterDetachment, RosterEntry, LeaderAttachment
 from src.bsdata.points_calculator import PointsCalculator
 from src.bsdata.detachment_loader import DetachmentLoader
 from src.bsdata.composition_validator import CompositionValidator
@@ -30,13 +31,22 @@ from src.bsdata.foc_validator import FOCValidator
 from src.bsdata.category_mapping import DISPLAY_GROUPS, get_native_categories_for_group
 from src.bsdata.modifier_evaluator import ModifierEvaluator, get_available_doctrines
 from src.analytics.unit_popularity import calculate_unit_popularity
+from src.config import VALID_GAME_SYSTEMS
+from src.gamesystems import GAME_SYSTEMS, get_category_mapping, get_points_calculator
 import json
 
-# Singleton composition validator
+# Singleton composition validator (HH3)
 composition_validator = CompositionValidator()
 
 # Rate limiter — keyed by client IP
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _validate_game_system(gs: str) -> str:
+    """Validate and return game system ID, raising 404 for unknown systems."""
+    if gs not in VALID_GAME_SYSTEMS:
+        raise HTTPException(status_code=404, detail=f"Unknown game system: {gs}")
+    return gs
 
 # Production mode: disable docs, lock CORS
 IS_PRODUCTION = os.environ.get("ENVIRONMENT", "production") == "production"
@@ -64,9 +74,9 @@ async def lifespan(app):
 
 # Initialize FastAPI
 app = FastAPI(
-    title="Solar Auxilia List Builder API",
-    description="REST API for Warhammer: The Horus Heresy Solar Auxilia army list building",
-    version="2.0.0",
+    title="Warhammer List Builder API",
+    description="REST API for Warhammer army list building — Horus Heresy & 40k 10th Edition",
+    version="3.0.0",
     docs_url=None if IS_PRODUCTION else "/docs",
     redoc_url=None if IS_PRODUCTION else "/redoc",
     lifespan=lifespan,
@@ -197,17 +207,36 @@ class ValidationResponse(BaseModel):
 async def root(request: Request):
     """API root endpoint."""
     return {
-        "name": "Solar Auxilia List Builder API",
-        "version": "2.0.0",
+        "name": "Warhammer List Builder API",
+        "version": "3.0.0",
         "docs": "/docs",
+        "game_systems": "/api/game-systems",
         "endpoints": {
-            "units": "/api/units",
+            "units": "/api/units (legacy HH3) or /api/{game_system}/units",
             "weapons": "/api/weapons",
-            "detachments": "/api/detachments",
-            "rosters": "/api/rosters",
+            "detachments": "/api/detachments or /api/{game_system}/detachments",
+            "rosters": "/api/rosters or /api/{game_system}/rosters",
             "meta": "/api/meta"
         }
     }
+
+
+# ===== GAME SYSTEMS =====
+
+@app.get("/api/game-systems")
+async def list_game_systems():
+    """List available game systems."""
+    systems = []
+    for gs_id, info in GAME_SYSTEMS.items():
+        unit_count = Unit.select().where(Unit.game_system == gs_id).count()
+        systems.append({
+            "id": gs_id,
+            "name": info["name"],
+            "short_name": info["short_name"],
+            "unit_count": unit_count,
+            "available": unit_count > 0,
+        })
+    return systems
 
 # Health check
 @app.get("/health")
@@ -227,6 +256,34 @@ async def health_check():
 
 # ===== UNITS =====
 
+def _get_units_query(
+    game_system: str = "hh3",
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """Build unit query filtered by game system."""
+    query = Unit.select().where(Unit.game_system == game_system)
+
+    if category:
+        # Try game-system-specific display group mapping first
+        try:
+            mapping = get_category_mapping(game_system)
+            native_cats = mapping.get_native_categories_for_group(category)
+        except ValueError:
+            native_cats = get_native_categories_for_group(category)
+
+        if native_cats:
+            query = query.where(Unit.unit_type.in_(native_cats))
+        else:
+            query = query.where(Unit.unit_type == category)
+    if search:
+        query = query.where(Unit.name.contains(search))
+
+    return query.limit(limit).offset(offset)
+
+
 @app.get("/api/units", response_model=List[UnitResponse])
 async def get_units(
     category: Optional[str] = Query(None, description="Filter by native slot or display group"),
@@ -234,21 +291,8 @@ async def get_units(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0)
 ):
-    """Get all units with optional filtering."""
-    query = Unit.select()
-
-    if category:
-        # Check if it's a display group name (e.g., "Heavy Support")
-        native_cats = get_native_categories_for_group(category)
-        if native_cats:
-            query = query.where(Unit.unit_type.in_(native_cats))
-        else:
-            # Direct native category filter
-            query = query.where(Unit.unit_type == category)
-    if search:
-        query = query.where(Unit.name.contains(search))
-
-    query = query.limit(limit).offset(offset)
+    """Get all HH3 units with optional filtering (legacy endpoint)."""
+    query = _get_units_query("hh3", category, search, limit, offset)
 
     # Pre-compute which units have required upgrade groups (min_quantity > 0)
     required_upgrade_unit_ids = set(
@@ -1139,8 +1183,257 @@ async def get_detachments(
 
 @app.get("/api/display-groups")
 async def get_display_groups():
-    """Get display group mappings for the unit browser."""
+    """Get display group mappings for the unit browser (HH3)."""
     return DISPLAY_GROUPS
+
+
+# ===== GAME-SYSTEM-SCOPED ENDPOINTS =====
+
+@app.get("/api/{gs}/units")
+async def get_units_for_game_system(
+    gs: str,
+    category: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+):
+    """Get units for a specific game system."""
+    _validate_game_system(gs)
+    query = _get_units_query(gs, category, search, limit, offset)
+
+    required_upgrade_unit_ids = set(
+        uu.unit_id for uu in
+        UnitUpgrade.select(UnitUpgrade.unit)
+        .where(UnitUpgrade.min_quantity > 0, UnitUpgrade.group_name.is_null(False))
+        .distinct()
+    )
+
+    default_upgrades_cache: Dict[int, list] = {}
+    for uid in required_upgrade_unit_ids:
+        default_upgrades_cache[uid] = compute_default_upgrades(uid)
+
+    units = []
+    for unit in query:
+        unit_constraints = None
+        if unit.constraints:
+            try:
+                unit_constraints = json.loads(unit.constraints)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        has_required = unit.id in required_upgrade_unit_ids
+
+        unit_data = {
+            "id": unit.id,
+            "bs_id": unit.bs_id,
+            "name": unit.name,
+            "unit_type": unit.unit_type,
+            "bsdata_category": unit.bsdata_category,
+            "base_cost": unit.base_cost,
+            "cost_per_model": unit.cost_per_model or 0,
+            "profiles": unit.profiles,
+            "rules": unit.rules,
+            "constraints": unit_constraints,
+            "model_min": unit.model_min or 1,
+            "model_max": unit.model_max,
+            "is_legacy": bool(unit.is_legacy),
+            "has_required_upgrades": has_required,
+            "default_upgrades": default_upgrades_cache.get(unit.id) if has_required else None,
+            "game_system": unit.game_system,
+        }
+
+        # 40k-specific fields
+        if gs == "40k10e":
+            if unit.points_brackets:
+                try:
+                    unit_data["points_brackets"] = json.loads(unit.points_brackets)
+                except (json.JSONDecodeError, TypeError):
+                    unit_data["points_brackets"] = None
+            if unit.leader_targets:
+                try:
+                    unit_data["leader_targets"] = json.loads(unit.leader_targets)
+                except (json.JSONDecodeError, TypeError):
+                    unit_data["leader_targets"] = None
+
+            # Include keywords
+            keywords = list(
+                UnitKeyword.select()
+                .where(UnitKeyword.unit == unit.id)
+            )
+            unit_data["keywords"] = [
+                {"keyword": kw.keyword, "type": kw.keyword_type}
+                for kw in keywords
+            ]
+
+        units.append(unit_data)
+
+    return units
+
+
+@app.get("/api/{gs}/detachments")
+async def get_detachments_for_game_system(
+    gs: str,
+    faction: Optional[str] = Query(None),
+):
+    """Get detachments for a specific game system."""
+    _validate_game_system(gs)
+
+    query = Detachment.select().where(Detachment.game_system == gs)
+    if faction:
+        query = query.where(
+            (Detachment.faction == faction) | (Detachment.faction.is_null())
+        )
+
+    detachments = []
+    for d in query:
+        det_data = {
+            "id": d.id,
+            "bs_id": d.bs_id,
+            "name": d.name,
+            "type": d.detachment_type,
+            "faction": d.faction,
+            "constraints": json.loads(d.constraints) if d.constraints else {},
+            "unit_restrictions": json.loads(d.unit_restrictions) if d.unit_restrictions else {},
+            "costs": json.loads(d.costs) if d.costs else {},
+            "game_system": d.game_system,
+        }
+        if d.abilities:
+            try:
+                det_data["abilities"] = json.loads(d.abilities)
+            except (json.JSONDecodeError, TypeError):
+                det_data["abilities"] = None
+        detachments.append(det_data)
+
+    return detachments
+
+
+@app.get("/api/{gs}/display-groups")
+async def get_display_groups_for_game_system(gs: str):
+    """Get display group mappings for a specific game system."""
+    _validate_game_system(gs)
+    mapping = get_category_mapping(gs)
+    return mapping.get_display_groups()
+
+
+@app.get("/api/{gs}/factions")
+async def get_factions_for_game_system(gs: str):
+    """Get available factions for a game system."""
+    _validate_game_system(gs)
+    from src.config import BSDATA_REPOS
+
+    config = BSDATA_REPOS.get(gs, {})
+    configured_factions = config.get("factions", [])
+
+    # Check which factions have data loaded
+    loaded_factions = (
+        Unit.select(Unit.game_system)
+        .where(Unit.game_system == gs)
+        .distinct()
+    )
+    has_data = loaded_factions.count() > 0
+
+    return {
+        "game_system": gs,
+        "factions": configured_factions,
+        "has_data": has_data,
+    }
+
+
+# ===== GAME-SYSTEM-SCOPED ROSTERS =====
+
+@app.post("/api/{gs}/rosters")
+@limiter.limit("10/minute")
+async def create_roster_for_game_system(request: Request, gs: str, roster: RosterCreate):
+    """Create a new roster for a specific game system."""
+    _validate_game_system(gs)
+
+    if not roster.name.strip():
+        raise HTTPException(status_code=422, detail="Roster name cannot be empty")
+
+    new_roster = Roster.create(
+        name=roster.name.strip(),
+        points_limit=roster.points_limit,
+        game_system=gs,
+    )
+
+    return _build_roster_response(new_roster)
+
+
+@app.get("/api/{gs}/rosters")
+async def list_rosters_for_game_system(gs: str):
+    """List all rosters for a game system."""
+    _validate_game_system(gs)
+    rosters = Roster.select().where(Roster.game_system == gs)
+    return [_build_roster_response(r) for r in rosters]
+
+
+# ===== LEADER ATTACHMENT (40k) =====
+
+@app.post("/api/{gs}/rosters/{roster_id}/detachments/{det_id}/entries/{entry_id}/attach")
+@limiter.limit("30/minute")
+async def attach_leader(request: Request, gs: str, roster_id: int, det_id: int, entry_id: int, body: dict):
+    """Attach a leader to a bodyguard unit (40k only)."""
+    _validate_game_system(gs)
+    if gs != "40k10e":
+        raise HTTPException(status_code=400, detail="Leader attachment is only available for 40k")
+
+    bodyguard_entry_id = body.get("bodyguard_entry_id")
+    if not bodyguard_entry_id:
+        raise HTTPException(status_code=422, detail="bodyguard_entry_id is required")
+
+    try:
+        roster = Roster.get_by_id(roster_id)
+    except Roster.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Roster not found")
+
+    try:
+        rd = RosterDetachment.get(
+            (RosterDetachment.id == det_id) & (RosterDetachment.roster == roster)
+        )
+    except RosterDetachment.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Detachment not found in roster")
+
+    try:
+        leader_entry = RosterEntry.get(
+            (RosterEntry.id == entry_id) & (RosterEntry.roster_detachment == rd)
+        )
+    except RosterEntry.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Leader entry not found")
+
+    try:
+        bodyguard_entry = RosterEntry.get(
+            (RosterEntry.id == bodyguard_entry_id) & (RosterEntry.roster_detachment == rd)
+        )
+    except RosterEntry.DoesNotExist:
+        raise HTTPException(status_code=404, detail="Bodyguard entry not found")
+
+    # Check leader isn't already attached
+    existing = LeaderAttachment.get_or_none(LeaderAttachment.leader == leader_entry)
+    if existing:
+        raise HTTPException(status_code=422, detail="Leader is already attached to a unit")
+
+    # Check bodyguard doesn't already have a leader
+    existing_bg = LeaderAttachment.get_or_none(LeaderAttachment.bodyguard == bodyguard_entry)
+    if existing_bg:
+        raise HTTPException(status_code=422, detail="Bodyguard unit already has an attached leader")
+
+    attachment = LeaderAttachment.create(leader=leader_entry, bodyguard=bodyguard_entry)
+    return {"id": attachment.id, "leader_id": entry_id, "bodyguard_id": bodyguard_entry_id}
+
+
+@app.delete("/api/{gs}/rosters/{roster_id}/detachments/{det_id}/entries/{entry_id}/detach")
+@limiter.limit("30/minute")
+async def detach_leader(request: Request, gs: str, roster_id: int, det_id: int, entry_id: int):
+    """Detach a leader from its bodyguard unit (40k only)."""
+    _validate_game_system(gs)
+    if gs != "40k10e":
+        raise HTTPException(status_code=400, detail="Leader detachment is only available for 40k")
+
+    attachment = LeaderAttachment.get_or_none(LeaderAttachment.leader_id == entry_id)
+    if not attachment:
+        raise HTTPException(status_code=404, detail="No leader attachment found")
+
+    attachment.delete_instance()
+    return {"ok": True}
 
 
 # ===== DOCTRINES =====

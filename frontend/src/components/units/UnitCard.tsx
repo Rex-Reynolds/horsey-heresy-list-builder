@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react';
 import type { Unit } from '../../types/index.ts';
-import { SLOT_STRIPE_COLORS, SLOT_CARD_TINTS } from '../../types/index.ts';
+import { useGameConfig } from '../../config/GameConfigContext.tsx';
 import type { UnitAvailability } from '../../hooks/useUnitAvailability.ts';
 import Badge from '../common/Badge.tsx';
 import UnitTypeIcon from '../common/UnitTypeIcon.tsx';
@@ -71,6 +71,7 @@ function HighlightedName({ name, term }: { name: string; term?: string }) {
 export default function UnitCard({ unit, expanded, onClick, availability, onQuickAdd, onCompareToggle, isComparing, searchTerm, compact, children }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [rippling, setRippling] = useState(false);
+  const { slotStripeColors, slotCardTints } = useGameConfig();
   const dotStyle = availability ? DOT_STYLES[availability] : undefined;
   const dimmed = availability === 'no_slot' || availability === 'roster_limit';
   const isFavorite = useUIStore((s) => s.favorites.has(unit.id));
@@ -109,8 +110,8 @@ export default function UnitCard({ unit, expanded, onClick, availability, onQuic
       return () => clearTimeout(timer);
     }
   }, [expanded]);
-  const stripe = SLOT_STRIPE_COLORS[unit.unit_type] ?? 'border-l-edge-500';
-  const tint = SLOT_CARD_TINTS[unit.unit_type] ?? '';
+  const stripe = slotStripeColors[unit.unit_type] ?? 'border-l-edge-500';
+  const tint = slotCardTints[unit.unit_type] ?? '';
 
   const hasModelRange = unit.model_max !== null && unit.model_max !== undefined
     && (unit.model_min > 1 || unit.model_max > 1);

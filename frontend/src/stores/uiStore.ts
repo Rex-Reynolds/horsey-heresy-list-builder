@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { GameSystemId } from '../config/gameConfig.ts';
 
 export interface Toast {
   id: number;
@@ -78,9 +79,14 @@ interface UIState {
   panelWidth: number;
   setPanelWidth: (w: number) => void;
 
-  // Theme: 'dataslate' (dark) or 'parchment' (light)
-  theme: 'dataslate' | 'parchment';
+  // Game system selector (null = first visit, show GameSelector)
+  gameSystem: GameSystemId | null;
+  setGameSystem: (gs: GameSystemId) => void;
+
+  // Theme: 'dataslate' (dark) or 'parchment' (light) or 'gothic'
+  theme: string;
   toggleTheme: () => void;
+  setTheme: (theme: string) => void;
 
   // Roster drawer (right slide-in to browse/switch rosters)
   showRosterDrawer: boolean;
@@ -217,17 +223,36 @@ export const useUIStore = create<UIState>((set, get) => ({
   whatIfPreview: null,
   setWhatIfPreview: (preview) => set({ whatIfPreview: preview }),
 
+  gameSystem: (() => {
+    try {
+      const saved = localStorage.getItem('sa_game_system');
+      if (saved === 'hh3') return 'hh3' as const;
+      if (saved === '40k10e') return '40k10e' as const;
+    } catch { /* storage unavailable */ }
+    return null; // First visit — show GameSelector
+  })(),
+  setGameSystem: (gs) => {
+    document.documentElement.setAttribute('data-game', gs);
+    try { localStorage.setItem('sa_game_system', gs); } catch { /* storage unavailable */ }
+    set({ gameSystem: gs });
+  },
+
   theme: (() => {
     try {
       const saved = localStorage.getItem('sa_theme');
-      if (saved === 'parchment') return 'parchment' as const;
+      if (saved === 'parchment' || saved === 'gothic') return saved;
     } catch { /* storage unavailable */ }
-    return 'dataslate' as const;
+    return 'dataslate';
   })(),
   toggleTheme: () => set((s) => {
-    const next = s.theme === 'dataslate' ? 'parchment' as const : 'dataslate' as const;
+    const next = s.theme === 'dataslate' ? 'parchment' : 'dataslate';
     document.documentElement.setAttribute('data-theme', next);
     try { localStorage.setItem('sa_theme', next); } catch { /* storage unavailable */ }
     return { theme: next };
   }),
+  setTheme: (theme) => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem('sa_theme', theme); } catch { /* storage unavailable */ }
+    set({ theme });
+  },
 }));
