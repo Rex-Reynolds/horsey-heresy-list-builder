@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from peewee import prefetch
 from src.models import db, Unit, Weapon, Upgrade, UnitUpgrade, Detachment, UnitKeyword, Roster, RosterDetachment, RosterEntry, LeaderAttachment
+from src.models.database import _migrate_add_columns
 from src.bsdata.points_calculator import PointsCalculator
 from src.bsdata.detachment_loader import DetachmentLoader
 from src.bsdata.composition_validator import CompositionValidator
@@ -63,6 +64,10 @@ async def lifespan(app):
     """Manage database connection lifecycle."""
     try:
         db.connect(reuse_if_open=True)
+        # Run migrations to add any new columns (safe for repeated runs)
+        _migrate_add_columns(db)
+        # Create new tables added since last deploy
+        db.create_tables([UnitKeyword, LeaderAttachment], safe=True)
         unit_count = Unit.select().count()
         logger.info(f"Database connected: {unit_count} units loaded")
     except Exception as e:
